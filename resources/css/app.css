@@ -7,137 +7,333 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@theme {
-    --font-sans:
-        'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
-        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-        'Noto Color Emoji';
+/* ---------------------------------------------------------------------------
+   Fonts
 
-    --radius-lg: var(--radius);
-    --radius-md: calc(var(--radius) - 2px);
-    --radius-sm: calc(var(--radius) - 4px);
+   Two families, no mono. Machine values (post numbers, board slugs, byte
+   counts) use Inter with `tabular-nums` so digits stay column-aligned.
+   Inter carries an `opsz` axis, so `font-optical-sizing: auto` matters.
+--------------------------------------------------------------------------- */
 
-    --color-background: var(--background);
-    --color-foreground: var(--foreground);
-
-    --color-card: var(--card);
-    --color-card-foreground: var(--card-foreground);
-
-    --color-popover: var(--popover);
-    --color-popover-foreground: var(--popover-foreground);
-
-    --color-primary: var(--primary);
-    --color-primary-foreground: var(--primary-foreground);
-
-    --color-secondary: var(--secondary);
-    --color-secondary-foreground: var(--secondary-foreground);
-
-    --color-muted: var(--muted);
-    --color-muted-foreground: var(--muted-foreground);
-
-    --color-accent: var(--accent);
-    --color-accent-foreground: var(--accent-foreground);
-
-    --color-destructive: var(--destructive);
-    --color-destructive-foreground: var(--destructive-foreground);
-
-    --color-border: var(--border);
-    --color-input: var(--input);
-    --color-ring: var(--ring);
-
-    --color-chart-1: var(--chart-1);
-    --color-chart-2: var(--chart-2);
-    --color-chart-3: var(--chart-3);
-    --color-chart-4: var(--chart-4);
-    --color-chart-5: var(--chart-5);
-
-    --color-sidebar: var(--sidebar);
-    --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-    --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-    --color-sidebar-border: var(--sidebar-border);
-    --color-sidebar-ring: var(--sidebar-ring);
+@font-face {
+    font-family: 'Inter';
+    src: url('../fonts/Inter-Variable.ttf') format('truetype-variations');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
 }
 
+@font-face {
+    font-family: 'Inter';
+    src: url('../fonts/Inter-Italic-Variable.ttf') format('truetype-variations');
+    font-weight: 100 900;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Space Grotesk';
+    src: url('../fonts/SpaceGrotesk-Variable.ttf') format('truetype-variations');
+    font-weight: 300 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* ---------------------------------------------------------------------------
+   Raw token values
+
+   `:root` is light, `.dark` is dark — matching the repo's existing appearance
+   mechanism. Clover's own names are the single source of truth; the `@theme`
+   block below maps both the shadcn aliases and Clover-native utilities onto
+   them, so there is only ever one set of values to change.
+--------------------------------------------------------------------------- */
+
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --destructive-foreground: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.87 0 0);
-    --chart-1: oklch(0.646 0.222 41.116);
-    --chart-2: oklch(0.6 0.118 184.704);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
-    --chart-5: oklch(0.769 0.188 70.08);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.87 0 0);
+    /* Surfaces */
+    --bg: #f6f8f6;
+    --surface: #ffffff;
+    --surface-elevated: #f1f4f1;
+    --surface-hover: #e8ede9;
+    --scrim: rgba(12, 20, 16, 0.42);
+
+    /* Text */
+    --text-primary: #0d1411;
+    --text-muted: #4c574f;
+    --text-faint: #6b766f;
+    --text-on-primary: #06130b;
+    --text-accent: #1f8b4c;
+
+    /* Lines */
+    --border-hairline: #dfe5e0;
+    --border-strong: #c4cec7;
+
+    /* Action */
+    --primary: #2aa85c;
+    --primary-hover: #249450;
+    --primary-pressed: #1f8b4c;
+    --primary-soft: rgba(42, 168, 92, 0.1);
+    --primary-soft-strong: rgba(42, 168, 92, 0.18);
+    --primary-line: rgba(42, 168, 92, 0.34);
+    --focus-ring: rgba(42, 168, 92, 0.45);
+
+    /* Semantic states */
+    --danger: #c93a32;
+    --danger-soft: rgba(201, 58, 50, 0.1);
+    --danger-line: rgba(201, 58, 50, 0.34);
+    --warning: #9a7412;
+    --warning-soft: rgba(154, 116, 18, 0.12);
+    --success: #2aa85c;
+
+    /* Media placeholder weave */
+    --placeholder-a: #eef2ef;
+    --placeholder-b: #e4eae6;
+
+    color-scheme: light;
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.145 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.145 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.396 0.141 25.723);
-    --destructive-foreground: oklch(0.637 0.237 25.331);
-    --border: oklch(0.269 0 0);
-    --input: oklch(0.269 0 0);
-    --ring: oklch(0.439 0 0);
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.985 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(0.269 0 0);
-    --sidebar-ring: oklch(0.439 0 0);
+    /* Surfaces */
+    --bg: #080a09;
+    --surface: #111513;
+    --surface-elevated: #171c19;
+    --surface-hover: #1c221e;
+    --scrim: rgba(4, 6, 5, 0.72);
+
+    /* Text */
+    --text-primary: #f2f5f2;
+    --text-muted: #9aa39c;
+    --text-faint: #75807a;
+    --text-on-primary: #06130b;
+    --text-accent: #53d98a;
+
+    /* Lines */
+    --border-hairline: #1b241e;
+    --border-strong: #2e3832;
+
+    /* Action */
+    --primary: #34c76f;
+    --primary-hover: #3ed97c;
+    --primary-pressed: #2aa85c;
+    --primary-soft: rgba(52, 199, 111, 0.12);
+    --primary-soft-strong: rgba(52, 199, 111, 0.2);
+    --primary-line: rgba(52, 199, 111, 0.4);
+    --focus-ring: rgba(52, 199, 111, 0.45);
+
+    /* Semantic states */
+    --danger: #f85149;
+    --danger-soft: rgba(248, 81, 73, 0.14);
+    --danger-line: rgba(248, 81, 73, 0.4);
+    --warning: #d6a420;
+    --warning-soft: rgba(214, 164, 32, 0.12);
+    --success: #34c76f;
+
+    /* Media placeholder weave */
+    --placeholder-a: #141917;
+    --placeholder-b: #1a201c;
+
+    color-scheme: dark;
 }
+
+/* Board identity swatches. Fixed across themes — each board's chip colour is
+   part of its identity, not a surface. Used for the board avatar and nothing
+   else. */
+:root {
+    --board-3: #3a4440;
+    --board-3-fg: #c7d2cc;
+    --board-a: #c4392f;
+    --board-a-fg: #fff1ef;
+    --board-b: #2e8fa3;
+    --board-b-fg: #edfaff;
+    --board-int: #174a5e;
+    --board-int-fg: #53d98a;
+    --board-biz: #22302a;
+    --board-biz-fg: #d2e6d9;
+    --board-vm: #5a4a9c;
+    --board-vm-fg: #eee9ff;
+    --board-g: #1e6b44;
+    --board-g-fg: #bff5d6;
+    --board-wg: #3e5e7a;
+    --board-wg-fg: #e3f0fb;
+    --board-fit: #8c5a24;
+    --board-fit-fg: #fff0dc;
+    --board-x: #4a3e63;
+    --board-x-fg: #e5def7;
+    --board-co: #7a3a6b;
+    --board-co-fg: #fbe6f6;
+}
+
+/* ---------------------------------------------------------------------------
+   Theme mapping
+--------------------------------------------------------------------------- */
+
+@theme {
+    /* Type families. `--font-mono: initial` removes Tailwind's default mono
+       utility outright, so the two-family constraint is enforced by the build
+       rather than by discipline. */
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: initial;
+
+    /* Type scale */
+    --text-display: 28px;
+    --text-display--line-height: 1.2;
+    --text-display--letter-spacing: -0.6px;
+    --text-h1: 22px;
+    --text-h1--line-height: 1.3;
+    --text-h1--letter-spacing: -0.3px;
+    --text-h2: 19px;
+    --text-h2--line-height: 1.35;
+    --text-h2--letter-spacing: -0.2px;
+    --text-h3: 16px;
+    --text-h3--line-height: 1.4;
+    --text-h3--letter-spacing: -0.1px;
+    --text-body: 15px;
+    --text-body--line-height: 1.5;
+    --text-body-sm: 14px;
+    --text-body-sm--line-height: 1.5;
+    --text-meta: 13px;
+    --text-meta--line-height: 1.45;
+    --text-caption: 12px;
+    --text-caption--line-height: 1.4;
+    --text-label: 11px;
+    --text-label--line-height: 1.3;
+    --text-label--letter-spacing: 1.2px;
+
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    /* Radii — chips, controls, dense rows, cards, dialogs */
+    --radius-sm: 8px;
+    --radius-md: 10px;
+    --radius-lg: 12px;
+    --radius-xl: 14px;
+    --radius-2xl: 16px;
+
+    /* Elevation. Nothing rests with a shadow; these apply only when something
+       genuinely floats. */
+    --shadow-lift: 0 6px 24px rgba(0, 0, 0, 0.18);
+    --shadow-sticky: 0 8px 24px rgba(0, 0, 0, 0.35);
+    --shadow-overlay: 0 24px 80px rgba(0, 0, 0, 0.5);
+
+    /* Motion */
+    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+    /* shadcn aliases — existing components keep working unchanged */
+    --color-background: var(--bg);
+    --color-foreground: var(--text-primary);
+    --color-card: var(--surface);
+    --color-card-foreground: var(--text-primary);
+    --color-popover: var(--surface-elevated);
+    --color-popover-foreground: var(--text-primary);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--text-on-primary);
+    --color-secondary: var(--surface-elevated);
+    --color-secondary-foreground: var(--text-primary);
+    --color-muted: var(--surface-hover);
+    --color-muted-foreground: var(--text-muted);
+    --color-accent: var(--surface-hover);
+    --color-accent-foreground: var(--text-primary);
+    --color-destructive: var(--danger);
+    --color-destructive-foreground: var(--text-primary);
+    --color-border: var(--border-hairline);
+    --color-input: var(--border-strong);
+    --color-ring: var(--focus-ring);
+
+    --color-sidebar: var(--bg);
+    --color-sidebar-foreground: var(--text-muted);
+    --color-sidebar-primary: var(--primary);
+    --color-sidebar-primary-foreground: var(--text-on-primary);
+    --color-sidebar-accent: var(--surface-hover);
+    --color-sidebar-accent-foreground: var(--text-primary);
+    --color-sidebar-border: var(--border-hairline);
+    --color-sidebar-ring: var(--focus-ring);
+
+    /* Clover-native surfaces and text */
+    --color-surface: var(--surface);
+    --color-surface-elevated: var(--surface-elevated);
+    --color-surface-hover: var(--surface-hover);
+    --color-scrim: var(--scrim);
+    --color-faint: var(--text-faint);
+    --color-accent-text: var(--text-accent);
+    --color-border-strong: var(--border-strong);
+
+    /* Clover-native action states */
+    --color-primary-hover: var(--primary-hover);
+    --color-primary-pressed: var(--primary-pressed);
+    --color-primary-soft: var(--primary-soft);
+    --color-primary-soft-strong: var(--primary-soft-strong);
+    --color-primary-line: var(--primary-line);
+
+    /* Clover-native semantic states */
+    --color-danger: var(--danger);
+    --color-danger-soft: var(--danger-soft);
+    --color-danger-line: var(--danger-line);
+    --color-warning: var(--warning);
+    --color-warning-soft: var(--warning-soft);
+    --color-success: var(--success);
+
+    --color-placeholder-a: var(--placeholder-a);
+    --color-placeholder-b: var(--placeholder-b);
+
+    /* Board identity swatches */
+    --color-board-3: var(--board-3);
+    --color-board-3-fg: var(--board-3-fg);
+    --color-board-a: var(--board-a);
+    --color-board-a-fg: var(--board-a-fg);
+    --color-board-b: var(--board-b);
+    --color-board-b-fg: var(--board-b-fg);
+    --color-board-int: var(--board-int);
+    --color-board-int-fg: var(--board-int-fg);
+    --color-board-biz: var(--board-biz);
+    --color-board-biz-fg: var(--board-biz-fg);
+    --color-board-vm: var(--board-vm);
+    --color-board-vm-fg: var(--board-vm-fg);
+    --color-board-g: var(--board-g);
+    --color-board-g-fg: var(--board-g-fg);
+    --color-board-wg: var(--board-wg);
+    --color-board-wg-fg: var(--board-wg-fg);
+    --color-board-fit: var(--board-fit);
+    --color-board-fit-fg: var(--board-fit-fg);
+    --color-board-x: var(--board-x);
+    --color-board-x-fg: var(--board-x-fg);
+    --color-board-co: var(--board-co);
+    --color-board-co-fg: var(--board-co-fg);
+}
+
+/* ---------------------------------------------------------------------------
+   Base layer
+--------------------------------------------------------------------------- */
 
 @layer base {
     * {
         @apply border-border;
     }
 
+    html {
+        font-optical-sizing: auto;
+    }
+
     body {
-        @apply bg-background text-foreground;
+        @apply bg-background font-sans text-foreground;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /* Focus is always visible, never removed. */
+    *:focus-visible {
+        outline: 2px solid var(--focus-ring);
+        outline-offset: 2px;
+        border-radius: 6px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
     }
 }
