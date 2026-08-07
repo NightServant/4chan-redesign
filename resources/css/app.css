@@ -219,8 +219,25 @@
     --shadow-sticky: 0 8px 24px rgba(0, 0, 0, 0.35);
     --shadow-overlay: 0 24px 80px rgba(0, 0, 0, 0.5);
 
-    /* Motion */
+    /* Motion. Four durations cover the whole system: a hover tint, a state
+       change, a scrim, and a panel arriving. Overlays sit deliberately below
+       enter — a scrim that lingers reads as lag, while the panel it reveals
+       can afford the extra 70ms. */
+    --duration-hover: 150ms;
+    --duration-state: 200ms;
+    --duration-overlay: 180ms;
+    --duration-enter: 250ms;
+
     --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+    /* Presses compress rather than lift; modals arrive from just under full
+       size so the scrim reads as depth instead of a flash. */
+    --press-scale: 0.98;
+    --modal-enter-scale: 0.98;
+
+    /* Length, not a filter function, so `backdrop-blur-scrim` composes. */
+    --blur-scrim: 3px;
 
     /* shadcn aliases — existing components keep working unchanged */
     --color-background: var(--bg);
