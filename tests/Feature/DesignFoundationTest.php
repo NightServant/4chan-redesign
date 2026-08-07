@@ -81,28 +81,31 @@ it('ships exactly two font families and no mono utility', function (): void {
 });
 
 /**
- * `truetype-variations` is an obsolete CSS Fonts Level 4 draft format hint.
- * Chrome and Firefox do not recognise it, and an unrecognised hint makes the
- * browser skip that @font-face source entirely — the file is never fetched and
- * text silently falls back to the system stack. Variable TTFs load correctly
- * under the plain `truetype` hint.
+ * An unrecognised format hint makes the browser skip that @font-face source
+ * entirely — the file is never fetched and text silently falls back to the
+ * system stack, which looks identical to "the font didn't change". The
+ * `-variations` suffixed hints are an obsolete CSS Fonts Level 4 draft that
+ * Chrome and Firefox reject; `woff2` is universally supported.
  */
 it('declares font sources with a format hint browsers recognise', function (): void {
     [$css] = compiledStylesheet();
 
     expect($css)
-        ->toContain('format("truetype")')
-        ->not->toContain('truetype-variations');
+        ->toContain('format("woff2")')
+        ->not->toContain('-variations');
 });
 
-it('emits both variable font families as build assets', function (): void {
+it('emits both variable font families as compressed build assets', function (): void {
     [, $buildPath] = compiledStylesheet();
 
-    $fonts = glob($buildPath.'/assets/*.ttf') ?: [];
+    $fonts = glob($buildPath.'/assets/*.woff2') ?: [];
     $names = implode(' ', array_map('basename', $fonts));
 
     expect($names)
         ->toContain('Inter-Variable')
         ->toContain('Inter-Italic-Variable')
         ->toContain('SpaceGrotesk-Variable');
+
+    // Uncompressed TTFs would roughly double the payload for no benefit.
+    expect(glob($buildPath.'/assets/*.ttf') ?: [])->toBeEmpty();
 });
