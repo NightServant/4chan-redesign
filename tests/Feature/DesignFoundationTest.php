@@ -82,6 +82,37 @@ it('keeps primary button text at an accessible contrast in both themes', functio
         ->not->toMatch('/--text-on-primary:\s*(#fff\b|#ffffff|white|oklch\(100%)/');
 });
 
+/**
+ * Overlays, menus and toasts all animate against the same four durations, so
+ * they live as tokens rather than as literals sprinkled through components.
+ * `--duration-overlay` being shorter than `--duration-enter` is deliberate:
+ * a scrim that lingers reads as lag, while the panel it reveals can afford
+ * the extra 70ms.
+ */
+it('compiles the shared motion and scrim tokens overlays depend on', function (): void {
+    [$css] = compiledStylesheet();
+
+    // Lightning CSS rewrites `150ms` to `.15s`, so each assertion accepts
+    // either spelling of the same duration.
+    expect($css)
+        ->toMatch('/--duration-hover:\s*(150ms|\.15s)/')
+        ->toMatch('/--duration-state:\s*(200ms|\.2s)/')
+        ->toMatch('/--duration-overlay:\s*(180ms|\.18s)/')
+        ->toMatch('/--duration-enter:\s*(250ms|\.25s)/')
+        ->toMatch('/--blur-scrim:\s*3px/');
+});
+
+/**
+ * Tailwind v4 prunes theme variables nothing references, so a token added to
+ * `@theme` but never used compiles to nothing at all. Asserting the utility
+ * class exists is what proves the token survived into the stylesheet.
+ */
+it('emits the overlay shadow as a usable utility', function (): void {
+    [$css] = compiledStylesheet();
+
+    expect($css)->toMatch('/\.shadow-overlay\{/');
+});
+
 it('ships exactly two font families and no mono utility', function (): void {
     [$css] = compiledStylesheet();
 

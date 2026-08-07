@@ -159,4 +159,41 @@ describe('Button', () => {
             screen.getByRole('button', { name: 'Focusable' }).className,
         ).not.toContain('outline-none');
     });
+
+    /**
+     * `delete-user.tsx` composes this button as `<DialogClose asChild><Button>`,
+     * which only closes the dialog if the ref reaches the underlying element.
+     * React 19 hands `ref` to function components as an ordinary prop, so the
+     * rest spread carries it without `forwardRef` — these two tests prove that
+     * holds on both the plain and the `asChild` path rather than assuming it.
+     */
+    it('forwards a ref to the underlying button element', () => {
+        const ref = { current: null as HTMLButtonElement | null };
+
+        render(<Button ref={ref}>Delete account</Button>);
+
+        expect(ref.current).toBe(
+            screen.getByRole('button', { name: 'Delete account' }),
+        );
+    });
+
+    it('forwards a ref through asChild to the slotted element', () => {
+        // Typed to Button's own ref, which is what a caller actually writes.
+        // At runtime Slot hands it to the anchor, so the assertion below
+        // compares it against the link element.
+        const ref = { current: null as HTMLButtonElement | null };
+
+        // The ref goes on Button, not on the anchor. A ref written directly on
+        // the child would be delivered by React no matter what Button did,
+        // which would make this test pass even with forwarding broken.
+        render(
+            <Button asChild ref={ref}>
+                <a href="/boards">Browse boards</a>
+            </Button>,
+        );
+
+        expect(ref.current).toBe(
+            screen.getByRole('link', { name: 'Browse boards' }),
+        );
+    });
 });

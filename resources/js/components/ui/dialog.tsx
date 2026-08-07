@@ -36,7 +36,10 @@ function DialogOverlay({
         <DialogPrimitive.Overlay
             data-slot="dialog-overlay"
             className={cn(
-                'fixed inset-0 z-50 bg-black/80 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0',
+                'fixed inset-0 z-50 bg-scrim backdrop-blur-scrim',
+                'duration-[var(--duration-overlay)] ease-[var(--ease-out)]',
+                'data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
+                'data-[state=open]:animate-in data-[state=open]:fade-in-0',
                 className,
             )}
             {...props}
@@ -55,13 +58,28 @@ function DialogContent({
             <DialogPrimitive.Content
                 data-slot="dialog-content"
                 className={cn(
-                    'fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border bg-background p-6 shadow-lg duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg',
+                    'fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4',
+                    'rounded-2xl border border-border bg-surface-elevated p-6 shadow-overlay',
+                    'ease-[var(--ease-standard)]',
+                    /* Exit runs at ~65% of the enter duration, per the taste
+                       law that exits read shorter than enters. */
+                    'data-[state=closed]:animate-out data-[state=closed]:duration-[calc(var(--duration-enter)*0.65)] data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-98',
+                    'data-[state=open]:animate-in data-[state=open]:duration-[var(--duration-enter)] data-[state=open]:ease-[var(--ease-out)] data-[state=open]:fade-in-0 data-[state=open]:zoom-in-98',
+                    'sm:max-w-lg',
                     className,
                 )}
                 {...props}
             >
                 {children}
-                <DialogPrimitive.Close className="absolute top-4 right-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4">
+                <DialogPrimitive.Close
+                    className={cn(
+                        'absolute top-4 right-4 inline-flex size-8 items-center justify-center rounded-md text-faint',
+                        'transition-colors duration-[var(--duration-hover)] ease-[var(--ease-standard)]',
+                        'hover:not-disabled:bg-surface-hover hover:not-disabled:text-foreground',
+                        'disabled:pointer-events-none disabled:opacity-60',
+                        "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+                    )}
+                >
                     <XIcon />
                     <span className="sr-only">Close</span>
                 </DialogPrimitive.Close>
@@ -103,7 +121,7 @@ function DialogTitle({
     return (
         <DialogPrimitive.Title
             data-slot="dialog-title"
-            className={cn('text-lg leading-none font-semibold', className)}
+            className={cn('font-display text-h3 font-semibold', className)}
             {...props}
         />
     );
@@ -116,7 +134,7 @@ function DialogDescription({
     return (
         <DialogPrimitive.Description
             data-slot="dialog-description"
-            className={cn('text-sm text-muted-foreground', className)}
+            className={cn('text-body-sm text-muted-foreground', className)}
             {...props}
         />
     );
