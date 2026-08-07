@@ -3,22 +3,20 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * Clover text input.
+ * Clover multiline input.
  *
- * 38px tall, 10px radius, hairline border on the surface fill. The focus ring
- * is the 2px token outline at 2px offset and is never removed. Invalid state
- * is driven by `aria-invalid` so the control stays accessible-first.
+ * Shares the Input treatment: 10px radius, hairline border on the surface
+ * fill, token focus outline that is never removed. Resizes vertically only so
+ * a long reply cannot break the column it sits in.
  */
-function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
+function Textarea({ className, ...props }: React.ComponentProps<'textarea'>) {
     return (
-        <input
-            type={type}
-            data-slot="input"
+        <textarea
+            data-slot="textarea"
             className={cn(
-                'flex h-9.5 w-full min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-base text-foreground md:text-body',
+                'flex min-h-24 w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-base text-foreground md:text-body',
                 'transition-[color,border-color,background-color] duration-150 ease-out',
                 'selection:bg-primary selection:text-primary-foreground placeholder:text-faint',
-                'file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-body-sm file:font-medium file:text-foreground',
                 'hover:border-border-strong',
                 'focus-visible:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                 'aria-invalid:border-danger aria-invalid:outline-danger',
@@ -30,4 +28,4 @@ function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
     );
 }
 
-export { Input };
+export { Textarea };
