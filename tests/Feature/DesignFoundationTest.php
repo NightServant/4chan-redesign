@@ -80,6 +80,21 @@ it('ships exactly two font families and no mono utility', function (): void {
         ->not->toMatch('/\.font-mono\{/');
 });
 
+/**
+ * `truetype-variations` is an obsolete CSS Fonts Level 4 draft format hint.
+ * Chrome and Firefox do not recognise it, and an unrecognised hint makes the
+ * browser skip that @font-face source entirely — the file is never fetched and
+ * text silently falls back to the system stack. Variable TTFs load correctly
+ * under the plain `truetype` hint.
+ */
+it('declares font sources with a format hint browsers recognise', function (): void {
+    [$css] = compiledStylesheet();
+
+    expect($css)
+        ->toContain('format("truetype")')
+        ->not->toContain('truetype-variations');
+});
+
 it('emits both variable font families as build assets', function (): void {
     [, $buildPath] = compiledStylesheet();
 
