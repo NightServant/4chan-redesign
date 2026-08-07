@@ -40,21 +40,33 @@ it('compiles the Clover dark token scope', function (): void {
     [$css] = compiledStylesheet();
 
     expect($css)
-        ->toContain('--bg:#080a09')
-        ->toContain('--surface:#111513')
-        ->toContain('--primary:#34c76f')
-        ->toContain('--text-primary:#f2f5f2');
+        ->toMatch('/--bg:\s*oklch\(14\./')
+        ->toMatch('/--surface:\s*oklch\(19\./')
+        ->toMatch('/--primary:\s*oklch\(73\./')
+        ->toMatch('/--text-primary:\s*oklch\(96\./');
 });
 
 it('compiles the Clover light token scope', function (): void {
     [$css] = compiledStylesheet();
 
-    // The minifier shortens #ffffff to #fff.
     expect($css)
-        ->toContain('--bg:#f6f8f6')
-        ->toContain('--surface:#fff')
-        ->toContain('--primary:#2aa85c')
-        ->toContain('--text-primary:#0d1411');
+        ->toMatch('/--bg:\s*oklch\(97\./')
+        ->toMatch('/--surface:\s*oklch\(99\./')
+        ->toMatch('/--primary:\s*oklch\(64\./')
+        ->toMatch('/--text-primary:\s*oklch\(18\./');
+});
+
+/**
+ * Every colour is authored in OKLCH, and no neutral is pure. Pure #fff / #000
+ * flatten depth against neutrals that all carry a slight green tint, so the
+ * lightest surface is a tinted near-white rather than white.
+ */
+it('authors colour in OKLCH with no pure white or black neutral', function (): void {
+    [$css] = compiledStylesheet();
+
+    expect($css)
+        ->not->toMatch('/--surface:\s*(#fff\b|#ffffff|white|oklch\(100%)/')
+        ->not->toMatch('/--bg:\s*(#fff\b|#ffffff|#000\b|#000000|white|black)/');
 });
 
 /**
@@ -66,8 +78,8 @@ it('keeps primary button text at an accessible contrast in both themes', functio
     [$css] = compiledStylesheet();
 
     expect($css)
-        ->toContain('--text-on-primary:#06130b')
-        ->not->toContain('--text-on-primary:#fff');
+        ->toMatch('/--text-on-primary:\s*oklch\(17\./')
+        ->not->toMatch('/--text-on-primary:\s*(#fff\b|#ffffff|white|oklch\(100%)/');
 });
 
 it('ships exactly two font families and no mono utility', function (): void {

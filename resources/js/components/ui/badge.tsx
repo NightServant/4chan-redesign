@@ -1,46 +1,58 @@
-import { Slot } from "@radix-ui/react-slot"
-import { cva, type VariantProps } from "class-variance-authority"
-import * as React from "react"
+import { Slot } from '@radix-ui/react-slot';
+import { cva } from 'class-variance-authority';
+import type { VariantProps } from 'class-variance-authority';
+import type { ComponentProps } from 'react';
+import { cn } from '@/lib/utils';
 
-import { cn } from "@/lib/utils"
+/**
+ * A status pill: sticky, locked, archived, report counts. Semantic tones are
+ * a soft tint plus coloured text, never a saturated fill, so a row of posts
+ * never turns into a traffic light.
+ */
+
+/**
+ * tailwind-merge (inside `cn`) does not know Clover's type scale, so it reads
+ * `text-caption` as a text colour and drops it next to `text-danger`. Applying
+ * the scale outside the merge keeps both. Remove the split once `cn` is taught
+ * the Clover font sizes.
+ */
+const typeScale = 'text-caption font-medium';
 
 const badgeVariants = cva(
-  "inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden",
-  {
-    variants: {
-      variant: {
-        default:
-          "border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
-        secondary:
-          "border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
-        destructive:
-          "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
-        outline:
-          "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
-      },
+    "inline-flex w-fit shrink-0 items-center justify-center gap-1 rounded-full px-2 py-0.5 whitespace-nowrap [&>svg]:pointer-events-none [&>svg:not([class*='size-'])]:size-3",
+    {
+        variants: {
+            tone: {
+                neutral: 'bg-surface-elevated text-muted-foreground',
+                primary: 'bg-primary-soft text-accent-text',
+                danger: 'bg-danger-soft text-danger',
+                warning: 'bg-warning-soft text-warning',
+                success: 'bg-primary-soft-strong text-accent-text',
+            },
+        },
+        defaultVariants: {
+            tone: 'neutral',
+        },
     },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-)
+);
 
-function Badge({
-  className,
-  variant,
-  asChild = false,
-  ...props
-}: React.ComponentProps<"span"> &
-  VariantProps<typeof badgeVariants> & { asChild?: boolean }) {
-  const Comp = asChild ? Slot : "span"
+type BadgeProps = ComponentProps<'span'> &
+    VariantProps<typeof badgeVariants> & {
+        /** Render the child element instead of a `span`, keeping the styles. */
+        asChild?: boolean;
+    };
 
-  return (
-    <Comp
-      data-slot="badge"
-      className={cn(badgeVariants({ variant }), className)}
-      {...props}
-    />
-  )
+function Badge({ className, tone, asChild = false, ...props }: BadgeProps) {
+    const Comp = asChild ? Slot : 'span';
+
+    return (
+        <Comp
+            data-slot="badge"
+            className={`${typeScale} ${cn(badgeVariants({ tone }), className)}`}
+            {...props}
+        />
+    );
 }
 
-export { Badge, badgeVariants }
+export { Badge, badgeVariants };
+export type { BadgeProps };
