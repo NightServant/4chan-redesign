@@ -1,0 +1,208 @@
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type { ReactNode } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AppSidebar } from '@/components/clover/app-sidebar';
+import { FOOTER_LINKS, PRIMARY_NAV } from '@/lib/navigation';
+import type { User } from '@/types/auth';
+
+/**
+ * The real `Link`/`usePage` require an Inertia page context that only exists
+ * inside `createInertiaApp`. The sidebar's own tests stand in a minimal
+ * double instead: `Link` renders a plain anchor (still queryable by role and
+ * accessible name) and `usePage` reads a mutable fixture reset in
+ * `beforeEach`, so each test controls auth state and the current URL without
+ * a real Inertia runtime.
+ */
+const mockPage: {
+    props: { auth: { user: User | null }; sidebarOpen: boolean };
+    url: string;
+} = {
+    props: { auth: { user: null }, sidebarOpen: true },
+    url: '/',
+};
+
+vi.mock('@inertiajs/react', () => ({
+    usePage: () => mockPage,
+    Link: ({
+        href,
+        children,
+        ...props
+    }: {
+        href: string | { url: string };
+        children: ReactNode;
+    } & Record<string, unknown>) => {
+        const url = typeof href === 'string' ? href : href.url;
+
+        return (
+            <a href={url} {...props}>
+                {children}
+            </a>
+        );
+    },
+}));
+
+const SIGNED_IN_USER: User = {
+    id: 1,
+    name: 'Anon',
+    email: 'anon@example.com',
+    email_verified_at: null,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+};
+
+const PUBLIC_TITLES = PRIMARY_NAV.filter((item) => !item.requiresAuth).map(
+    (item) => item.title,
+);
+const AUTH_ONLY_TITLES = PRIMARY_NAV.filter((item) => item.requiresAuth).map(
+    (item) => item.title,
+);
+
+beforeEach(() => {
+    mockPage.props = { auth: { user: null }, sidebarOpen: true };
+    mockPage.url = '/';
+    document.cookie = 'sidebar_state=; path=/; max-age=0';
+});
+
+afterEach(() => {
+    vi.restoreAllMocks();
+});
+
+describe('AppSidebar', () => {
+    it('renders every PRIMARY_NAV row for a signed-in anon', () => {
+        mockPage.props.auth.user = SIGNED_IN_USER;
+
+        render(<AppSidebar />);
+
+        for (const item of PRIMARY_NAV) {
+            expect(
+                screen.getByRole('link', { name: item.title }),
+            ).toBeInTheDocument();
+        }
+    });
+
+    it('hides requiresAuth rows and shows only the public rows for a signed-out anon', () => {
+        mockPage.props.auth.user = null;
+
+        render(<AppSidebar />);
+
+        for (const title of PUBLIC_TITLES) {
+            expect(
+                screen.getByRole('link', { name: title }),
+            ).toBeInTheDocument();
+        }
+
+        for (const title of AUTH_ONLY_TITLES) {
+            expect(
+                screen.queryByRole('link', { name: title }),
+            ).not.toBeInTheDocument();
+        }
+    });
+
+    it('marks the row matching the current URL with aria-current="page"', () => {
+        mockPage.props.auth.user = SIGNED_IN_USER;
+        const active = PRIMARY_NAV[2];
+        const activeUrl =
+            typeof active.href === 'string' ? active.href : active.href.url;
+        mockPage.url = activeUrl;
+
+        render(<AppSidebar />);
+
+        const activeLink = screen.getByRole('link', { name: active.title });
+        expect(activeLink).toHaveAttribute('aria-current', 'page');
+
+        const inactiveLink = screen.getByRole('link', {
+            name: PRIMARY_NAV[0].title,
+        });
+        expect(inactiveLink).not.toHaveAttribute('aria-current');
+    });
+
+    it('renders the footer links and a "Boards you use" section when expanded', () => {
+        mockPage.props.auth.user = SIGNED_IN_USER;
+
+        render(<AppSidebar />);
+
+        expect(
+            screen.getByText('Boards you use', { exact: false }),
+        ).toBeInTheDocument();
+
+        for (const link of FOOTER_LINKS) {
+            expect(
+                screen.getByRole('link', { name: link.title }),
+            ).toBeInTheDocument();
+        }
+    });
+
+    it('names the collapse toggle by the direction it collapses', () => {
+        mockPage.props.sidebarOpen = true;
+
+        render(<AppSidebar />);
+
+        expect(
+            screen.getByRole('button', { name: /collapse sidebar/i }),
+        ).toBeInTheDocument();
+    });
+
+    it('names the expand toggle by the direction it expands when collapsed', () => {
+        mockPage.props.sidebarOpen = false;
+
+        render(<AppSidebar />);
+
+        expect(
+            screen.getByRole('button', { name: /expand sidebar/i }),
+        ).toBeInTheDocument();
+    });
+
+    it('hides the "Boards you use" section and footer links when collapsed', () => {
+        mockPage.props.auth.user = SIGNED_IN_USER;
+        mockPage.props.sidebarOpen = false;
+
+        render(<AppSidebar />);
+
+        expect(
+            screen.queryByText('Boards you use', { exact: false }),
+        ).not.toBeInTheDocument();
+
+        for (const link of FOOTER_LINKS) {
+            expect(
+                screen.queryByRole('link', { name: link.title }),
+            ).not.toBeInTheDocument();
+        }
+    });
+
+    it('collapses on toggle, hiding visible row labels while every row keeps its accessible name', async () => {
+        const user = userEvent.setup();
+        mockPage.props.auth.user = SIGNED_IN_USER;
+
+        render(<AppSidebar />);
+
+        await user.click(
+            screen.getByRole('button', { name: /collapse sidebar/i }),
+        );
+
+        for (const item of PRIMARY_NAV) {
+            const link = screen.getByRole('link', { name: item.title });
+            expect(link).toBeInTheDocument();
+
+            const label = within(link).getByText(item.title);
+            expect(label).toHaveClass('sr-only');
+        }
+
+        expect(
+            screen.getByRole('button', { name: /expand sidebar/i }),
+        ).toBeInTheDocument();
+    });
+
+    it('writes the sidebar_state cookie when the collapse toggle is used', async () => {
+        const user = userEvent.setup();
+        mockPage.props.sidebarOpen = true;
+
+        render(<AppSidebar />);
+
+        await user.click(
+            screen.getByRole('button', { name: /collapse sidebar/i }),
+        );
+
+        expect(document.cookie).toContain('sidebar_state=false');
+    });
+});

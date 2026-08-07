@@ -11,7 +11,12 @@ export type User = {
 };
 
 export type Auth = {
-    user: User;
+    /**
+     * Null for signed-out anons. The backend shares `$request->user()`, which
+     * is nullable, so typing this as non-nullable made TypeScript vouch for a
+     * guarantee the server never made.
+     */
+    user: User | null;
 };
 
 /* @chisel-passkeys */
