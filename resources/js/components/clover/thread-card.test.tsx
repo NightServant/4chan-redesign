@@ -222,4 +222,25 @@ describe('ThreadCard', () => {
         expect(card.className).not.toMatch(/(^|\s)shadow-/);
         expect(card).toHaveClass('hover:shadow-lift');
     });
+
+    /**
+     * Thread routes do not exist yet, so any surface showing a card before
+     * they do needs to point it somewhere real. Without this the homepage
+     * hero and trending strip would link a first-time visitor into a 404.
+     */
+    it('lets a caller override where the title links', () => {
+        render(<ThreadCard thread={baseThread} href="/popular" />);
+
+        expect(
+            screen.getByRole('link', { name: baseThread.title }),
+        ).toHaveAttribute('href', '/popular');
+    });
+
+    it('falls back to the board and post number when no href is given', () => {
+        render(<ThreadCard thread={baseThread} />);
+
+        expect(
+            screen.getByRole('link', { name: baseThread.title }),
+        ).toHaveAttribute('href', `${baseThread.board}${baseThread.no}`);
+    });
 });

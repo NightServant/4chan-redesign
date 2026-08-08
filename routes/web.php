@@ -27,4 +27,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
 });
 
+/**
+ * Utility pages linked from the sidebar footer and the homepage footer. None
+ * are written yet, so each resolves to a plain "not written yet" screen.
+ *
+ * They exist because the alternative is worse. Task 4 linked four of these and
+ * shipped four live 404s; disabling the links instead would hide them from
+ * screen-reader navigation entirely and make the footer read as broken. An
+ * honest placeholder is the only option that neither lies nor breaks.
+ */
+collect([
+    'rules' => 'Rules',
+    'faq' => 'FAQ',
+    'status' => 'Status',
+    'terms' => 'Terms',
+    'privacy' => 'Privacy',
+    'dmca' => 'DMCA',
+    'contact' => 'Contact',
+    'search' => 'Search',
+    'janitors' => 'Janitor queue',
+    'report' => 'Report a post',
+    'contribute' => 'Contribute',
+])->each(function (string $title, string $uri): void {
+    Route::inertia($uri, 'information', ['title' => $title])->name($uri);
+});
+
 require __DIR__.'/settings.php';
