@@ -23,6 +23,12 @@ import type { Thread } from '@/types/clover';
  */
 type ThreadCardProps = Omit<ComponentProps<'div'>, 'onClick' | 'children'> & {
     thread: Thread;
+    /**
+     * Overrides where the title links. Thread routes do not exist yet, so
+     * surfaces that show a card before then point it somewhere real rather
+     * than at a 404.
+     */
+    href?: string;
     onBless?: () => void;
     onCurse?: () => void;
     onBookmark?: () => void;
@@ -36,13 +42,14 @@ const iconButtonClasses = cn(
 
 function ThreadCard({
     thread,
+    href,
     onBless,
     onCurse,
     onBookmark,
     className,
     ...props
 }: ThreadCardProps) {
-    const href = `${thread.board}${thread.no}`;
+    const titleHref = href ?? `${thread.board}${thread.no}`;
 
     return (
         <Card
@@ -74,7 +81,7 @@ function ThreadCard({
 
             <h3 className="px-5 font-display text-h3 font-semibold text-foreground">
                 <Link
-                    href={href}
+                    href={titleHref}
                     className="static after:absolute after:inset-0 after:content-['']"
                 >
                     {thread.title}
