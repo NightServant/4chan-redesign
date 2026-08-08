@@ -152,3 +152,34 @@ it('emits both variable font families as compressed build assets', function (): 
     // Uncompressed TTFs would roughly double the payload for no benefit.
     expect(glob($buildPath.'/assets/*.ttf') ?: [])->toBeEmpty();
 });
+
+/**
+ * The loading shimmer is the one looping animation Clover allows, on the
+ * grounds that the loop is the message. That exception only holds if the
+ * global reduced-motion rule genuinely overrides it.
+ *
+ * This cannot be tested from the JS side: `vitest.config.ts` sets
+ * `css: false`, so jsdom never loads the stylesheet and a component test can
+ * only assert that a class name is present, not that the cascade suppresses
+ * it. Reading the compiled CSS is the only place the two rules actually meet.
+ */
+it('suppresses looping animation for anons who ask for reduced motion', function (): void {
+    [$css] = compiledStylesheet();
+
+    expect($css)
+        ->toContain('@media (prefers-reduced-motion:reduce)')
+        // Important declarations invert layer order, so these beat the
+        // utility-layer animation regardless of specificity.
+        ->toMatch('/animation-duration:\s*\.?0?\.?01ms!important/')
+        ->toMatch('/animation-iteration-count:\s*1!important/');
+});
+
+it('compiles the loading shimmer rather than naming a keyframe that does not exist', function (): void {
+    [$css] = compiledStylesheet();
+
+    // An animation referencing an undefined keyframe is silently inert, the
+    // same failure shape as an unrecognised font format hint.
+    expect($css)
+        ->toContain('@keyframes pulse')
+        ->toMatch('/animation:\s*1\.4s[^;}]*pulse/');
+});

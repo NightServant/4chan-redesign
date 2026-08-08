@@ -38,6 +38,28 @@ export interface Thread {
     pinned: boolean;
 }
 
+/**
+ * A reply within a thread. Replies nest, so this type is recursive.
+ *
+ * `quotes` holds the post numbers this reply is answering. Clover renders them
+ * as `>>58210441` references rather than threading arrows, which is how the
+ * board has always worked and is the one convention worth preserving.
+ */
+export interface Comment {
+    no: number;
+    /** Post numbers this reply quotes. Empty for a direct reply to the OP. */
+    quotes: number[];
+    /** Almost always `Anonymous`. A tripcode when an anon chose to sign. */
+    author: string;
+    /** Relative and pre-formatted, e.g. `4 min ago`. */
+    time: string;
+    body: string;
+    blessings: number;
+    /** True for the anon who opened the thread. */
+    op: boolean;
+    replies: Comment[];
+}
+
 export interface TrendingTag {
     tag: string;
     /** Pre-formatted, e.g. `4,182 posts`. */
