@@ -1,6 +1,7 @@
 import type {
     ActivityEntry,
     Board,
+    Comment,
     HistoryEntry,
     Thread,
     TrendingTag,
@@ -168,3 +169,88 @@ export const HISTORY: readonly HistoryEntry[] = [
         media: 'thumb · 640×360',
     },
 ] as const;
+
+/**
+ * Replies on thread 58210441. Unlike the other fixtures this one has no
+ * counterpart in the design prototype, which shows a comment tree without
+ * publishing its data. Written here in the same register: dry, specific,
+ * technical, and unimpressed.
+ *
+ * Nesting goes three deep deliberately, so indentation, the depth cap and the
+ * collapse affordance all have something real to act on.
+ */
+export const COMMENTS: readonly Comment[] = [
+    {
+        no: 58210447,
+        quotes: [],
+        author: 'Anonymous',
+        time: '3 min ago',
+        body: 'Forty minutes for LLVM is not "fine", that is a full coffee break per build. What is the core count?',
+        blessings: 214,
+        op: false,
+        replies: [
+            {
+                no: 58210452,
+                quotes: [58210447],
+                author: 'Anonymous',
+                time: '2 min ago',
+                body: 'Eight cores, 16 GB. It is not fast, it is usable. Those are different claims.',
+                blessings: 388,
+                op: true,
+                replies: [
+                    {
+                        no: 58210461,
+                        quotes: [58210452],
+                        author: 'Anonymous',
+                        time: '1 min ago',
+                        body: 'Fair. What is battery like under sustained load?',
+                        blessings: 42,
+                        op: false,
+                        replies: [],
+                    },
+                ],
+            },
+            {
+                no: 58210455,
+                quotes: [58210447],
+                author: 'Anonymous',
+                time: '2 min ago',
+                body: 'Cross compile on an x86 box and rsync the artifacts. Nobody builds LLVM natively on these.',
+                blessings: 156,
+                op: false,
+                replies: [],
+            },
+        ],
+    },
+    {
+        no: 58210449,
+        quotes: [],
+        author: 'Anonymous',
+        time: '2 min ago',
+        body: 'Mainline kernel support or vendor tree? This is the only question that matters and every one of these threads dodges it.',
+        blessings: 512,
+        op: false,
+        replies: [
+            {
+                no: 58210458,
+                quotes: [58210449],
+                author: 'Anonymous',
+                time: '1 min ago',
+                body: 'Vendor tree, 6.6 based. Mainline boots but the GPU does nothing.',
+                blessings: 297,
+                op: true,
+                replies: [],
+            },
+        ],
+    },
+    {
+        no: 58210463,
+        quotes: [],
+        author: 'Anonymous',
+        time: 'just now',
+        body: 'Bought one in April and returned it in May. Your mileage will vary wildly by workload.',
+        blessings: 8,
+        op: false,
+        replies: [],
+    },
+];
