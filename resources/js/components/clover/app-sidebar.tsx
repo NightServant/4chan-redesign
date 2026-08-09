@@ -33,12 +33,16 @@ const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 const MAX_BOARD_ROWS = 5;
 
 const rowBaseClasses =
-    'flex h-[38px] items-center gap-3 rounded-lg px-[11px] text-body-sm transition-colors duration-[var(--duration-hover)] ease-standard';
+    'flex h-[38px] items-center gap-3 rounded-lg text-body-sm transition-colors duration-[var(--duration-hover)] ease-standard';
 
 const rowRestClasses =
     'font-normal text-muted-foreground hover:bg-surface-hover hover:text-foreground hover:font-medium';
 
 const rowActiveClasses = 'bg-primary-soft font-semibold text-primary';
+
+/** Shared by the collapse and expand toggles so both sit on the same axis. */
+const toggleClasses =
+    'flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover hover:text-foreground';
 
 type AppSidebarProps = Omit<ComponentProps<'aside'>, 'children'>;
 
@@ -65,9 +69,14 @@ function AppSidebar({ className, ...props }: AppSidebarProps) {
         const row = (
             <Link
                 href={item.href}
+                data-slot="sidebar-row"
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                     rowBaseClasses,
+                    /* Collapsed, the row is only an icon, so it centres on the
+                       rail's axis. Keeping the expanded padding here is what
+                       pushed every glyph left of the toggle above it. */
+                    open ? 'px-[11px]' : 'justify-center px-0',
                     active ? rowActiveClasses : rowRestClasses,
                 )}
             >
@@ -95,24 +104,26 @@ function AppSidebar({ className, ...props }: AppSidebarProps) {
             <aside
                 data-slot="app-sidebar"
                 className={cn(
-                    'bg-bg sticky top-0 z-20 hidden h-screen shrink-0 flex-col border-r border-border md:flex',
+                    'sticky top-0 z-20 hidden h-screen shrink-0 flex-col border-r border-border bg-bg md:flex',
                     open ? 'w-[268px]' : 'w-[76px]',
                     className,
                 )}
                 {...props}
             >
+                {/* Exactly the header's height, so the wordmark and the
+                    header content share a baseline. The sidebar is a sibling
+                    of the header's column, not its parent, so nothing lines
+                    these up automatically. */}
                 <div
+                    data-slot="sidebar-brand"
                     className={cn(
-                        'flex items-center gap-1 px-3 py-4',
-                        !open && 'flex-col',
+                        'flex h-16 shrink-0 items-center px-3',
+                        open ? 'justify-between gap-1' : 'justify-center',
                     )}
                 >
                     <Link
                         href={home()}
-                        className={cn(
-                            'flex items-center gap-2 rounded-lg px-2 py-1.5 text-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover',
-                            !open && 'justify-center',
-                        )}
+                        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover"
                     >
                         {open ? (
                             <Wordmark />
@@ -121,30 +132,39 @@ function AppSidebar({ className, ...props }: AppSidebarProps) {
                         )}
                     </Link>
 
-                    <button
-                        type="button"
-                        onClick={toggleOpen}
-                        className={cn(
-                            'flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover hover:text-foreground',
-                            open && 'ml-auto',
-                        )}
-                    >
-                        {open ? (
+                    {open ? (
+                        <button
+                            type="button"
+                            onClick={toggleOpen}
+                            className={toggleClasses}
+                        >
                             <PanelLeftCloseIcon
                                 aria-hidden="true"
                                 className="size-4"
                             />
-                        ) : (
+                            <span className="sr-only">Collapse sidebar</span>
+                        </button>
+                    ) : null}
+                </div>
+
+                {/* Collapsed, the toggle drops below the mark and centres on
+                    the same axis as every nav icon. Side by side they would
+                    not fit a 76px rail. */}
+                {!open ? (
+                    <div className="flex shrink-0 justify-center px-2 pb-2">
+                        <button
+                            type="button"
+                            onClick={toggleOpen}
+                            className={toggleClasses}
+                        >
                             <PanelLeftOpenIcon
                                 aria-hidden="true"
                                 className="size-4"
                             />
-                        )}
-                        <span className="sr-only">
-                            {open ? 'Collapse sidebar' : 'Expand sidebar'}
-                        </span>
-                    </button>
-                </div>
+                            <span className="sr-only">Expand sidebar</span>
+                        </button>
+                    </div>
+                ) : null}
 
                 <nav
                     aria-label="Primary"

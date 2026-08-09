@@ -131,4 +131,32 @@ describe('TopNav', () => {
             screen.queryByRole('button', { name: /menu/i }),
         ).not.toBeInTheDocument();
     });
+
+    /**
+     * The header sits over scrolling content, so it needs to read as glass
+     * rather than as an opaque bar cutting the page in half.
+     *
+     * The translucent fill is gated behind `supports-[backdrop-filter]`: where
+     * the filter is unavailable the header stays fully opaque, because a
+     * see-through header with no blur behind it is unreadable rather than
+     * merely unstyled.
+     */
+    it('frosts the header over the content it covers', () => {
+        const { container } = render(<TopNav />);
+
+        const header = container.querySelector('header');
+
+        expect(header?.className).toMatch(/backdrop-blur/);
+        expect(header?.className).toMatch(
+            /supports-\[backdrop-filter\]:bg-bg\//,
+        );
+    });
+
+    it('stays opaque where backdrop-filter is unsupported', () => {
+        const { container } = render(<TopNav />);
+
+        const header = container.querySelector('header');
+
+        expect(header?.className).toMatch(/(^|\s)bg-bg(\s|$)/);
+    });
 });

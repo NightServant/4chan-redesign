@@ -269,7 +269,13 @@
     --color-sidebar-border: var(--border-hairline);
     --color-sidebar-ring: var(--focus-ring);
 
-    /* Clover-native surfaces and text */
+    /* Clover-native surfaces and text.
+       `--color-bg` backs `bg-bg`, which the sidebar and both headers use. It
+       was missing until now, so those utilities emitted no CSS and every
+       sticky surface was transparent: content scrolled underneath them and a
+       backdrop blur had no fill to frost. The page only looked right because
+       the body colour showed through. */
+    --color-bg: var(--bg);
     --color-surface: var(--surface);
     --color-surface-elevated: var(--surface-elevated);
     --color-surface-hover: var(--surface-hover);
