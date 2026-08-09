@@ -1,269 +1,154 @@
-# Clover
+<p align="center">
+  <img src="public/favicon.svg" alt="Clover mark: a four-leaf clover on a brand-green rounded square" width="72" height="72"/>
+</p>
 
-**A 4chan redesign. Same boards, threads and greentext, without the 2003 interface.**
+<h1 align="center">Clover</h1>
 
-Clover keeps what imageboards got right, anonymity, boards instead of followers,
-and no algorithmic timeline, and rebuilds the surface around it. It is a
-Laravel 13 + Inertia + React application, ported from a design system rather
-than styled ad hoc.
+<p align="center"><em>The same boards, threads and greentext. Without the 2003 interface.</em></p>
 
-> **Status: in progress.** The design system and the public pages are built and
-> tested. The backend data layer is not, so threads and boards currently render
-> from typed fixtures. See [Progress track](#progress-track).
-
----
+A redesign of 4chan built on Laravel, Inertia and React. Fly through boards that keep bump order instead of an algorithm, read threads where greentext still works, bless or curse a post without an account following you around, and browse it all in a design system authored once in OKLCH and derived into two themes.
 
 ## Overview
 
 4chan's information architecture has aged well. Its interface has not.
 
-Clover is a front-to-back redesign that treats the underlying model as correct:
-anonymous posting, subject-scoped boards, bump-order ranking, human moderation.
-What changes is everything a person actually touches. A real type scale. A
-colour system authored in OKLCH so both themes are derived from one set of
-values. Components that are keyboard operable and readable by a screen reader,
-because an imageboard read at 2am on a phone is not a place to be precious about
-accessibility.
+Clover treats the underlying model as correct: anonymous posting, subject-scoped boards, bump-order ranking, human moderation. What changes is everything a person actually touches. A real type scale, a colour system where both themes fall out of one set of values, and components that are keyboard operable and readable by a screen reader, because an imageboard read at 2am on a phone is no place to be precious about accessibility.
 
-The design lives in a Claude Design project and is treated as a **blueprint, not
-a spec**. Where the prototype and good practice disagree, good practice wins,
-and the departure gets written down. Three examples that shipped:
+The design lives in a Claude Design project and is treated as a blueprint, not a spec. Where the prototype and good practice disagree, good practice wins and the departure is written down. The prototype animates the sidebar's `width` on collapse, so the width snaps and only colour transitions. Its light theme sets button text to `#FFFFFF`, which measures 3.06:1 against the light green and fails WCAG AA, so the authored `#06130B` ships instead at 6.20:1. Its `Switch` animates `justify-content` to slide the thumb, so the thumb translates.
 
-- The prototype animates the sidebar's `width` on collapse. Animating layout
-  properties causes jank, so the width snaps and only colour transitions.
-- Its light theme sets button text to `#FFFFFF`, which is **3.06:1** against the
-  light green and fails WCAG AA. The authored `#06130B` gives **6.20:1** and is
-  what ships.
-- Its `Switch` animates `justify-content` to slide the thumb. The thumb
-  translates instead.
-
----
+Boards, threads and replies currently render from typed fixtures. The contracts in `resources/js/types/clover.ts` are shaped so components do not change when Eloquent replaces them.
 
 ## Features
 
-### The product
+- **Token foundation** &mdash; every colour authored once in OKLCH, mapped through Tailwind's `@theme` to both shadcn aliases and Clover-native utilities; dark by default with a fully authored light scope, and no neutral pure black or white
+- **Component library** &mdash; 57 components across primitives, Clover-specific components and homepage sections, each built test-first
+- **Overlays on Radix** &mdash; dialog, dropdown, context menu, tabs, tooltip and select, so focus trapping, roving tabindex and typeahead are correct rather than approximated
+- **Command palette** &mdash; ⌘K / Ctrl+K over `cmdk`, net-new work the design prototype never covered
+- **App chrome** &mdash; collapsible sidebar with persisted state, sticky header with account and notification menus, and a mobile bottom bar that respects the home-indicator inset
+- **Community layer** &mdash; thread cards with a stretched-link target so vote buttons stay independently focusable, a recursive comment tree with real list semantics, collapse and a depth cap, and blessings and curses rather than upvotes
+- **Marketing homepage** &mdash; hero, board grid, trending strip, features, and a footer whose every destination resolves to a real page
+- **Accessibility as a build constraint** &mdash; focus rings never removed, state never carried by colour alone, tests asserting accessible names and keyboard paths instead of class strings
+- **Motion that means something** &mdash; four duration tokens, exits at roughly 65% of their enter, layout properties never animated, and a reduced-motion rule asserted against the compiled stylesheet
+- **Two variable fonts** &mdash; Inter and Space Grotesk, subset to WOFF2; no monospace ships, and machine values use Inter with tabular figures
 
-**Anonymous by default.** Any board is readable without an account. Posting,
-commenting and blessing require one, and posts are still signed Anonymous. An
-account is an identity for moderation, not a profile for an audience.
+## Tech stack
 
-**Boards, not follows.** You subscribe to subjects. Nobody accumulates
-followers, so nobody optimises for them.
-
-**Blessings and curses.** Ranking is bump order plus blessings; curses sink a
-thread and replies bump it back up. There is no recommendation feed deciding
-what you see. The vocabulary is deliberate and enforced throughout the codebase:
-a vote is a blessing or a curse, never an upvote.
-
-**Janitors, not bots.** Moderation is scoped to boards and performed by people,
-with a public action log.
-
-**Greentext preserved.** Markdown, quotes and `>greentext` work the way they
-always have.
-
-**Fast on purpose.** No infinite scroll, no autoplay, no tracking scripts.
-
-### The implementation
-
-**One token layer, two themes.** Every colour is authored once in OKLCH and
-mapped through Tailwind's `@theme` to both shadcn aliases and Clover-native
-utilities. Dark is the default; light is a first-class, fully authored scope,
-not an inversion. No neutral is pure `#000` or `#fff`, every one carries a
-slight green tint so surfaces separate without borders doing all the work.
-
-**A tested component library.** 57 components across three namespaces:
-primitives (`ui/`), Clover-specific components (`clover/`), and homepage
-sections (`home/`). Overlays and menus are built on Radix, so focus trapping,
-roving tabindex and typeahead are correct rather than approximated.
-
-**Accessibility as a build constraint.** Focus indicators are never removed.
-State is never conveyed by colour alone. The comment tree renders as real nested
-lists so depth and position reach a screen reader. Tests assert accessible names
-and keyboard paths, not class strings.
-
-**A command palette.** ⌘K / Ctrl+K, built on `cmdk`. Net-new work: the design
-prototype has no palette.
-
-**Two variable fonts, subset to WOFF2.** Inter for text, Space Grotesk for
-display. No monospace font ships; machine values use Inter with tabular figures,
-which is what monospace was doing here anyway.
-
-**Motion that means something.** Four duration tokens, exits at roughly 65% of
-their enter, layout properties never animated, and a global
-`prefers-reduced-motion` rule that is asserted against the compiled stylesheet
-rather than assumed.
-
----
-
-## Brand colour palette
-
-One green on a near-black field. Green marks state and action; it is **never** a
-page background or a large fill. Values are authored in OKLCH, which keeps
-lightness perceptually even across hues and makes the two themes derivable from
-one set of decisions. Hex below is the sRGB equivalent, for reference only.
-
-### Dark (default)
-
-| | Token | Hex | OKLCH | Role |
-|---|---|---|---|---|
-| ![](https://placehold.co/18x18/080A09/080A09.png) | `--bg` | `#080A09` | `14.18% 0.0042 165.2` | Page field |
-| ![](https://placehold.co/18x18/111513/111513.png) | `--surface` | `#111513` | `19.06% 0.0074 164.1` | Cards, rails |
-| ![](https://placehold.co/18x18/171C19/171C19.png) | `--surface-elevated` | `#171C19` | `22.01% 0.0095 159.2` | Menus, dialogs |
-| ![](https://placehold.co/18x18/1B241E/1B241E.png) | `--border-hairline` | `#1B241E` | `24.93% 0.0171 155.8` | Dividers |
-| ![](https://placehold.co/18x18/34C76F/34C76F.png) | `--primary` | `#34C76F` | `73.37% 0.1751 152.1` | Action, active state |
-| ![](https://placehold.co/18x18/F2F5F2/F2F5F2.png) | `--text-primary` | `#F2F5F2` | `96.7% 0.0051 145.5` | Body text |
-| ![](https://placehold.co/18x18/9AA39C/9AA39C.png) | `--text-muted` | `#9AA39C` | `70.61% 0.0143 152.5` | Secondary text |
-| ![](https://placehold.co/18x18/75807A/75807A.png) | `--text-faint` | `#75807A` | `58.89% 0.0158 162.2` | Machine values |
-| ![](https://placehold.co/18x18/F85149/F85149.png) | `--danger` | `#F85149` | `66.51% 0.2046 27` | Destructive |
-| ![](https://placehold.co/18x18/D6A420/D6A420.png) | `--warning` | `#D6A420` | `74.53% 0.1453 85.2` | Caution |
-
-### Light
-
-| | Token | Hex | OKLCH | Role |
-|---|---|---|---|---|
-| ![](https://placehold.co/18x18/F6F8F6/F6F8F6.png) | `--bg` | `#F6F8F6` | `97.71% 0.0034 145.5` | Page field |
-| ![](https://placehold.co/18x18/FBFEFC/FBFEFC.png) | `--surface` | `#FBFEFC` | `99.4% 0.004 150` | Cards, rails |
-| ![](https://placehold.co/18x18/DFE5E0/DFE5E0.png) | `--border-hairline` | `#DFE5E0` | `91.59% 0.0093 150.7` | Dividers |
-| ![](https://placehold.co/18x18/2AA85C/2AA85C.png) | `--primary` | `#2AA85C` | `64.67% 0.1552 151.9` | Action, active state |
-| ![](https://placehold.co/18x18/06130B/06130B.png) | `--text-on-primary` | `#06130B` | `17.12% 0.0256 156.5` | Text on green |
-| ![](https://placehold.co/18x18/0D1411/0D1411.png) | `--text-primary` | `#0D1411` | `18.28% 0.0123 166.9` | Body text |
-| ![](https://placehold.co/18x18/4C574F/4C574F.png) | `--text-muted` | `#4C574F` | `44.45% 0.0189 154` | Secondary text |
-| ![](https://placehold.co/18x18/C93A32/C93A32.png) | `--danger` | `#C93A32` | `56.06% 0.1812 27.8` | Destructive |
-
-**Two rules the palette enforces.** No neutral is pure white or black, every one
-is tinted toward the brand hue, so surfaces read as a family. And
-`--text-on-primary` stays dark in both themes: white on the light green measures
-3.06:1 and fails WCAG AA, where the dark value measures 6.20:1. A test asserts
-this and will fail if anyone reintroduces white.
-
----
-
-## Technology stack
-
-### Backend
-
-| | |
+| Layer | Technology |
 |---|---|
-| PHP | 8.4 |
-| Laravel | 13 |
-| Inertia (Laravel adapter) | 3 |
-| Laravel Fortify | 1 (auth, two-factor, passkeys) |
-| Laravel Wayfinder | 0.1 (typed route helpers for the client) |
-| Pest | 4 |
-| Larastan | 3 (level 7) |
-| Pint | 1 |
+| Framework | [Laravel 13](https://laravel.com) · PHP 8.4 · [Inertia 3](https://inertiajs.com) |
+| Frontend | [React 19](https://react.dev) · TypeScript 5.7 (strict) · [Vite 8](https://vite.dev) |
+| Styling | [Tailwind CSS v4](https://tailwindcss.com) (`@theme`, no config file) · class-variance-authority · tw-animate-css |
+| Components | [Radix UI](https://radix-ui.com) primitives · [cmdk](https://cmdk.paco.me) · [Sonner](https://sonner.emilkowal.ski) · [Lucide](https://lucide.dev) icons |
+| Auth | [Laravel Fortify](https://laravel.com/docs/fortify) · two-factor · passkeys |
+| Routing | [Wayfinder](https://github.com/laravel/wayfinder) typed route helpers |
+| Database | SQLite · Eloquent |
+| Testing | [Pest 4](https://pestphp.com) · [Vitest 4](https://vitest.dev) · Testing Library |
+| Quality | Larastan (level 7) · Pint · ESLint 9 · Prettier 3 |
 
-### Frontend
+## Brand
 
-| | |
-|---|---|
-| React | 19 |
-| TypeScript | 5.7, strict |
-| Inertia (React adapter) | 3 |
-| Tailwind CSS | 4 (`@theme`, no config file) |
-| Vite | 8 |
-| class-variance-authority | 0.7 (component variants) |
-| Radix UI | dialog, dropdown, context menu, select, tabs, tooltip, checkbox |
-| cmdk | 1.1 (command palette) |
-| Sonner | 2 (toasts) |
-| Lucide | icons, the only glyph source; no emoji anywhere |
-| Vitest + Testing Library | 4 / 16 |
-| ESLint 9, Prettier 3 | |
+The identity is one green on a near-black field. Space Grotesk carries the wordmark and headings, Inter carries body text, and machine values (post numbers, board slugs, byte counts) use Inter with tabular figures so digit columns hold still as counts change. There is no monospace font: tabular figures were what monospace was doing here anyway.
 
-### Tooling
+Green marks state and action. It is never a page background and never a large fill.
 
-Laravel Herd for local serving, GitHub Actions for CI. Every pull request runs
-type analysis, the JS suite, the PHP suite, lint and format checks across PHP
-8.4 and 8.5. `main` is protected: squash merges only, linear history, three
-required green checks.
+### Color palette
 
----
+![Clover brand palette: dark and light scopes, one green on fog-tinted neutrals](docs/brand-palette.svg)
 
-## Progress track
+Colours are authored in OKLCH, which keeps lightness perceptually even across hues and lets both themes derive from one set of decisions. Hex below is the sRGB equivalent, for reference only. All tokens live in [`resources/css/app.css`](resources/css/app.css); components consume semantic utilities (`bg-surface`, `text-faint`, `border-border`), so the theme retunes in one place.
 
-Work is sequenced into gated tasks. Each is built, reviewed, merged to `main` as
-a single squashed commit, and verified on `main` before the next begins.
+| Token | Role | OKLCH | Hex |
+|---|---|---|---|
+| Field | `--bg` (dark) | `oklch(14.18% 0.0042 165.2)` | `#080A09` |
+| Surface | `--surface` (dark) | `oklch(19.06% 0.0074 164.1)` | `#111513` |
+| Primary | `--primary` (dark) | `oklch(73.37% 0.1751 152.1)` | `#34C76F` |
+| Text | `--text-primary` (dark) | `oklch(96.7% 0.0051 145.5)` | `#F2F5F2` |
+| Muted | `--text-muted` (dark) | `oklch(70.61% 0.0143 152.5)` | `#9AA39C` |
+| Field | `--bg` (light) | `oklch(97.71% 0.0034 145.5)` | `#F6F8F6` |
+| Primary | `--primary` (light) | `oklch(64.67% 0.1552 151.9)` | `#2AA85C` |
+| On primary | `--text-on-primary` | `oklch(17.12% 0.0256 156.5)` | `#06130B` |
+| Danger | `--danger` (dark) | `oklch(66.51% 0.2046 27)` | `#F85149` |
+| Warning | `--warning` (dark) | `oklch(74.53% 0.1453 85.2)` | `#D6A420` |
 
-### Done
+Two rules the palette enforces. No neutral is pure white or black, every one is tinted toward the brand hue so surfaces read as a family. And `--text-on-primary` stays dark in both themes: white on the light green measures 3.06:1 and fails WCAG AA, where the dark value measures 6.20:1. A test asserts this and fails if anyone reintroduces white.
 
-| Task | What landed | PR |
-|---|---|---|
-| **1** | **Design foundation.** OKLCH token layer, both theme scopes, two variable fonts, typed domain contracts and fixtures. | [#4](https://github.com/NightServant/4chan-redesign/pull/4) |
-| **2** | **Core primitives and form controls.** Button, Card, Badge, Input, Textarea, Select, Checkbox, Tag, avatars, form and search fields. | [#7](https://github.com/NightServant/4chan-redesign/pull/7) |
-| **3** | **Overlays, navigation, feedback.** Dialog, MenuSurface family, Dropdown, ContextMenu, CommandPalette, Toast, NotificationItem, Tabs, Pagination. | [#8](https://github.com/NightServant/4chan-redesign/pull/8) |
-| **4** | **App chrome and layouts.** Collapsible sidebar, sticky header, mobile bottom bar, eight stub routes. Breadcrumbs and the shadcn sidebar primitive removed. | [#9](https://github.com/NightServant/4chan-redesign/pull/9) |
-| **5** | **Community layer.** ThreadCard, VoteControl, MediaPlaceholder, CommentTree, Panel, Switch, Progress, Tooltip, Skeleton. | [#10](https://github.com/NightServant/4chan-redesign/pull/10) |
-| **6** | **Homepage.** Nav, hero, boards, trending, features, how it works, footer. Eleven information routes added. | [#11](https://github.com/NightServant/4chan-redesign/pull/11) |
-| **6.1** | **Visual fixes.** Sidebar rail alignment, hero card overlap, header backdrop blur, and a missing `--color-bg` token that left every sticky surface transparent. | [#12](https://github.com/NightServant/4chan-redesign/pull/12) |
+### Brand icon
 
-**Current suite: 409 frontend tests, 85 backend tests.** Every component is
-built test-first.
+The mark is a single glyph, drawn once in [`resources/js/components/clover/wordmark.tsx`](resources/js/components/clover/wordmark.tsx) and reused wherever it appears:
 
-### Planned
+- `Mark` &mdash; the glyph alone, used in the collapsed sidebar rail
+- `Wordmark` &mdash; the glyph plus the word `clover`, always lowercase, used in the expanded sidebar, the homepage nav and the footer
+- [`public/favicon.svg`](public/favicon.svg) &mdash; the same glyph in near-black on a brand-green rounded square
 
-| Task | Scope |
-|---|---|
-| **7** | Feed and board pages, thread routing |
-| **8** | Thread view and composer |
-| **9** | Account, history, auth screens and error pages |
-| **10** | Design and build the six screens the prototype never covered: settings, messages, bookmarks, communities, two-factor, passkeys |
-| **11** | Backend data layer, replacing fixtures with Eloquent |
+The prototype masks a PNG for the glyph. A raster mask cannot recolour cleanly across two themes and costs a request for one shape, so the app uses a vector icon that both themes can tint.
 
-### Known gaps
+## Local setup
 
-- **No backend yet.** Boards, threads and replies render from typed fixtures in
-  `resources/js/fixtures/`. The contracts in `resources/js/types/clover.ts` are
-  designed so components do not change when Eloquent replaces them.
-- **Thread routes do not exist.** `ThreadCard` accepts an `href` override so
-  surfaces that show a card before Task 7 can point it somewhere real.
-- **Authenticated screens are only partly restyled.** `/dashboard` still renders
-  starter-kit placeholders, and the split auth layout bypasses the token layer.
-  Tasks 7 and 9 respectively.
-
----
-
-## Local development
-
-Requires PHP 8.4+, Node 22+ and Composer. The database is SQLite, created on
-first migrate.
+**Prerequisites:** PHP 8.4+, Node 22+, Composer. The database is SQLite and is created on first migrate. No API keys or paid accounts required.
 
 ```bash
+# 1. Clone
+git clone https://github.com/NightServant/4chan-redesign.git
+cd 4chan-redesign
+
+# 2. Install both dependency trees, copy .env, generate a key, migrate, build
 composer setup
-```
 
-That installs both dependency trees, copies `.env`, generates a key, migrates
-and builds assets. Then:
-
-```bash
+# 3. Run the dev server
 composer dev
 ```
 
-Served by [Laravel Herd](https://herd.laravel.com) at `https://4chan-redesign.test`.
+Open [http://localhost:8000](http://localhost:8000). Served by [Laravel Herd](https://herd.laravel.com) at `https://4chan-redesign.test` if you use it.
 
-### Checks
+> **Note:** the site renders without a running queue or cache. If a page 500s after a fresh pull, run `npm run build` first: Pest asserts against the compiled stylesheet and skips those checks when assets are unbuilt.
+
+### Useful commands
 
 ```bash
 composer ci:check        # everything CI runs, in one command
-```
 
-Or individually:
-
-```bash
 npm run test:js          # Vitest
 php artisan test         # Pest
 npm run types:check      # tsc --noEmit
-composer types:check     # Larastan (PHPStan level 7)
+composer types:check     # Larastan, level 7
 npm run lint             # ESLint, with --fix
 npm run format           # Prettier
 vendor/bin/pint          # PHP formatting
 ```
 
----
+## Progress
+
+Work is sequenced into gated tasks. Each is built, reviewed, merged to `main` as one squashed commit, and verified on `main` before the next begins. **Current suite: 409 frontend tests, 85 backend tests.**
+
+| Task | Scope | Status |
+|---|---|---|
+| 1 | Design foundation: OKLCH tokens, both theme scopes, two variable fonts, typed contracts | [Merged](https://github.com/NightServant/4chan-redesign/pull/4) |
+| 2 | Core primitives and form controls | [Merged](https://github.com/NightServant/4chan-redesign/pull/7) |
+| 3 | Overlays, navigation, feedback; command palette | [Merged](https://github.com/NightServant/4chan-redesign/pull/8) |
+| 4 | App chrome and Inertia layouts; breadcrumbs and the shadcn sidebar removed | [Merged](https://github.com/NightServant/4chan-redesign/pull/9) |
+| 5 | Community layer: thread cards, votes, comment tree, skeletons | [Merged](https://github.com/NightServant/4chan-redesign/pull/10) |
+| 6 | Homepage, plus eleven information routes | [Merged](https://github.com/NightServant/4chan-redesign/pull/11) |
+| 6.1 | Visual fixes from review: rail alignment, hero overlap, header backdrop | [Merged](https://github.com/NightServant/4chan-redesign/pull/12) |
+| 7 | Feed and board pages, thread routing | Planned |
+| 8 | Thread view and composer | Planned |
+| 9 | Account, history, auth screens, error pages | Planned |
+| 10 | The six screens the prototype never covered: settings, messages, bookmarks, communities, two-factor, passkeys | Planned |
+| 11 | Backend data layer, replacing fixtures with Eloquent | Planned |
+
+### Known gaps
+
+- **No backend yet.** Boards, threads and replies render from fixtures in `resources/js/fixtures/`.
+- **Thread routes do not exist.** `ThreadCard` accepts an `href` override so surfaces showing a card before Task 7 point somewhere real.
+- **Authenticated screens are partly restyled.** `/dashboard` still renders starter-kit placeholders and the split auth layout bypasses the token layer. Tasks 7 and 9.
+
+## Data notes
+
+Board, thread and reply content is fixture data written for this project, in the product's voice. It is not scraped from 4chan and no real posts are reproduced. Attachments are never invented: media renders as a labelled placeholder carrying filename, dimensions and size rather than a stock photograph.
+
+Fonts are Inter and Space Grotesk, both under the SIL Open Font License, vendored and subset to WOFF2. Icons are Lucide, ISC licensed.
 
 ## Licence
 
-No licence has been chosen yet, so default copyright applies and the code is not
-yet free to reuse. A licence file will land before the project is considered
-finished.
+No licence has been chosen yet, so default copyright applies and the code is not yet free to reuse. A licence file will land before the project is considered finished.
 
 Clover is an independent redesign exercise and is not affiliated with 4chan.
