@@ -1,8 +1,18 @@
 <?php
 
+use App\Http\Controllers\BoardController;
+use App\Http\Controllers\ThreadController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
+
+/**
+ * The feed, in three sorts. All three are public: reading needs no account,
+ * which is the product's central claim and should not be contradicted by the
+ * routing.
+ */
+Route::inertia('popular', 'feed', ['sort' => 'popular'])->name('popular');
+Route::inertia('latest', 'feed', ['sort' => 'latest'])->name('latest');
 
 /**
  * Destinations the Clover sidebar links to that have no screen yet. They
@@ -11,8 +21,6 @@ Route::inertia('/', 'welcome')->name('home');
  * copy is written against; replacing one with a real screen is a matter of
  * pointing the route at a different component.
  */
-Route::inertia('popular', 'placeholder', ['destination' => 'popular'])->name('popular');
-Route::inertia('latest', 'placeholder', ['destination' => 'latest'])->name('latest');
 Route::inertia('communities', 'placeholder', ['destination' => 'communities'])->name('communities');
 
 Route::middleware('auth')->group(function () {
@@ -24,7 +32,7 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
+    Route::inertia('dashboard', 'feed', ['sort' => 'bumped'])->name('dashboard');
 });
 
 /**
@@ -51,5 +59,26 @@ collect([
 ])->each(function (string $title, string $uri): void {
     Route::inertia($uri, 'information', ['title' => $title])->name($uri);
 });
+
+/**
+ * Boards and threads, registered last and constrained to known slugs.
+ *
+ * `/{board}` has the same shape as every named page above it, so without the
+ * constraint the router would resolve `/rules` as a board and shadow the real
+ * page. Registering these last is belt and braces: the constraint is what
+ * actually does the work, and `BoardRoutingTest` proves both halves.
+ *
+ * The slug list lives in `config/clover.php` and becomes a database lookup
+ * once the backend lands.
+ */
+$boardPattern = implode('|', config('clover.boards'));
+
+Route::get('{board}', BoardController::class)
+    ->where('board', $boardPattern)
+    ->name('board');
+
+Route::get('{board}/{thread}', ThreadController::class)
+    ->where(['board' => $boardPattern, 'thread' => '[0-9]+'])
+    ->name('thread');
 
 require __DIR__.'/settings.php';

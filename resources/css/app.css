@@ -84,6 +84,7 @@
     --danger-line: oklch(56.06% 0.1812 27.8 / 0.34);
     --warning: oklch(58.13% 0.1141 84.4);
     --warning-soft: oklch(58.13% 0.1141 84.4 / 0.12);
+    --warning-line: oklch(58.13% 0.1141 84.4 / 0.34);
     --success: oklch(64.67% 0.1552 151.9);
 
     /* Media placeholder weave */
@@ -127,6 +128,7 @@
     --danger-line: oklch(66.51% 0.2046 27 / 0.4);
     --warning: oklch(74.53% 0.1453 85.2);
     --warning-soft: oklch(74.53% 0.1453 85.2 / 0.12);
+    --warning-line: oklch(74.53% 0.1453 85.2 / 0.4);
     --success: oklch(73.37% 0.1751 152.1);
 
     /* Media placeholder weave */
@@ -297,6 +299,7 @@
     --color-danger-line: var(--danger-line);
     --color-warning: var(--warning);
     --color-warning-soft: var(--warning-soft);
+    --color-warning-line: var(--warning-line);
     --color-success: var(--success);
 
     --color-placeholder-a: var(--placeholder-a);

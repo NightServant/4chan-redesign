@@ -5,6 +5,7 @@ import { BoardAvatar } from '@/components/clover/board-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
 import { MediaPlaceholder } from '@/components/clover/media-placeholder';
 import { VoteControl } from '@/components/clover/vote-control';
+import type { VoteState } from '@/components/clover/vote-control';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,12 @@ type ThreadCardProps = Omit<ComponentProps<'div'>, 'onClick' | 'children'> & {
      * than at a 404.
      */
     href?: string;
+    /**
+     * The anon's vote, held by the caller. The card owns no vote state of its
+     * own, so without this the bless button reports `aria-pressed="false"`
+     * forever and a landed bless is signalled only by the count changing.
+     */
+    voteState?: VoteState;
     onBless?: () => void;
     onCurse?: () => void;
     onBookmark?: () => void;
@@ -43,6 +50,7 @@ const iconButtonClasses = cn(
 function ThreadCard({
     thread,
     href,
+    voteState = null,
     onBless,
     onCurse,
     onBookmark,
@@ -103,6 +111,7 @@ function ThreadCard({
             <div className="relative flex items-center gap-5 px-5">
                 <VoteControl
                     count={thread.blessings}
+                    state={voteState}
                     onBless={onBless}
                     onCurse={onCurse}
                     size="sm"
