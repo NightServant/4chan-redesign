@@ -205,7 +205,13 @@ describe('Feed', () => {
         ).toBeInTheDocument();
     });
 
-    it('sends a signed-out anon to the login route instead of voting when bless is pressed', async () => {
+    /**
+     * The design's own pattern for a gated action is a dialog, not a redirect.
+     * Sending an anon to /login throws away their place in the feed to answer
+     * a question they may not want to answer yet, and the thread page already
+     * uses the gate, so the two pages agreed on nothing.
+     */
+    it('opens the auth gate instead of voting when a signed-out anon blesses', async () => {
         const user = userEvent.setup();
         mockPage({ signedIn: false });
         const thread = THREADS[0];
@@ -220,7 +226,13 @@ describe('Feed', () => {
             within(card).getByRole('button', { name: 'Bless this post' }),
         );
 
-        expect(router.visit).toHaveBeenCalledWith('/login');
+        expect(
+            await screen.findByRole('dialog', {
+                name: /create an account to continue/i,
+            }),
+        ).toBeInTheDocument();
+        expect(screen.getByText(/bless a thread/i)).toBeInTheDocument();
+        expect(router.visit).not.toHaveBeenCalled();
         expect(
             within(card).getByText(String(thread.blessings)),
         ).toBeInTheDocument();

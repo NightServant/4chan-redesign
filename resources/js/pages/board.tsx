@@ -7,7 +7,6 @@ import { BoardHeader } from '@/components/feed/board-header';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BOARDS, THREADS } from '@/fixtures/clover';
-import AppLayout from '@/layouts/app-layout';
 import { popular } from '@/routes';
 import type { BoardSlug, Thread } from '@/types/clover';
 
@@ -59,7 +58,7 @@ export default function Board({ slug }: BoardProps) {
     }
 
     return (
-        <AppLayout>
+        <>
             <Head title={board.name} />
 
             <div className="mx-auto flex max-w-[760px] flex-col gap-6 px-6 py-8">
@@ -108,6 +107,6 @@ export default function Board({ slug }: BoardProps) {
                     ))}
                 </Tabs>
             </div>
-        </AppLayout>
+        </>
     );
 }
