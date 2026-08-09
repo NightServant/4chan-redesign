@@ -16,16 +16,21 @@ Clover treats the underlying model as correct: anonymous posting, subject-scoped
 
 The design lives in a Claude Design project and is treated as a blueprint, not a spec. Where the prototype and good practice disagree, good practice wins and the departure is written down. The prototype animates the sidebar's `width` on collapse, so the width snaps and only colour transitions. Its light theme sets button text to `#FFFFFF`, which measures 3.06:1 against the light green and fails WCAG AA, so the authored `#06130B` ships instead at 6.20:1. Its `Switch` animates `justify-content` to slide the thumb, so the thumb translates.
 
+Some of it is not a port at all. The prototype has no command palette, no thread page and no composer: it stubs the last two with copy claiming the design system ships them, and it does not. Those are net-new work built to sit inside the system rather than beside it.
+
 Boards, threads and replies currently render from typed fixtures. The contracts in `resources/js/types/clover.ts` are shaped so components do not change when Eloquent replaces them.
 
 ## Features
 
 - **Token foundation** &mdash; every colour authored once in OKLCH, mapped through Tailwind's `@theme` to both shadcn aliases and Clover-native utilities; dark by default with a fully authored light scope, and no neutral pure black or white
-- **Component library** &mdash; 57 components across primitives, Clover-specific components and homepage sections, each built test-first
+- **Component library** &mdash; 64 components across primitives, Clover-specific components, and page sections, each built test-first
 - **Overlays on Radix** &mdash; dialog, dropdown, context menu, tabs, tooltip and select, so focus trapping, roving tabindex and typeahead are correct rather than approximated
 - **Command palette** &mdash; ⌘K / Ctrl+K over `cmdk`, net-new work the design prototype never covered
 - **App chrome** &mdash; collapsible sidebar with persisted state, sticky header with account and notification menus, and a mobile bottom bar that respects the home-indicator inset
 - **Community layer** &mdash; thread cards with a stretched-link target so vote buttons stay independently focusable, a recursive comment tree with real list semantics, collapse and a depth cap, and blessings and curses rather than upvotes
+- **Feed, boards and threads** &mdash; three feed sorts, a board page per slug with a real empty state, and a thread view that handles a post number matching nothing as an ordinary case rather than an error
+- **Imageboard URLs** &mdash; `/g/` is a board and `/g/58210441` a thread, constrained to known slugs so they cannot shadow the site's own pages
+- **Composers that do not lie** &mdash; a reply form inline where replying belongs and a dialog for starting a thread, both refusing empty input, both stating in the source that nothing is submitted yet
 - **Marketing homepage** &mdash; hero, board grid, trending strip, features, and a footer whose every destination resolves to a real page
 - **Accessibility as a build constraint** &mdash; focus rings never removed, state never carried by colour alone, tests asserting accessible names and keyboard paths instead of class strings
 - **Motion that means something** &mdash; four duration tokens, exits at roughly 65% of their enter, layout properties never animated, and a reduced-motion rule asserted against the compiled stylesheet
@@ -118,7 +123,7 @@ vendor/bin/pint          # PHP formatting
 
 ## Progress
 
-Work is sequenced into gated tasks. Each is built, reviewed, merged to `main` as one squashed commit, and verified on `main` before the next begins. **Current suite: 409 frontend tests, 85 backend tests.**
+Work is sequenced into gated tasks. Each is built, reviewed, merged to `main` as one squashed commit, and verified on `main` before the next begins. **Current suite: 519 frontend tests, 101 backend tests.**
 
 | Task | Scope | Status |
 |---|---|---|
@@ -129,17 +134,20 @@ Work is sequenced into gated tasks. Each is built, reviewed, merged to `main` as
 | 5 | Community layer: thread cards, votes, comment tree, skeletons | [Merged](https://github.com/NightServant/4chan-redesign/pull/10) |
 | 6 | Homepage, plus eleven information routes | [Merged](https://github.com/NightServant/4chan-redesign/pull/11) |
 | 6.1 | Visual fixes from review: rail alignment, hero overlap, header backdrop | [Merged](https://github.com/NightServant/4chan-redesign/pull/12) |
-| 7 | Feed and board pages, thread routing | Planned |
-| 8 | Thread view and composer | Planned |
+| 7 | Feed and board pages; board and thread routing | [Merged](https://github.com/NightServant/4chan-redesign/pull/15) |
+| 8 | Thread view, reply composer, new-thread dialog, auth gate | [Merged](https://github.com/NightServant/4chan-redesign/pull/16) |
+| 8.1 | Review fixes: Home resolves by auth state, feed sort tabs removed | [Merged](https://github.com/NightServant/4chan-redesign/pull/17) |
 | 9 | Account, history, auth screens, error pages | Planned |
 | 10 | The six screens the prototype never covered: settings, messages, bookmarks, communities, two-factor, passkeys | Planned |
 | 11 | Backend data layer, replacing fixtures with Eloquent | Planned |
 
+The app is navigable end to end: homepage, feed, board, thread, reply. Every link resolves.
+
 ### Known gaps
 
-- **No backend yet.** Boards, threads and replies render from fixtures in `resources/js/fixtures/`.
-- **Thread routes do not exist.** `ThreadCard` accepts an `href` override so surfaces showing a card before Task 7 point somewhere real.
-- **Authenticated screens are partly restyled.** `/dashboard` still renders starter-kit placeholders and the split auth layout bypasses the token layer. Tasks 7 and 9.
+- **No backend yet.** Boards, threads and replies render from fixtures in `resources/js/fixtures/`. Nothing submits: composers hold local state and say so in comments rather than faking a post that vanishes on reload.
+- **Auth screens bypass the token layer.** The split auth layout still uses raw greys instead of Clover tokens. Task 9.
+- **Six screens are placeholders.** Settings, messages, bookmarks, communities and the anon's own profile resolve to a page that states what will be there, rather than 404ing. Task 10.
 
 ## Data notes
 
