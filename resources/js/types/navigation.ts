@@ -17,6 +17,8 @@ export type CloverNavItem = {
     title: string;
     href: NonNullable<InertiaLinkProps['href']>;
     icon: LucideIcon;
+    /** Where this points once signed in, when that differs. Only Home does. */
+    authedHref?: NonNullable<InertiaLinkProps['href']>;
     /** Hidden from signed-out anons, who have no such thing to show. */
     requiresAuth?: boolean;
     /** Unread count. Rendered as a badge, omitted when zero or absent. */

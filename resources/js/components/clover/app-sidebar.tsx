@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/tooltip';
 import { BOARDS } from '@/fixtures/clover';
 import { useCurrentUrl } from '@/hooks/use-current-url';
-import { FOOTER_LINKS, PRIMARY_NAV } from '@/lib/navigation';
+import { FOOTER_LINKS, navHref, PRIMARY_NAV } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import { home } from '@/routes';
 import type { CloverNavItem } from '@/types/navigation';
@@ -63,12 +63,13 @@ function AppSidebar({ className, ...props }: AppSidebarProps) {
     const boards = BOARDS.slice(0, MAX_BOARD_ROWS);
 
     function renderRow(item: CloverNavItem) {
-        const active = isCurrentUrl(item.href);
+        const href = navHref(item, Boolean(auth.user));
+        const active = isCurrentUrl(href);
         const Icon = item.icon;
 
         const row = (
             <Link
-                href={item.href}
+                href={href}
                 data-slot="sidebar-row"
                 aria-current={active ? 'page' : undefined}
                 className={cn(

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import {
     bookmarks,
+    dashboard,
     communities,
     history,
     home,
@@ -32,7 +33,7 @@ import type { CloverNavItem } from '@/types/navigation';
  * the anon's own things, then settings last.
  */
 const PRIMARY_NAV: readonly CloverNavItem[] = [
-    { title: 'Home', href: home(), icon: HouseIcon },
+    { title: 'Home', href: home(), authedHref: dashboard(), icon: HouseIcon },
     { title: 'Popular', href: popular(), icon: FlameIcon },
     { title: 'Latest', href: latest(), icon: ClockIcon },
     { title: 'Communities', href: communities(), icon: LayoutGridIcon },
@@ -72,7 +73,7 @@ const PRIMARY_NAV: readonly CloverNavItem[] = [
  * rather than navigating, so it is added here on its own terms.
  */
 const MOBILE_NAV: readonly CloverNavItem[] = [
-    { title: 'Home', href: home(), icon: HouseIcon },
+    { title: 'Home', href: home(), authedHref: dashboard(), icon: HouseIcon },
     { title: 'Popular', href: popular(), icon: FlameIcon },
     {
         title: 'History',
@@ -102,4 +103,19 @@ const FOOTER_LINKS: readonly { title: string; href: string }[] = [
     { title: 'Status', href: '/status' },
 ];
 
-export { FOOTER_LINKS, MOBILE_NAV, PRIMARY_NAV };
+/**
+ * Where a nav item actually points for this anon.
+ *
+ * Only Home differs by auth state: signed out it is the marketing homepage,
+ * signed in it is the feed. A signed-in anon pressing Home and landing back on
+ * the sales pitch for a product they have already joined is the bug this
+ * resolves. Everything else points at one place regardless.
+ */
+function navHref(
+    item: CloverNavItem,
+    signedIn: boolean,
+): CloverNavItem['href'] {
+    return signedIn && item.authedHref ? item.authedHref : item.href;
+}
+
+export { FOOTER_LINKS, MOBILE_NAV, navHref, PRIMARY_NAV };

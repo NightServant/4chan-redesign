@@ -105,36 +105,6 @@ describe('Feed', () => {
         expect(screen.queryByRole('main')).not.toBeInTheDocument();
     });
 
-    it('renders the sort tabs as links pointing at the three sort routes', () => {
-        render(<Feed sort="bumped" />);
-
-        expect(
-            screen.getByRole('link', { name: 'Recently bumped' }),
-        ).toHaveAttribute('href', '/dashboard');
-        expect(screen.getByRole('link', { name: 'New' })).toHaveAttribute(
-            'href',
-            '/latest',
-        );
-        expect(
-            screen.getByRole('link', { name: 'Most blessed' }),
-        ).toHaveAttribute('href', '/popular');
-    });
-
-    it('marks the tab matching the current sort prop as the active one', () => {
-        render(<Feed sort="latest" />);
-
-        expect(screen.getByRole('link', { name: 'New' })).toHaveAttribute(
-            'aria-current',
-            'page',
-        );
-        expect(
-            screen.getByRole('link', { name: 'Recently bumped' }),
-        ).not.toHaveAttribute('aria-current');
-        expect(
-            screen.getByRole('link', { name: 'Most blessed' }),
-        ).not.toHaveAttribute('aria-current');
-    });
-
     it('shows the anon banner when signed out', () => {
         mockPage({ signedIn: false });
 
@@ -307,5 +277,21 @@ describe('Feed', () => {
         expect(
             screen.getAllByRole('button', { name: /bless/i })[0],
         ).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    /**
+     * The sort tabs were removed as visual overload: the sidebar already lists
+     * Home, Popular and Latest as separate destinations, so the tab row was a
+     * second control for navigation the chrome already provides.
+     */
+    it('does not repeat the sidebar destinations as a tab row', () => {
+        render(<Feed sort="bumped" />);
+
+        expect(
+            screen.queryByRole('navigation', { name: /sort threads/i }),
+        ).not.toBeInTheDocument();
+        expect(
+            screen.queryByRole('link', { name: 'Recently bumped' }),
+        ).not.toBeInTheDocument();
     });
 });

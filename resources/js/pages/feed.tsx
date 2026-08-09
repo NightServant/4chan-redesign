@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { AuthGate } from '@/components/clover/auth-gate';
 import { MachineValue } from '@/components/clover/machine-value';
@@ -9,8 +9,6 @@ import { AnonBanner } from '@/components/feed/anon-banner';
 import { Rail } from '@/components/feed/rail';
 import { Button } from '@/components/ui/button';
 import { THREADS } from '@/fixtures/clover';
-import { cn } from '@/lib/utils';
-import { dashboard, latest, popular } from '@/routes';
 
 /**
  * The feed, in three sorts. The server decides which by the route it renders
@@ -47,16 +45,6 @@ const ONLINE_COUNT = '228,025';
  * screen reader or the browser's back button reports is always the one that
  * is actually showing.
  */
-const SORT_TABS: {
-    sort: Sort;
-    label: string;
-    href: ReturnType<typeof dashboard>;
-}[] = [
-    { sort: 'bumped', label: 'Recently bumped', href: dashboard() },
-    { sort: 'latest', label: 'New', href: latest() },
-    { sort: 'popular', label: 'Most blessed', href: popular() },
-];
-
 /**
  * A blessing the anon has added optimistically, held here because there is no
  * backend to hold it. The page feeds `ThreadCard` both an adjusted
@@ -112,45 +100,14 @@ export default function Feed({ sort }: { sort: Sort }) {
                     data-slot="feed-column"
                     className="flex max-w-[760px] min-w-0 flex-1 flex-col gap-5"
                 >
-                    <div className="flex flex-wrap items-end justify-between gap-4">
-                        <div className="flex flex-col gap-1">
-                            <h1 className="font-display text-h1 font-semibold text-foreground">
-                                {HEADINGS[sort]}
-                            </h1>
-                            <MachineValue>
-                                {SORT_DESCRIPTIONS[sort]} &middot;{' '}
-                                {ONLINE_COUNT} anons online
-                            </MachineValue>
-                        </div>
-
-                        <nav aria-label="Sort threads">
-                            <ul className="flex items-center gap-1 border-b border-border">
-                                {SORT_TABS.map((tab) => {
-                                    const active = tab.sort === sort;
-
-                                    return (
-                                        <li key={tab.sort}>
-                                            <Link
-                                                href={tab.href}
-                                                aria-current={
-                                                    active ? 'page' : undefined
-                                                }
-                                                className={cn(
-                                                    '-mb-px inline-flex items-center justify-center border-b-2 border-transparent px-3 py-2 text-body-sm font-medium whitespace-nowrap text-muted-foreground',
-                                                    'transition-colors duration-[var(--duration-hover)] ease-standard',
-                                                    'hover:text-foreground',
-                                                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
-                                                    active &&
-                                                        'border-primary text-foreground',
-                                                )}
-                                            >
-                                                {tab.label}
-                                            </Link>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        </nav>
+                    <div className="flex flex-col gap-1">
+                        <h1 className="font-display text-h1 font-semibold text-foreground">
+                            {HEADINGS[sort]}
+                        </h1>
+                        <MachineValue>
+                            {SORT_DESCRIPTIONS[sort]} &middot; {ONLINE_COUNT}{' '}
+                            anons online
+                        </MachineValue>
                     </div>
 
                     {signedIn ? null : <AnonBanner />}
