@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { MobileNav } from '@/components/clover/mobile-nav';
 import { toUrl } from '@/lib/utils';
-import { home, popular } from '@/routes';
+import { dashboard, popular } from '@/routes';
 
 const { usePage } = vi.hoisted(() => ({ usePage: vi.fn() }));
 
@@ -78,8 +78,12 @@ describe('MobileNav', () => {
         ).toHaveLength(5);
     });
 
+    /**
+     * Signed in, Home is the feed rather than the marketing page, so the
+     * current-page match is against /dashboard.
+     */
     it('marks the destination matching the current URL with aria-current', () => {
-        mockPage({ url: toUrl(home()), signedIn: true });
+        mockPage({ url: toUrl(dashboard()), signedIn: true });
 
         render(<MobileNav />);
 

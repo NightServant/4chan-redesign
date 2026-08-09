@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { FOOTER_LINKS, MOBILE_NAV, PRIMARY_NAV } from '@/lib/navigation';
+import {
+    FOOTER_LINKS,
+    MOBILE_NAV,
+    navHref,
+    PRIMARY_NAV,
+} from '@/lib/navigation';
+import { toUrl } from '@/lib/utils';
 
 /**
  * The sidebar, the mobile bar and the header all read their destinations from
@@ -59,10 +65,10 @@ describe('MOBILE_NAV', () => {
     });
 
     it('draws every destination from the primary nav so the two cannot disagree', () => {
-        const primaryHrefs = PRIMARY_NAV.map((item) => String(item.href));
+        const primaryHrefs = PRIMARY_NAV.map((item) => toUrl(item.href));
 
         for (const item of MOBILE_NAV) {
-            expect(primaryHrefs).toContain(String(item.href));
+            expect(primaryHrefs).toContain(toUrl(item.href));
         }
     });
 });
@@ -75,5 +81,29 @@ describe('FOOTER_LINKS', () => {
             'Terms',
             'Status',
         ]);
+    });
+});
+
+/**
+ * Signed in, "Home" means the feed, not the marketing page. A signed-in anon
+ * pressing Home and landing back on the sales pitch for a product they have
+ * already joined is the bug this resolves.
+ */
+describe('navHref', () => {
+    const homeItem = PRIMARY_NAV.find((item) => item.title === 'Home')!;
+
+    it('sends a signed-out visitor to the marketing homepage', () => {
+        expect(toUrl(navHref(homeItem, false))).toBe('/');
+    });
+
+    it('sends a signed-in anon to the feed', () => {
+        expect(toUrl(navHref(homeItem, true))).toBe('/dashboard');
+    });
+
+    it('leaves every other destination alone in both states', () => {
+        for (const item of PRIMARY_NAV.filter((i) => i.title !== 'Home')) {
+            expect(toUrl(navHref(item, true))).toBe(toUrl(item.href));
+            expect(toUrl(navHref(item, false))).toBe(toUrl(item.href));
+        }
     });
 });

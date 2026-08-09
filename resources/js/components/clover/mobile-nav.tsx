@@ -1,7 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import type { ComponentProps } from 'react';
 import { useCurrentUrl } from '@/hooks/use-current-url';
-import { MOBILE_NAV } from '@/lib/navigation';
+import { MOBILE_NAV, navHref } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 
 /**
@@ -36,13 +36,14 @@ function MobileNav({ className, ...props }: MobileNavProps) {
             {...props}
         >
             {items.map((item) => {
-                const active = isCurrentUrl(item.href);
+                const href = navHref(item, signedIn);
+                const active = isCurrentUrl(href);
                 const Icon = item.icon;
 
                 return (
                     <Link
                         key={item.title}
-                        href={item.href}
+                        href={href}
                         aria-current={active ? 'page' : undefined}
                         className={cn(
                             'flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg py-1.5',
