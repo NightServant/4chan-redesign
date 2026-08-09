@@ -243,4 +243,42 @@ describe('ThreadCard', () => {
             screen.getByRole('link', { name: baseThread.title }),
         ).toHaveAttribute('href', `${baseThread.board}${baseThread.no}`);
     });
+
+    /**
+     * The card owns no vote state, so a caller holding it optimistically has
+     * to be able to push it back down. Without this the bless button reports
+     * `aria-pressed="false"` forever and the only signal that a bless landed
+     * is the count, which is exactly the colour-and-number-only state the
+     * accessibility rules forbid.
+     */
+    it('reflects a caller-held bless back onto the vote control', () => {
+        render(<ThreadCard thread={baseThread} voteState="blessed" />);
+
+        expect(screen.getByRole('button', { name: /bless/i })).toHaveAttribute(
+            'aria-pressed',
+            'true',
+        );
+        expect(screen.getByRole('button', { name: /curse/i })).toHaveAttribute(
+            'aria-pressed',
+            'false',
+        );
+    });
+
+    it('reflects a caller-held curse back onto the vote control', () => {
+        render(<ThreadCard thread={baseThread} voteState="cursed" />);
+
+        expect(screen.getByRole('button', { name: /curse/i })).toHaveAttribute(
+            'aria-pressed',
+            'true',
+        );
+    });
+
+    it('reports neither vote as pressed by default', () => {
+        render(<ThreadCard thread={baseThread} />);
+
+        expect(screen.getByRole('button', { name: /bless/i })).toHaveAttribute(
+            'aria-pressed',
+            'false',
+        );
+    });
 });

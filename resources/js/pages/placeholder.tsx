@@ -2,8 +2,6 @@ import { Head } from '@inertiajs/react';
 import {
     BellIcon,
     BookmarkIcon,
-    ClockIcon,
-    FlameIcon,
     HistoryIcon,
     LayoutGridIcon,
     MailIcon,
@@ -22,8 +20,6 @@ import AppLayout from '@/layouts/app-layout';
  */
 type Destination =
     | 'account'
-    | 'popular'
-    | 'latest'
     | 'communities'
     | 'bookmarks'
     | 'history'
@@ -39,18 +35,6 @@ const PLACEHOLDERS: Record<
         heading: 'Your profile',
         title: 'Your profile',
         body: 'Your posts, blessings and board activity will be collected here. Account settings live under Settings.',
-    },
-    popular: {
-        icon: <FlameIcon />,
-        heading: 'Popular',
-        title: 'Nothing is popular yet',
-        body: 'Threads with the most blessings in the last day will be ranked here.',
-    },
-    latest: {
-        icon: <ClockIcon />,
-        heading: 'Latest',
-        title: 'No threads yet',
-        body: 'Every board in bump order, newest first, lands here.',
     },
     communities: {
         icon: <LayoutGridIcon />,

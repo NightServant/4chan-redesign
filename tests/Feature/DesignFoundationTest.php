@@ -209,4 +209,5 @@ it('compiles every Clover surface utility the chrome depends on', function (stri
     'text-faint',
     'text-primary',
     'border-border',
+    'border-warning-line',
 ]);
