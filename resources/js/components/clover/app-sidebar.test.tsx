@@ -205,4 +205,46 @@ describe('AppSidebar', () => {
 
         expect(document.cookie).toContain('sidebar_state=false');
     });
+
+    /**
+     * The sidebar sits beside the header, not above it, so its first row has
+     * to be exactly as tall as the header (64px) or the wordmark and the
+     * header content sit on different baselines. Reported from a screenshot:
+     * the collapsed rail did not line up with the header or its own toggle.
+     */
+    it('matches the header height on its brand row so the two align', () => {
+        mockPage.props.sidebarOpen = true;
+        const { container } = render(<AppSidebar />);
+
+        expect(
+            container.querySelector('[data-slot="sidebar-brand"]'),
+        ).toHaveClass('h-16');
+    });
+
+    /**
+     * Collapsed, every icon must share one vertical axis. Rows keeping their
+     * expanded horizontal padding push the glyph left of the toggle above it.
+     */
+    it('centres every row icon on one axis when collapsed', () => {
+        mockPage.props.sidebarOpen = false;
+        const { container } = render(<AppSidebar />);
+
+        const rows = container.querySelectorAll('[data-slot="sidebar-row"]');
+
+        expect(rows.length).toBeGreaterThan(0);
+
+        for (const row of rows) {
+            expect(row.className).toContain('justify-center');
+            expect(row.className).not.toMatch(/px-\[11px\]/);
+        }
+    });
+
+    it('keeps the collapsed rail exactly one icon wide', () => {
+        mockPage.props.sidebarOpen = false;
+        const { container } = render(<AppSidebar />);
+
+        expect(
+            container.querySelector('[data-slot="app-sidebar"]'),
+        ).toHaveClass('w-[76px]');
+    });
 });

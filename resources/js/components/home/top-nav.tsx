@@ -27,7 +27,11 @@ function TopNav({ className, ...props }: TopNavProps) {
         <header
             data-slot="top-nav"
             className={cn(
-                'bg-bg sticky top-0 z-20 border-b border-border',
+                'sticky top-0 z-20 border-b border-border',
+                /* Opaque by default. The translucent fill is gated behind
+                   `supports-[backdrop-filter]` because a see-through header
+                   with no blur behind it is unreadable, not merely unstyled. */
+                'bg-bg supports-[backdrop-filter]:bg-bg/75 supports-[backdrop-filter]:backdrop-blur-lg',
                 className,
             )}
             {...props}

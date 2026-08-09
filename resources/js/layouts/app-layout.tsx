@@ -14,7 +14,7 @@ import { MobileNav } from '@/components/clover/mobile-nav';
  */
 export default function AppLayout({ children }: { children: ReactNode }) {
     return (
-        <div className="bg-bg flex min-h-dvh">
+        <div className="flex min-h-dvh bg-bg">
             <AppSidebar />
 
             <div className="flex min-w-0 flex-1 flex-col">

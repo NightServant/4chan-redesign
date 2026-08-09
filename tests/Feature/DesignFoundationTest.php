@@ -183,3 +183,30 @@ it('compiles the loading shimmer rather than naming a keyframe that does not exi
         ->toContain('@keyframes pulse')
         ->toMatch('/animation:\s*1\.4s[^;}]*pulse/');
 });
+
+/**
+ * Tailwind v4 only emits a colour utility when the theme defines the variable
+ * behind it. `bg-bg` named `--color-bg`, which was never mapped, so the class
+ * emitted nothing at all: the sidebar and both sticky headers were fully
+ * transparent and content scrolled underneath them. Nothing errored, and the
+ * page looked correct because the body colour showed through.
+ *
+ * Same failure shape as the inert `duration-*` classes and the unrecognised
+ * font format hint: valid-looking markup, no CSS behind it. Every utility the
+ * app chrome depends on is asserted here because a missing background is
+ * invisible until something scrolls under it.
+ */
+it('compiles every Clover surface utility the chrome depends on', function (string $utility): void {
+    [$css] = compiledStylesheet();
+
+    expect($css)->toContain('.'.$utility.'{');
+})->with([
+    'bg-bg',
+    'bg-surface',
+    'bg-surface-elevated',
+    'bg-surface-hover',
+    'bg-primary-soft',
+    'text-faint',
+    'text-primary',
+    'border-border',
+]);

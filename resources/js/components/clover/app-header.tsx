@@ -90,7 +90,7 @@ function AppHeader({ className, onCompose, ...props }: AppHeaderProps) {
         <header
             data-slot="app-header"
             className={cn(
-                'bg-bg sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border px-6',
+                'sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-bg px-6',
                 className,
             )}
             {...props}

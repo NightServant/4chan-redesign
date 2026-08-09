@@ -21,7 +21,7 @@ import { Trending } from '@/components/home/trending';
  */
 export default function Welcome() {
     return (
-        <div className="bg-bg flex min-h-dvh flex-col">
+        <div className="flex min-h-dvh flex-col bg-bg">
             <Head title="Anonymous discussion, organised by board" />
 
             <TopNav />

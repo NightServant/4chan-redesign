@@ -135,12 +135,53 @@ describe('Hero', () => {
         ).not.toBeInTheDocument();
     });
 
-    it('scales and fades the trailing card so the pair reads as a stack, without animating layout', () => {
+    /**
+     * The trailing card recedes by opacity alone. It used to also scale, but
+     * scaling only reads as depth when the cards overlap, and overlapping
+     * them is what made the pair unreadable in the first place.
+     */
+    it('fades the trailing card so the pair reads as a stack', () => {
         const { container } = render(<Hero />);
 
         const cards = container.querySelectorAll('[data-slot="thread-card"]');
 
         expect(cards).toHaveLength(2);
-        expect(cards[1]).toHaveClass('scale-[0.96]', 'opacity-82');
+        expect(cards[0].className).not.toMatch(/\bopacity-/);
+        expect(cards[1]).toHaveClass('opacity-60');
+    });
+
+    /**
+     * Reported from a screenshot: the two preview cards were laid on top of
+     * each other, so the lower card's title printed straight through the
+     * upper card's body text. Absolute positioning pulled the second card out
+     * of flow with nothing reserving space for it.
+     *
+     * They now stack in normal flow. The second recedes by opacity alone,
+     * which cannot collide with anything.
+     */
+    it('never lifts a preview card out of flow on top of the other', () => {
+        const { container } = render(<Hero />);
+
+        const preview = container.querySelector(
+            '[data-slot="hero-thread-preview"]',
+        );
+
+        expect(preview).toBeTruthy();
+
+        for (const card of preview?.children ?? []) {
+            expect(card.className).not.toMatch(/\babsolute\b/);
+            expect(card.className).not.toMatch(/\binset-x-0\b/);
+        }
+    });
+
+    it('stacks the previews in a spaced column', () => {
+        const { container } = render(<Hero />);
+
+        const preview = container.querySelector(
+            '[data-slot="hero-thread-preview"]',
+        );
+
+        expect(preview?.className).toMatch(/\bflex-col\b/);
+        expect(preview?.className).toMatch(/\bgap-/);
     });
 });

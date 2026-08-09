@@ -86,21 +86,23 @@ function Hero({ className, ...props }: HeroProps) {
                     </MachineValue>
                 </div>
 
+                {/* A spaced column, not a stack. The second card previously
+                    sat `absolute` over the first, so its title printed
+                    straight through the first card's body. Depth now comes
+                    from opacity alone, which cannot collide with anything and
+                    still reads as "there is more below". */}
                 <div
                     data-slot="hero-thread-preview"
                     aria-hidden="true"
                     inert
-                    className="relative"
+                    className="flex flex-col gap-3"
                 >
                     {previewThreads.map((thread, index) => (
                         <ThreadCard
                             key={thread.no}
                             thread={thread}
                             href={toUrl(popular())}
-                            className={cn(
-                                index === 1 &&
-                                    'absolute inset-x-0 top-8 origin-top scale-[0.96] opacity-82',
-                            )}
+                            className={cn(index === 1 && 'opacity-60')}
                         />
                     ))}
                 </div>
