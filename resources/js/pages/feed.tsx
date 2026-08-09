@@ -1,5 +1,6 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import { AuthGate } from '@/components/clover/auth-gate';
 import { MachineValue } from '@/components/clover/machine-value';
 import { Pagination } from '@/components/clover/pagination';
 import { ThreadCard } from '@/components/clover/thread-card';
@@ -9,7 +10,7 @@ import { Rail } from '@/components/feed/rail';
 import { Button } from '@/components/ui/button';
 import { THREADS } from '@/fixtures/clover';
 import { cn } from '@/lib/utils';
-import { dashboard, latest, login, popular } from '@/routes';
+import { dashboard, latest, popular } from '@/routes';
 
 /**
  * The feed, in three sorts. The server decides which by the route it renders
@@ -69,12 +70,16 @@ export default function Feed({ sort }: { sort: Sort }) {
     const signedIn = Boolean(auth.user);
 
     const [blessed, setBlessed] = useState<Record<number, BlessDelta>>({});
+    /* Signed-out anons get the gate rather than a redirect: sending them to
+       /login throws away their place in the feed to answer a question they may
+       not want to answer yet. Matches the thread page. */
+    const [gatedAction, setGatedAction] = useState<string | null>(null);
     const [loadingMore, setLoadingMore] = useState(false);
     const [page, setPage] = useState(1);
 
     function toggleBless(threadNo: number) {
         if (!signedIn) {
-            router.visit(login().url);
+            setGatedAction('bless a thread');
 
             return;
         }
@@ -196,6 +201,16 @@ export default function Feed({ sort }: { sort: Sort }) {
                     <Rail />
                 </div>
             </div>
+
+            <AuthGate
+                action={gatedAction ?? 'do that'}
+                open={gatedAction !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setGatedAction(null);
+                    }
+                }}
+            />
         </>
     );
 }

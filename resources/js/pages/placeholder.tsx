@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { EmptyState } from '@/components/clover/empty-state';
-import AppLayout from '@/layouts/app-layout';
 
 /**
  * The screen behind every sidebar destination that has no real page yet.
@@ -76,9 +75,9 @@ export default function Placeholder({
     const { icon, heading, title, body } = PLACEHOLDERS[destination];
 
     return (
-        <AppLayout>
+        <>
             <Head title={heading} />
             <EmptyState icon={icon} title={title} body={body} />
-        </AppLayout>
+        </>
     );
 }

@@ -1,7 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { FileTextIcon } from 'lucide-react';
 import { EmptyState } from '@/components/clover/empty-state';
-import AppLayout from '@/layouts/app-layout';
 
 /**
  * The utility pages the footers link to: rules, terms, status and the rest.
@@ -15,13 +14,13 @@ import AppLayout from '@/layouts/app-layout';
  */
 export default function Information({ title }: { title: string }) {
     return (
-        <AppLayout>
+        <>
             <Head title={title} />
             <EmptyState
                 icon={<FileTextIcon />}
                 title={title}
                 body="This page has not been written yet. The link is here because the page belongs in the product, not because it is ready."
             />
-        </AppLayout>
+        </>
     );
 }
