@@ -1,8 +1,15 @@
 import type {
+    Achievement,
     ActivityEntry,
     Board,
+    BoardDirectoryEntry,
+    Bookmark,
     Comment,
+    Conversation,
     HistoryEntry,
+    Profile,
+    ProfileComment,
+    ProfileStat,
     Thread,
     TrendingTag,
 } from '@/types/clover';
@@ -167,6 +174,258 @@ export const HISTORY: readonly HistoryEntry[] = [
         when: 'Mon, 08:12',
         progress: 90,
         media: 'thumb · 640×360',
+    },
+] as const;
+
+/**
+ * The signed-in anon, as their own profile page shows them.
+ *
+ * Lifted from `cl-account.jsx`. The bio's last sentence is the product's
+ * whole argument in one line and is kept exactly as the design wrote it.
+ */
+export const PROFILE: Profile = {
+    handle: 'anon_4412',
+    tripcode: '!!Xk29fLp2',
+    bio: 'Reads /g/ at 3am. Keeps a homelab that costs more than the car. Posts are anonymous — this page is not.',
+    joined: '14 Mar 2024',
+    janitorScope: ['/g/', '/wg/'],
+} as const;
+
+export const PROFILE_STATS: readonly ProfileStat[] = [
+    { label: 'Posts', value: '412' },
+    { label: 'Comments', value: '3,908' },
+    { label: 'Reputation', value: '11,204' },
+    { label: 'Bookmarks', value: '96' },
+] as const;
+
+export const ACHIEVEMENTS: readonly Achievement[] = [
+    { icon: 'flame', title: 'Bumped 100 threads', meta: 'Since Mar 2024' },
+    { icon: 'star', title: '10K blessings received', meta: 'Since Jan 2025' },
+    { icon: 'shield', title: 'Janitor · /g/, /wg/', meta: 'Since Aug 2025' },
+] as const;
+
+/**
+ * Replies this anon wrote, for the profile's Comments tab.
+ *
+ * The design renders one hardcoded body against four different threads, which
+ * reads as a rendering bug rather than as data. These are four distinct
+ * replies in the same register, each answering the thread it sits under.
+ */
+export const PROFILE_COMMENTS: readonly ProfileComment[] = [
+    {
+        no: 58210452,
+        board: '/g/',
+        threadNo: 58210441,
+        time: '2 min ago',
+        body: 'Eight cores, 16 GB. It is not fast, it is usable. Those are different claims.',
+        quoted: 'forty minutes is not "fine"',
+    },
+    {
+        no: 58210302,
+        board: '/biz/',
+        threadNo: 58210277,
+        time: '31 min ago',
+        body: 'Same in Lisbon. Two clients moved to fixed-price and called it a rate freeze.',
+    },
+    {
+        no: 58209960,
+        board: '/x/',
+        threadNo: 58209914,
+        time: '52 min ago',
+        body: 'Track four is tape hiss and a relay. Depends entirely on the transfer, mine is clean since I resampled at 96k.',
+        quoted: 'just use the vendor rip',
+    },
+    {
+        no: 58209588,
+        board: '/fit/',
+        threadNo: 58209502,
+        time: '2 hr ago',
+        body: 'Two years of walking beats six weeks of anything else. Nobody wants to hear it.',
+    },
+] as const;
+
+/**
+ * Attachments on this anon's posts. Filenames and dimensions only — Clover
+ * never invents an image, so these render as labelled placeholders.
+ */
+export const PROFILE_MEDIA: readonly string[] = [
+    'ridge-4k.png · 3840×2160',
+    'progress-2y.jpg · 1440×1800',
+    'rack-2026.jpg · 2048×1536',
+    'chart.png · 1200×900',
+    'bench.png · 1600×1000',
+    'desk.jpg · 2400×1600',
+] as const;
+
+/**
+ * Threads the anon saved. Wraps entries from `THREADS` rather than restating
+ * their titles, so a bookmark can never drift out of sync with its thread.
+ *
+ * `note` is the anon's own annotation. Two are empty on purpose: a note is
+ * optional, and a list where every row has one would not exercise the case.
+ */
+export const BOOKMARKS: readonly Bookmark[] = [
+    {
+        thread: THREADS[3],
+        savedAt: 'Saved 2 days ago',
+        note: 'Track four timestamp is 11:42, not 11:24 like the OP says.',
+    },
+    { thread: THREADS[0], savedAt: 'Saved 4 days ago', note: '' },
+    {
+        thread: THREADS[2],
+        savedAt: 'Saved last week',
+        note: 'Check whether this held up next quarter.',
+    },
+    { thread: THREADS[4], savedAt: 'Saved last week', note: '' },
+] as const;
+
+/**
+ * The board directory.
+ *
+ * Every slug here is routable — it is the same six the router accepts, from
+ * `config/clover.php`. A directory whose entire purpose is links must not
+ * list a board the router will 404, so this stays in step with that config
+ * rather than inventing the full board list.
+ */
+export const BOARD_DIRECTORY: readonly BoardDirectoryEntry[] = [
+    {
+        slug: '/g/',
+        name: 'Technology',
+        online: '41,208',
+        threads: '18,402',
+        category: 'Interests',
+        subscribed: true,
+        description:
+            'Hardware, software and the arguments between them. Homelabs, compilers, and one thread per week about mechanical keyboards.',
+    },
+    {
+        slug: '/wg/',
+        name: 'Wallpapers',
+        online: '9,114',
+        threads: '4,190',
+        category: 'Creative',
+        subscribed: true,
+        description:
+            'Wallpaper dumps at native resolution. No upscales, no watermarks, no AI slop.',
+    },
+    {
+        slug: '/biz/',
+        name: 'Business',
+        online: '12,860',
+        threads: '11,067',
+        category: 'Work',
+        subscribed: false,
+        description:
+            'Markets, freelancing and small business. Half of it is useful and the other half is someone selling a course.',
+    },
+    {
+        slug: '/x/',
+        name: 'Paranormal',
+        online: '7,442',
+        threads: '9,338',
+        category: 'Interests',
+        subscribed: true,
+        description:
+            'Unexplained recordings, missing footage and long transcripts. Sourcing is expected even here.',
+    },
+    {
+        slug: '/fit/',
+        name: 'Fitness',
+        online: '15,309',
+        threads: '13,551',
+        category: 'Life',
+        subscribed: false,
+        description:
+            'Training, food and progress logs. Ask about form, expect to be told your form is bad.',
+    },
+    {
+        slug: '/co/',
+        name: 'Comics',
+        online: '6,027',
+        threads: '7,802',
+        category: 'Creative',
+        subscribed: false,
+        description:
+            'Comics and animation, print and web. Storyboards, panel layouts and long-running adaptation grudges.',
+    },
+] as const;
+
+/**
+ * Direct messages.
+ *
+ * Messaging is an account feature, so correspondents are handles rather than
+ * post numbers: nothing here ties back to anything either anon posted. The
+ * copy stays in register — terse, specific, and about the boards themselves.
+ *
+ * The first conversation is unread and the last is a one-sided message with
+ * no reply, so the list has both states to render.
+ */
+export const CONVERSATIONS: readonly Conversation[] = [
+    {
+        id: 1,
+        handle: 'anon_7781',
+        time: '2 min ago',
+        unread: 2,
+        messages: [
+            {
+                id: 1,
+                outgoing: false,
+                body: 'You janitor /g/, right? There is a bot dumping the same three links across every homelab thread.',
+                time: '11 min ago',
+            },
+            {
+                id: 2,
+                outgoing: true,
+                body: 'Seen it. Same host each time, so the filter catches it about a minute after it posts.',
+                time: '8 min ago',
+            },
+            {
+                id: 3,
+                outgoing: false,
+                body: 'A minute is long enough for it to get bumped to the top.',
+                time: '3 min ago',
+            },
+            {
+                id: 4,
+                outgoing: false,
+                body: 'Can the filter run before the bump instead of after?',
+                time: '2 min ago',
+            },
+        ],
+    },
+    {
+        id: 2,
+        handle: 'anon_0294',
+        time: '1 hr ago',
+        unread: 0,
+        messages: [
+            {
+                id: 1,
+                outgoing: false,
+                body: 'That RISC-V thread is the first honest one I have read. Everyone else is benchmarking a fan curve.',
+                time: '2 hr ago',
+            },
+            {
+                id: 2,
+                outgoing: true,
+                body: 'It is a slow machine that does what I need. That is the whole review.',
+                time: '1 hr ago',
+            },
+        ],
+    },
+    {
+        id: 3,
+        handle: 'anon_5530',
+        time: 'Yesterday',
+        unread: 0,
+        messages: [
+            {
+                id: 1,
+                outgoing: true,
+                body: 'Your wallpaper dump had one at 5120x2880 mislabelled as 4K. Worth reposting the correct size.',
+                time: 'Yesterday',
+            },
+        ],
     },
 ] as const;
 

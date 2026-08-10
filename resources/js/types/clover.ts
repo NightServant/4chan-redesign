@@ -83,3 +83,108 @@ export interface HistoryEntry {
     progress: number;
     media: string;
 }
+
+/**
+ * The anon whose account this is.
+ *
+ * Every field here is account-scoped, never post-scoped: the whole point of
+ * the product is that a post carries none of it. `handle` names the account,
+ * and `tripcode` is the opt-in signature an anon may attach to a post — the
+ * only thing on this type that can ever appear beside something they wrote.
+ */
+export interface Profile {
+    handle: string;
+    /** Opt-in post signature, e.g. `!!Xk29fLp2`. Null when never set. */
+    tripcode: string | null;
+    bio: string;
+    /** Absolute and pre-formatted, e.g. `14 Mar 2024`. */
+    joined: string;
+    /** Boards this anon janitors. Empty for anons who do not. */
+    janitorScope: BoardSlug[];
+}
+
+/**
+ * A counted figure on the profile header. Pre-formatted, because the
+ * separator is a display concern and the backend should not guess a locale.
+ */
+export interface ProfileStat {
+    label: string;
+    /** Pre-formatted, e.g. `11,204`. */
+    value: string;
+}
+
+export interface Achievement {
+    /** Lucide icon name. */
+    icon: string;
+    title: string;
+    /** Pre-formatted, e.g. `Since Mar 2024`. */
+    meta: string;
+}
+
+/**
+ * A reply this anon wrote, as listed on their own profile.
+ *
+ * `quoted` is the greentext line being answered, kept separate from `body` so
+ * it can be rendered in the quote colour without parsing the body for a
+ * leading `>`. Absent when the reply quotes nothing.
+ */
+export interface ProfileComment {
+    no: number;
+    board: BoardSlug;
+    /** The thread this reply lives in. */
+    threadNo: number;
+    time: string;
+    body: string;
+    quoted?: string;
+}
+
+/** A thread the anon saved. Wraps a `Thread` rather than restating it. */
+export interface Bookmark {
+    thread: Thread;
+    /** Pre-formatted, e.g. `Saved 2 days ago`. */
+    savedAt: string;
+    /** The anon's own note. Empty string when they wrote none. */
+    note: string;
+}
+
+/**
+ * A board as listed in the directory.
+ *
+ * Extends `Board` with the copy and state the directory needs. `slug` must
+ * be a routable board: the directory links every row, so a slug the router
+ * does not know would ship a dead link on a page whose entire job is links.
+ */
+export interface BoardDirectoryEntry extends Board {
+    description: string;
+    /** Pre-formatted, e.g. `18,402`. */
+    threads: string;
+    category: string;
+    subscribed: boolean;
+}
+
+/** One message in a conversation. */
+export interface Message {
+    id: number;
+    /** True when this anon wrote it, false when the other did. */
+    outgoing: boolean;
+    body: string;
+    /** Relative and pre-formatted, e.g. `2 min ago`. */
+    time: string;
+}
+
+/**
+ * A conversation with one other anon.
+ *
+ * Correspondents are identified by handle, not by post: messaging is an
+ * account feature and carries no thread identity with it.
+ */
+export interface Conversation {
+    id: number;
+    /** The other anon's handle. */
+    handle: string;
+    /** Pre-formatted, e.g. `2 min ago`. */
+    time: string;
+    /** Unread count. Zero when nothing is unread. */
+    unread: number;
+    messages: Message[];
+}
