@@ -1,10 +1,15 @@
 <?php
 
 use App\Http\Controllers\BoardController;
+use App\Http\Controllers\BoardSubscriptionController;
+use App\Http\Controllers\BookmarkController;
 use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\PostVoteController;
+use App\Http\Controllers\ReplyController;
 use App\Http\Controllers\ThreadController;
+use App\Http\Controllers\ThreadReadController;
 use App\Support\RoutableBoards;
 use Illuminate\Support\Facades\Route;
 
@@ -38,6 +43,25 @@ Route::middleware('auth')->group(function () {
      * unfinished instead of looking broken.
      */
     Route::inertia('notifications', 'placeholder', ['destination' => 'notifications'])->name('notifications');
+
+    /**
+     * What an account can do, as opposed to read.
+     *
+     * All of it is private to the anon doing it — a vote, a saved thread, a
+     * followed board and a read marker are none of them visible to anyone
+     * else. Each is a toggle in the interface, so each is idempotent here: a
+     * double submit is a double press, not an error.
+     */
+    Route::post('posts/{post}/vote', [PostVoteController::class, 'store'])->name('posts.vote');
+
+    Route::post('threads/{thread}/bookmark', [BookmarkController::class, 'store'])->name('threads.bookmark');
+    Route::delete('threads/{thread}/bookmark', [BookmarkController::class, 'destroy'])->name('threads.bookmark.destroy');
+
+    Route::post('threads/{thread}/read', [ThreadReadController::class, 'store'])->name('threads.read');
+    Route::delete('history', [ThreadReadController::class, 'destroy'])->name('history.destroy');
+
+    Route::post('boards/{board}/subscribe', [BoardSubscriptionController::class, 'store'])->name('boards.subscribe');
+    Route::delete('boards/{board}/subscribe', [BoardSubscriptionController::class, 'destroy'])->name('boards.subscribe.destroy');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -89,5 +113,16 @@ Route::get('{board}', BoardController::class)
 Route::get('{board}/{thread}', ThreadController::class)
     ->where(['board' => $boardPattern, 'thread' => '[0-9]+'])
     ->name('thread');
+
+/**
+ * Replying, which needs an account and so cannot sit in the public group
+ * above. Registered with the board-shaped routes rather than beside the other
+ * account actions, because it takes the same two constrained segments and
+ * splitting it from them is how the constraint gets forgotten.
+ */
+Route::post('{board}/{thread}/replies', [ReplyController::class, 'store'])
+    ->middleware('auth')
+    ->where(['board' => $boardPattern, 'thread' => '[0-9]+'])
+    ->name('replies.store');
 
 require __DIR__.'/settings.php';

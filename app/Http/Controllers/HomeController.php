@@ -46,7 +46,7 @@ class HomeController extends Controller
 
         $threads = Thread::query()
             ->onVisibleBoard($showsMature)
-            ->with(['board', 'originalPost'])
+            ->with(['board', 'originalPost' => fn ($op) => $op->withSum('votes', 'value')])
             ->orderByDesc('bumped_at')
             ->limit(self::THREADS)
             ->get();

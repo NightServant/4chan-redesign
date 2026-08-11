@@ -81,6 +81,18 @@ class Thread extends Model
         return $this->hasOne(Post::class)->where('is_op', true);
     }
 
+    /** @return HasMany<Bookmark, $this> */
+    public function bookmarks(): HasMany
+    {
+        return $this->hasMany(Bookmark::class);
+    }
+
+    /** @return HasMany<ThreadRead, $this> */
+    public function reads(): HasMany
+    {
+        return $this->hasMany(ThreadRead::class);
+    }
+
     /**
      * Threads on a board this anon is allowed to see.
      *

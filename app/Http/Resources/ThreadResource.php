@@ -72,11 +72,11 @@ final class ThreadResource extends JsonResource
             ),
 
             /**
-             * Blessings are Clover's own votes, and voting is task 11b. There
-             * is no table to count, so every ingested thread has none — a true
-             * zero, not a missing value.
+             * Clover's own votes, counted on the opening post: blessing a
+             * thread card and blessing the OP are the same act, recorded once.
+             * A thread nobody has voted on is a true zero.
              */
-            'blessings' => 0,
+            'blessings' => $originalPost?->blessings() ?? 0,
 
             'replies' => $thread->replies_count,
             'images' => number_format($thread->images_count),
