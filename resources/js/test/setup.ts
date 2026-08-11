@@ -38,6 +38,47 @@ if (!document.elementFromPoint) {
     document.elementFromPoint = (): null => null;
 }
 
+/**
+ * Timers that outlive the test that scheduled them.
+ *
+ * `input-otp` schedules its caret probe with `setTimeout` and does not cancel
+ * it on unmount, so `cleanup()` is not enough: the callback survives the test,
+ * survives the file, and eventually fires against an environment vitest has
+ * already torn down. What it reports is `ReferenceError: window is not
+ * defined`, attributed to whichever file was running at the time, with no test
+ * attached to it — a whole test run failing on one unhandled error while all
+ * 835 tests pass.
+ *
+ * It is the same defect as the `elementFromPoint` shim above, one step later:
+ * a timer-driven failure that cannot be traced to the test that caused it.
+ * Tracking every timer and clearing what is still pending after each test is
+ * the general fix, rather than special-casing the one suite that happens to
+ * render an OTP field today.
+ */
+/* Node types `setTimeout` as returning `Timeout` and `clearTimeout` as taking
+   one, while the DOM lib types both as `number`. The set holds whichever this
+   environment actually produces. */
+const pendingTimers = new Set<Parameters<typeof clearTimeout>[0]>();
+const scheduleTimeout = globalThis.setTimeout;
+
+globalThis.setTimeout = ((
+    handler: TimerHandler,
+    timeout?: number,
+    ...args: unknown[]
+) => {
+    const id = scheduleTimeout(handler, timeout, ...args);
+
+    pendingTimers.add(id);
+
+    return id;
+}) as typeof globalThis.setTimeout;
+
 afterEach(() => {
     cleanup();
+
+    for (const id of pendingTimers) {
+        clearTimeout(id);
+    }
+
+    pendingTimers.clear();
 });
