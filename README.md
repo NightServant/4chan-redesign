@@ -18,22 +18,24 @@ The design lives in a Claude Design project and is treated as a blueprint, not a
 
 Some of it is not a port at all. The prototype has no command palette, no thread page and no composer: it stubs the last two with copy claiming the design system ships them, and it does not. Those are net-new work built to sit inside the system rather than beside it.
 
-Boards, threads and posts are ingested from 4chan's read-only JSON API into Eloquent and reach the screens as Inertia props. Everything account-shaped — profiles, settings, two-factor, passkeys — is this application's own, so Clover is two data sources behind one set of typed contracts rather than a mirror.
+Boards, threads and posts are ingested from 4chan's read-only JSON API into Eloquent and reach the screens as Inertia props. Everything an account does — posting, voting, saving, following, and the reading history behind it — is this application's own and never leaves it. Clover is two data sources behind one set of typed contracts rather than a mirror.
 
 ## Features
 
 - **Token foundation** &mdash; every colour authored once in OKLCH, mapped through Tailwind's `@theme` to both shadcn aliases and Clover-native utilities; dark by default with a fully authored light scope, and no neutral pure black or white
-- **Component library** &mdash; 64 components across primitives, Clover-specific components, and page sections, each built test-first
+- **Component library** &mdash; 94 components across primitives, Clover-specific components, and page sections, each built test-first
 - **Overlays on Radix** &mdash; dialog, dropdown, context menu, tabs, tooltip and select, so focus trapping, roving tabindex and typeahead are correct rather than approximated
 - **Command palette** &mdash; ⌘K / Ctrl+K over `cmdk`, net-new work the design prototype never covered
 - **App chrome** &mdash; collapsible sidebar with persisted state, sticky header with account and notification menus, and a mobile bottom bar that respects the home-indicator inset
-- **Community layer** &mdash; thread cards with a stretched-link target so vote buttons stay independently focusable, a recursive comment tree with real list semantics, collapse and a depth cap, and blessings and curses rather than upvotes
+- **Community layer** &mdash; thread cards with a stretched-link target so vote buttons stay independently focusable, and a comment tree nested from quotelinks, since 4chan's own posts are flat
 - **Feed, boards and threads** &mdash; three feed sorts, a board page per slug with a real empty state, and a thread view that handles a post number matching nothing as an ordinary case rather than an error
 - **Real data, read-only upstream** &mdash; 77 boards, their catalogs and their posts ingested from 4chan's JSON API by `clover:sync`, rate limited to one request a second and conditional on `If-Modified-Since`; nothing is ever written back
-- **Greentext that works** &mdash; post bodies are parsed from 4chan's HTML to plain text on ingest, then rendered line by line with quote lines styled and `>>` references picked out, without `dangerouslySetInnerHTML` anywhere
+- **Greentext that works** &mdash; post bodies are parsed from 4chan's HTML to plain text on ingest, then rendered line by line with quote lines styled and `>>` references picked out; no post body ever reaches React as markup
 - **Adult boards behind an opt-in** &mdash; `ws_board` drives it, the preference is account-level and off by default, and a board you have not opted into answers 404 rather than 403 so its existence is not confirmed
 - **Imageboard URLs** &mdash; `/g/` is a board and `/g/109522303` a thread, constrained to the synced slug list so they cannot shadow the site's own pages
-- **Composers that do not lie** &mdash; a reply form inline where replying belongs and a dialog for starting a thread, both refusing empty input, both enforcing the board's own `max_comment_chars` rather than one global guess, and both stating in the source that nothing is submitted yet
+- **Attachments that render** &mdash; images served straight from 4chan's CDN, addressed by the id it stores them under; spoilered files and everything on a not-worksafe board sit behind a cover that fetches nothing until asked
+- **Composers that persist** &mdash; a reply form inline where replying belongs and a dialog for starting a thread, both refusing empty input, both enforcing the board's own `max_comment_chars` rather than one global guess, and both writing a post that survives a reload
+- **An account layer of its own** &mdash; blessings and curses, saved threads, reading history and followed boards, each private to the anon and none of it attached to anything they post
 - **Marketing homepage** &mdash; hero, board grid, trending strip, features, and a footer whose every destination resolves to a real page
 - **Accessibility as a build constraint** &mdash; focus rings never removed, state never carried by colour alone, tests asserting accessible names and keyboard paths instead of class strings
 - **Motion that means something** &mdash; four duration tokens, exits at roughly 65% of their enter, layout properties never animated, and a reduced-motion rule asserted against the compiled stylesheet
@@ -103,16 +105,21 @@ cd 4chan-redesign
 # 2. Install both dependency trees, copy .env, generate a key, migrate, build
 composer setup
 
-# 3. Pull real boards and threads from 4chan (one request a second)
-php artisan clover:sync --with-posts
+# 3. Pull every board and its threads from 4chan (77 requests, about a minute)
+php artisan clover:sync
 
 # 4. Run the dev server
 composer dev
 ```
 
+Step 3 is one request per board and gets a fully readable site: `catalog.json`
+returns every thread on a board along with its opening post, so boards, cards,
+titles, excerpts and images are all populated by it. Replies need the thread
+endpoint, which is a request per thread and off by default — add
+`--with-posts` for it, and `--board=g --limit=5` to keep a first run short.
+
 Without step 3 the site runs and every route resolves, but there are no boards
-and the feed says so. `clover:sync --board=g --limit=5` is enough to see it
-working without spending several minutes on a full sync.
+and the feed says so.
 
 Open [http://localhost:8000](http://localhost:8000). Served by [Laravel Herd](https://herd.laravel.com) at `https://4chan-redesign.test` if you use it.
 
@@ -134,7 +141,7 @@ vendor/bin/pint          # PHP formatting
 
 ## Progress
 
-Work is sequenced into gated tasks. Each is built, reviewed, merged to `main` as one squashed commit, and verified on `main` before the next begins. **Current suite: 835 frontend tests, 212 backend tests.**
+Work is sequenced into gated tasks. Each is built, reviewed, merged to `main` as one squashed commit, and verified on `main` before the next begins. **Current suite: 836 frontend tests, 296 backend tests.**
 
 | Task | Scope | Status |
 |---|---|---|
@@ -150,30 +157,43 @@ Work is sequenced into gated tasks. Each is built, reviewed, merged to `main` as
 | 8.1 | Review fixes: Home resolves by auth state, feed sort tabs removed | [Merged](https://github.com/NightServant/4chan-redesign/pull/17) |
 | 9 | Account, history, auth screens, error pages | [Merged](https://github.com/NightServant/4chan-redesign/pull/19) |
 | 10 | The six screens the prototype never covered: settings, messages, bookmarks, communities, two-factor, passkeys | [Merged](https://github.com/NightServant/4chan-redesign/pull/19) |
-| 11a | Read layer: ingest from 4chan's API, board and thread models, per-board limits, mature-board gating | In review |
-| 11b | Account layer: bookmarks, history, messages, blessings and curses, local posting | Planned |
+| 11a | Read layer: ingest from 4chan's API, board and thread models, per-board limits, mature-board gating | [Merged](https://github.com/NightServant/4chan-redesign/pull/20) |
+| 11a.1 | Attachments rendered from 4chan's CDN, behind spoiler and mature-board covers | [Merged](https://github.com/NightServant/4chan-redesign/pull/21) |
+| 11a.2 | Image sizing; no attachments on the homepage | [Merged](https://github.com/NightServant/4chan-redesign/pull/22) |
+| 11a.3 | Whole catalog imported, opening post with it | [Merged](https://github.com/NightServant/4chan-redesign/pull/23) |
+| 11b | Account layer: votes, bookmarks, history, subscriptions, local posting; messages removed | [Merged](https://github.com/NightServant/4chan-redesign/pull/25) |
 
-The app is navigable end to end: homepage, feed, board, thread, reply. Every link resolves.
+The app is navigable end to end: homepage, feed, board, thread, reply. Every link resolves, and everything an account does persists.
+
+There are no design fixtures left. `resources/js/fixtures/` holds test-data
+builders and nothing else — every product surface reads the database.
 
 ### Known gaps
 
-- **Nothing submits yet.** The API upstream is read-only, so posting is Clover's own and lands in task 11b along with blessings, bookmarks, history and messages. Composers hold local state and say so rather than faking a post that vanishes on reload.
+- **Nothing has been checked in a browser by eye.** Every route is asserted to render and the write paths are covered end to end, but no one has looked at the result. Historically on this project the defects that mattered came from screenshots, not from the suite.
+- **`NewThreadDialog` is mounted by nothing.** Starting a thread works over its route and is covered by tests, but no screen renders the dialog, so the feature is unreachable from the interface.
 - **The feed does not page.** It is one query with a limit. The previous "Load more" was removed rather than kept, because it showed two skeletons and put itself back — paging a server-backed feed needs a cursor on the prop.
-- **Account-shaped fixtures remain** in `resources/js/fixtures/clover.ts`: profile, history, bookmarks, conversations and activity. Task 11b replaces them.
-- **Nothing has been checked in a browser by eye.** Every route is asserted to render, but the visual review of task 11a has not happened.
+- **Reading progress is always nought.** The thread page records that a thread was read but does not measure how far, so the history screen's progress ring is honest and uninformative. Inventing a number would be worse.
+- **Clover accepts no uploads.** A post written here carries no attachment, which is why the account screen's media tab is empty for a new account.
 - **`php artisan route:cache` freezes the board list.** The `/{board}` constraint is built from the synced table, so a deployment that caches routes must re-cache them after a sync adds boards.
 
 ## Data notes
 
 Board, thread and post content is **real, and comes from 4chan**, via its [read-only JSON API](https://github.com/4chan/4chan-API). It is fetched server-side, at most one request a second with `If-Modified-Since` as the API's documentation asks, and nothing is ever sent upstream — the API accepts `GET`, `HEAD` and `OPTIONS` only. Everything an anon does here stays in this application's database.
 
-Post bodies are parsed to plain text on the way in. The API returns `com` as HTML written by anonymous strangers, so it is converted once during ingest rather than trusted into the DOM at render time; there is no `dangerouslySetInnerHTML` anywhere in the app.
+Post bodies are parsed to plain text on the way in. The API returns `com` as HTML written by anonymous strangers — `<br>`, `<wbr>` injected mid-URL, greentext spans, three shapes of quotelink and HTML entities — so it is converted once during ingest rather than trusted into the DOM at render time. No post body reaches React as markup, and the renderer uses no `dangerouslySetInnerHTML`. (One component does: the two-factor setup modal, for the QR code SVG Fortify generates server-side. That is the app's own output, not an anon's.)
 
-**Attachments are metadata only.** The API reports a real filename, extension, dimensions and byte size, and those are what the placeholder renders. No image is fetched, hotlinked or displayed.
+**Attachments are real images, served by 4chan.** Files are addressed by `tim`, 4chan's own id for them, and the `<img>` points straight at `i.4cdn.org` — the documented arrangement, and what any client does. Nothing is downloaded or stored here: the application holds the id of a file, not the file. A browser fetching one therefore contacts 4chan directly, and `referrerPolicy="no-referrer"` keeps which page an anon was reading out of it.
+
+**A covered attachment is never fetched.** Images 4chan marks `spoiler`, and every image on a board marked not worksafe, render as a labelled cover with no `src` at all until an anon asks for one. Blurring a file the browser has already downloaded conceals nothing — the bytes arrived and the request happened. The homepage carries no attachments in its payload whatsoever, so the first screen a visitor sees cannot make a request to the CDN.
 
 Boards 4chan marks `ws_board: 0` are hidden unless an anon opts in, and a signed-out visitor always gets the filtered view. Requesting one you have not opted into returns 404 rather than 403, so the board's existence is not confirmed to someone who asked not to see boards like it.
 
-Two figures the design carried were removed rather than estimated, because the API publishes neither at any scope: a per-board "anons online" count, and per-thread views. Where a number has no source it is not shown. The same rule governs copy: the rail's moderation panel no longer claims a board is under slow mode, because nothing upstream reports moderation state.
+Several figures the design carried were removed rather than estimated, because nothing publishes them: a per-board "anons online" count, per-thread views, and the rail's site-wide presence panel. Where a number has no source it is not shown. The same rule took the profile's achievement badges and its janitor scope — one measured nothing, the other named a moderation system that does not exist — and emptied the rail's moderation panel, which had claimed a specific live board was under slow mode.
+
+**Everything an account does is its own, and private.** Votes, saved threads, reading history and followed boards are visible to nobody else, and a post carries no identity at all: a reply written here is `Anonymous` whoever wrote it, and the only thing that can appear beside it is a tripcode an anon opted into. Nothing is ever sent upstream — the API accepts `GET`, `HEAD` and `OPTIONS` only — so a reply written on Clover stays on Clover.
+
+Direct messages were removed rather than built. Two anons have no way to find each other here: there is no directory, no profile page for anyone but yourself, and no identity on a post to start from. The screen assumed a social graph the product's own premise rules out.
 
 Fonts are Inter and Space Grotesk, both under the SIL Open Font License, vendored and subset to WOFF2. Icons are Lucide, ISC licensed.
 
