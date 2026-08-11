@@ -3,7 +3,7 @@ import { Bookmark, ImageIcon, MessageSquare } from 'lucide-react';
 import type { ComponentProps } from 'react';
 import { BoardAvatar } from '@/components/clover/board-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
-import { MediaPlaceholder } from '@/components/clover/media-placeholder';
+import { PostAttachment } from '@/components/clover/post-image';
 import { VoteControl } from '@/components/clover/vote-control';
 import type { VoteState } from '@/components/clover/vote-control';
 import { Badge } from '@/components/ui/badge';
@@ -102,9 +102,12 @@ function ThreadCard({
                 </p>
             ) : null}
 
+            {/* Thumbnail only. A feed of thirty cards fetching originals
+                would pull tens of megabytes for images most anons scroll
+                past; the full file loads when one is opened. */}
             {thread.media ? (
-                <div className="px-5">
-                    <MediaPlaceholder label={thread.media} />
+                <div className="relative px-5">
+                    <PostAttachment media={thread.media} />
                 </div>
             ) : null}
 

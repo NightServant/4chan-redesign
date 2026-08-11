@@ -31,9 +31,13 @@ class PostFactory extends Factory
             'quotes' => [],
             'media_filename' => null,
             'media_extension' => null,
+            'media_tim' => null,
             'media_width' => null,
             'media_height' => null,
+            'media_thumb_width' => null,
+            'media_thumb_height' => null,
             'media_size' => null,
+            'media_spoiler' => false,
             'posted_at' => $this->faker->dateTimeBetween('-30 days', 'now'),
         ];
     }
@@ -57,8 +61,19 @@ class PostFactory extends Factory
         return $this->state(fn (array $attributes): array => [
             'media_filename' => $this->faker->slug(3),
             'media_extension' => $this->faker->randomElement(['.png', '.jpg', '.webm', '.gif']),
+
+            /**
+             * The id the CDN addresses the file by: a unix timestamp in
+             * microseconds. Without it there is no URL to build, so a media
+             * state that omitted it would model a post the interface treats
+             * as having no attachment at all.
+             */
+            'media_tim' => $this->faker->numberBetween(1_600_000_000_000_000, 1_800_000_000_000_000),
+
             'media_width' => $this->faker->numberBetween(320, 3840),
             'media_height' => $this->faker->numberBetween(240, 2160),
+            'media_thumb_width' => 250,
+            'media_thumb_height' => $this->faker->numberBetween(140, 250),
             'media_size' => $this->faker->numberBetween(20_000, 4_000_000),
         ]);
     }

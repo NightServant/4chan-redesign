@@ -29,6 +29,33 @@ return [
 
     /*
     |---------------------------------------------------------------------------
+    | Content delivery
+    |---------------------------------------------------------------------------
+    |
+    | Where attachments are served from. Two hosts, both 4chan's:
+    |
+    |   i.4cdn.org   uploads and their thumbnails
+    |   s.4cdn.org   the site's own static images, which is where the spoiler
+    |                placeholder lives
+    |
+    | These URLs go into `src` attributes, so an anon's browser fetches them
+    | from 4chan directly and 4chan sees that request. Proxying them through
+    | this application would hide it, at the cost of putting every image
+    | through the app; hotlinking is the documented arrangement and the one
+    | every other client uses.
+    |
+    | Nothing is ever downloaded or stored here. The application holds the id
+    | of a file, not the file.
+    |
+    */
+
+    'cdn' => [
+        'images' => env('CLOVER_CDN_IMAGES', 'https://i.4cdn.org'),
+        'static' => env('CLOVER_CDN_STATIC', 'https://s.4cdn.org'),
+    ],
+
+    /*
+    |---------------------------------------------------------------------------
     | Board categories
     |---------------------------------------------------------------------------
     |

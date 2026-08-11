@@ -59,10 +59,11 @@ final class ThreadResource extends JsonResource
             'images' => number_format($thread->images_count),
 
             /**
-             * Metadata only, and only what 4chan actually reported. The file
-             * itself is never fetched, hotlinked or put in an `<img>`.
+             * The OP's attachment, or null when the thread opened without one.
+             * Only ever what 4chan reported: this application stores the id of
+             * a file, never the file.
              */
-            'media' => $originalPost?->mediaLabel(),
+            'media' => AttachmentResource::for($originalPost, $request),
 
             'pinned' => $thread->sticky,
         ];

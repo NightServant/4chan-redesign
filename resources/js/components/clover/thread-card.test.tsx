@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { ThreadCard } from '@/components/clover/thread-card';
+import { makeAttachment } from '@/fixtures/factories';
 import type { Thread } from '@/types/clover';
 
 /**
@@ -152,19 +153,17 @@ describe('ThreadCard', () => {
     });
 
     it('renders media only when the thread carries an attachment', () => {
+        const media = makeAttachment({
+            label: 'ridge-4k.png · 3840x2160 · 4.1 MB',
+            filename: 'ridge-4k.png',
+        });
+
         const { rerender } = render(
-            <ThreadCard
-                thread={{
-                    ...baseThread,
-                    media: 'ridge-4k.png · 3840×2160 · 4.1 MB',
-                }}
-            />,
+            <ThreadCard thread={{ ...baseThread, media }} />,
         );
 
         expect(
-            screen.getByRole('img', {
-                name: 'Attachment: ridge-4k.png · 3840×2160 · 4.1 MB',
-            }),
+            screen.getByRole('img', { name: media.filename }),
         ).toBeInTheDocument();
 
         rerender(<ThreadCard thread={{ ...baseThread, media: null }} />);
@@ -172,17 +171,27 @@ describe('ThreadCard', () => {
         expect(screen.queryByRole('img')).not.toBeInTheDocument();
     });
 
-    it('never invents media: it does not render a real image element', () => {
-        const { container } = render(
-            <ThreadCard
-                thread={{
-                    ...baseThread,
-                    media: 'ridge-4k.png · 3840×2160 · 4.1 MB',
-                }}
-            />,
-        );
+    /**
+     * This used to assert the opposite — that a card never renders a real
+     * `<img>` — because media was metadata and there was no file to point at.
+     * There is one now, so the rule it was protecting moved rather than went
+     * away: attachments are still never invented, and the card still shows
+     * only what 4chan reported. What changed is that the report includes an id
+     * the file can be fetched by.
+     *
+     * The card loads the thumbnail and never the original: a feed of thirty
+     * cards pulling four-megabyte images is the difference between a page that
+     * loads and one that does not.
+     */
+    it('loads the thumbnail and never the full image', () => {
+        const media = makeAttachment();
 
-        expect(container.querySelector('img')).not.toBeInTheDocument();
+        render(<ThreadCard thread={{ ...baseThread, media }} />);
+
+        const image = screen.getByRole('img', { name: media.filename });
+
+        expect(image).toHaveAttribute('src', media.thumbnailUrl);
+        expect(image).not.toHaveAttribute('src', media.fullUrl);
     });
 
     it('renders the excerpt when present and omits it otherwise', () => {

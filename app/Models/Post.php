@@ -25,9 +25,13 @@ use Illuminate\Support\Carbon;
  * @property array<int, int> $quotes
  * @property string|null $media_filename
  * @property string|null $media_extension
+ * @property int|null $media_tim
  * @property int|null $media_width
  * @property int|null $media_height
+ * @property int|null $media_thumb_width
+ * @property int|null $media_thumb_height
  * @property int|null $media_size
+ * @property bool $media_spoiler
  * @property Carbon $posted_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -44,9 +48,13 @@ use Illuminate\Support\Carbon;
     'quotes',
     'media_filename',
     'media_extension',
+    'media_tim',
     'media_width',
     'media_height',
+    'media_thumb_width',
+    'media_thumb_height',
     'media_size',
+    'media_spoiler',
     'posted_at',
 ])]
 class Post extends Model
@@ -62,7 +70,75 @@ class Post extends Model
 
     public function hasMedia(): bool
     {
-        return filled($this->media_filename);
+        return filled($this->media_filename) && $this->media_tim !== null;
+    }
+
+    /**
+     * The full-size attachment, on 4chan's CDN.
+     *
+     * Addressed by `tim`, 4chan's own id for the file, never by the filename
+     * an anon uploaded. Needs the board slug, which lives a relation away —
+     * eager load `thread.board` before calling this for a list of posts.
+     */
+    public function mediaUrl(): ?string
+    {
+        if (! $this->hasMedia()) {
+            return null;
+        }
+
+        return sprintf(
+            '%s/%s/%d%s',
+            rtrim((string) config('clover.cdn.images'), '/'),
+            $this->thread->board->slug,
+            $this->media_tim,
+            $this->media_extension,
+        );
+    }
+
+    /**
+     * The thumbnail. Always JPEG regardless of what the original was, which
+     * is upstream's rule and not an assumption: a `.webm` attachment still
+     * has a `.jpg` thumbnail.
+     */
+    public function mediaThumbnailUrl(): ?string
+    {
+        if (! $this->hasMedia()) {
+            return null;
+        }
+
+        return sprintf(
+            '%s/%s/%ds.jpg',
+            rtrim((string) config('clover.cdn.images'), '/'),
+            $this->thread->board->slug,
+            $this->media_tim,
+        );
+    }
+
+    /**
+     * Why this attachment is covered, or null when it is shown outright.
+     *
+     * Decided here rather than in the browser. A client that received the URL
+     * and a "please blur this" hint could always be asked not to blur it; the
+     * reason travels with the image so the interface has one honest state to
+     * render, and the two causes stay distinguishable because they warrant
+     * different copy.
+     *
+     * `spoiler` is 4chan's own flag, set by whoever posted it. `mature` is
+     * ours, and covers everything on a board 4chan marks not worksafe — an
+     * anon who opted into seeing those boards has agreed to find them, not to
+     * have every image on them arrive unannounced.
+     */
+    public function mediaConcealment(): ?string
+    {
+        if (! $this->hasMedia()) {
+            return null;
+        }
+
+        if ($this->media_spoiler) {
+            return 'spoiler';
+        }
+
+        return $this->thread->board->worksafe ? null : 'mature';
     }
 
     /**
@@ -115,6 +191,7 @@ class Post extends Model
     {
         return [
             'is_op' => 'boolean',
+            'media_spoiler' => 'boolean',
             'quotes' => 'array',
             'posted_at' => 'datetime',
         ];

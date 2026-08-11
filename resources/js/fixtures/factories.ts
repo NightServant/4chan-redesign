@@ -1,4 +1,5 @@
 import type {
+    Attachment,
     Board,
     BoardDirectoryEntry,
     Comment,
@@ -68,7 +69,32 @@ export function makeComment(overrides: Partial<Comment> = {}): Comment {
         body: 'A reply.',
         blessings: 0,
         op: false,
+        media: null,
         replies: [],
+        ...overrides,
+    };
+}
+
+/**
+ * An attachment as the server sends it.
+ *
+ * URLs are the real CDN shape — `{tim}{ext}` for the file and `{tim}s.jpg`
+ * for the thumbnail — so a test that asserts on one is asserting on the
+ * arrangement the application actually produces.
+ */
+export function makeAttachment(
+    overrides: Partial<Attachment> = {},
+): Attachment {
+    return {
+        label: 'x230.png · 1440x900 · 412 KB',
+        filename: 'x230.png',
+        thumbnailUrl: 'https://i.4cdn.org/g/1745612650141704s.jpg',
+        fullUrl: 'https://i.4cdn.org/g/1745612650141704.png',
+        width: 1440,
+        height: 900,
+        thumbWidth: 250,
+        thumbHeight: 156,
+        concealed: null,
         ...overrides,
     };
 }

@@ -8,6 +8,7 @@ import { useId, useState } from 'react';
 import { AnonAvatar } from '@/components/clover/anon-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
 import { PostBody } from '@/components/clover/post-body';
+import { PostAttachment } from '@/components/clover/post-image';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { Comment } from '@/types/clover';
@@ -189,6 +190,11 @@ function CommentNode({
                             body={comment.body}
                             className="max-w-prose text-body-sm text-foreground"
                         />
+
+                        {/* Replies carry files as often as the OP does; a
+                            thread rendered without them drops most of what is
+                            actually on a board like /wg/ or /3/. */}
+                        <PostAttachment media={comment.media} />
 
                         <footer className="flex items-center gap-3">
                             <span

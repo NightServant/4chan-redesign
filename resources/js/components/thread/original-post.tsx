@@ -2,8 +2,8 @@ import { Link } from '@inertiajs/react';
 import { Bookmark, ImageIcon, MessageSquare, Share2 } from 'lucide-react';
 import { BoardAvatar } from '@/components/clover/board-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
-import { MediaPlaceholder } from '@/components/clover/media-placeholder';
 import { PostBody } from '@/components/clover/post-body';
+import { PostAttachment } from '@/components/clover/post-image';
 import { VoteControl } from '@/components/clover/vote-control';
 import type { VoteState } from '@/components/clover/vote-control';
 import { Badge } from '@/components/ui/badge';
@@ -124,9 +124,7 @@ function OriginalPost({
                 />
             ) : null}
 
-            {thread.media ? (
-                <MediaPlaceholder label={thread.media} height={360} />
-            ) : null}
+            <PostAttachment media={thread.media} />
 
             <footer className="flex flex-wrap items-center gap-5">
                 <VoteControl

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { OriginalPost } from '@/components/thread/original-post';
-import { makeThread } from '@/fixtures/factories';
+import { makeAttachment, makeThread } from '@/fixtures/factories';
 import { board } from '@/routes';
 
 /**
@@ -38,9 +38,7 @@ const THREAD = makeThread({
     excerpt: 'Compiling LLVM takes 40 minutes but everything else is fine.',
 });
 const PINNED_THREAD = makeThread({ pinned: true });
-const MEDIA_THREAD = makeThread({
-    media: 'thinkpad-x230.png · 1440x900 · 412 KB',
-});
+const MEDIA_THREAD = makeThread({ media: makeAttachment() });
 
 function stubClipboard() {
     Object.defineProperty(navigator, 'clipboard', {
@@ -92,21 +90,23 @@ describe('OriginalPost', () => {
         expect(screen.queryByText('Pinned')).not.toBeInTheDocument();
     });
 
-    it('renders a MediaPlaceholder rather than an image when media is set', () => {
+    /**
+     * The inverse of what this asserted before. Media was metadata and there
+     * was no file to point at, so the OP rendered a labelled placeholder and a
+     * real `<img>` would have meant something was invented. There is a file
+     * now, and the rule it protected moved rather than went away: still only
+     * what 4chan reported, still nothing estimated.
+     */
+    it('renders the attachment thumbnail when the thread has one', () => {
         render(<OriginalPost thread={MEDIA_THREAD} />);
 
-        expect(
-            screen.getByRole('img', {
-                name: `Attachment: ${MEDIA_THREAD.media}`,
-            }),
-        ).toBeInTheDocument();
-        expect(
-            screen.queryByRole('img', { name: /^(?!Attachment).*/ }),
-        ).not.toBeInTheDocument();
-        expect(document.querySelector('img')).not.toBeInTheDocument();
+        const media = MEDIA_THREAD.media!;
+        const image = screen.getByRole('img', { name: media.filename });
+
+        expect(image).toHaveAttribute('src', media.thumbnailUrl);
     });
 
-    it('does not render a MediaPlaceholder when media is null', () => {
+    it('renders no attachment when media is null', () => {
         render(<OriginalPost thread={THREAD} />);
 
         expect(screen.queryByRole('img')).not.toBeInTheDocument();

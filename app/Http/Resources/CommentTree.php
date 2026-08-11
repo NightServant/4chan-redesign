@@ -180,6 +180,13 @@ final class CommentTree
 
                 'op' => self::isOriginalAnon($post, $originalTripcode),
 
+                /**
+                 * Replies carry files as often as the OP does. Rendering the
+                 * thread without them drops most of what is actually on a
+                 * board like /wg/ or /3/.
+                 */
+                'media' => AttachmentResource::for($post, request()),
+
                 'replies' => self::nodes($childrenOf[$no] ?? [], $byNo, $childrenOf, $originalTripcode),
             ];
         }
