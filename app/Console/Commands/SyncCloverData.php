@@ -271,11 +271,30 @@ class SyncCloverData extends Command
         return is_numeric($configured) ? (int) $configured : null;
     }
 
+    /**
+     * How many threads per board get their full page fetched.
+     *
+     * Always a number, and deliberately not `threadLimit()`. The two look
+     * alike and cost nothing alike: the thread limit can be null because one
+     * `catalog.json` request already returns every thread on the board, so a
+     * cap there only discards rows already paid for. A post limit of null
+     * would mean a request *per thread* — against the eleven thousand threads
+     * a full sync stores, better than three hours at the rate limit.
+     *
+     * It used to delegate here, which was a bug rather than a decision: when
+     * the thread limit gained its null case, this kept declaring `int` and
+     * returned it anyway, so `--with-posts` type-errored unless `--post-limit`
+     * was passed explicitly.
+     */
     private function postLimit(): int
     {
         $limit = $this->option('post-limit');
 
-        return is_numeric($limit) ? (int) $limit : $this->threadLimit();
+        if (is_numeric($limit)) {
+            return (int) $limit;
+        }
+
+        return (int) config('clover.sync.threads_with_posts', 10);
     }
 
     /**

@@ -111,6 +111,20 @@ return [
     'sync' => [
         'threads_per_board' => null,
 
+        /*
+        | How many threads per board `--with-posts` fetches in full.
+        |
+        | Finite, unlike `threads_per_board`, and for a reason the two do not
+        | share: a catalog is one request for every thread on the board, while
+        | a thread page is one request each. Left uncapped against a full sync
+        | that stores eleven thousand threads, this is better than three hours
+        | at one request a second.
+        |
+        | Ten a board is roughly a quarter of an hour across all 77. Raise it
+        | when a deeper archive is worth the wait.
+        */
+        'threads_with_posts' => 10,
+
         /**
          * Boards synced when none are named. Empty means every board the API
          * returns, which is the intended steady state; a short list is useful
