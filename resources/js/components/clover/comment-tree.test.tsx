@@ -44,6 +44,7 @@ const COMMENTS: readonly Comment[] = [
         body: 'Forty minutes for LLVM is not "fine", that is a full coffee break per build. What is the core count?',
         blessings: 214,
         op: false,
+        media: null,
         replies: [
             {
                 no: 58210452,
@@ -53,6 +54,7 @@ const COMMENTS: readonly Comment[] = [
                 body: 'Eight cores, 16 GB. It is not fast, it is usable. Those are different claims.',
                 blessings: 388,
                 op: true,
+                media: null,
                 replies: [
                     {
                         no: 58210461,
@@ -62,6 +64,7 @@ const COMMENTS: readonly Comment[] = [
                         body: 'Fair. What is battery like under sustained load?',
                         blessings: 42,
                         op: false,
+                        media: null,
                         replies: [],
                     },
                 ],
@@ -74,6 +77,7 @@ const COMMENTS: readonly Comment[] = [
                 body: 'Cross compile on an x86 box and rsync the artifacts. Nobody builds LLVM natively on these.',
                 blessings: 156,
                 op: false,
+                media: null,
                 replies: [],
             },
         ],
@@ -86,6 +90,7 @@ const COMMENTS: readonly Comment[] = [
         body: 'Mainline kernel support or vendor tree? This is the only question that matters and every one of these threads dodges it.',
         blessings: 512,
         op: false,
+        media: null,
         replies: [
             {
                 no: 58210458,
@@ -95,6 +100,7 @@ const COMMENTS: readonly Comment[] = [
                 body: 'Vendor tree, 6.6 based. Mainline boots but the GPU does nothing.',
                 blessings: 297,
                 op: true,
+                media: null,
                 replies: [],
             },
         ],
@@ -107,6 +113,7 @@ const COMMENTS: readonly Comment[] = [
         body: 'Bought one in April and returned it in May. Your mileage will vary wildly by workload.',
         blessings: 8,
         op: false,
+        media: null,
         replies: [],
     },
 ];

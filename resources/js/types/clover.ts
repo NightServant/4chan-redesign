@@ -31,6 +31,44 @@ export interface Board {
     threads: string;
 }
 
+/**
+ * An attachment on a post.
+ *
+ * Files live on 4chan's CDN and are addressed by `tim`, its own id for them,
+ * never by the filename an anon uploaded. Nothing is downloaded or stored by
+ * this application: it holds the id of a file, not the file.
+ *
+ * Both URLs go straight into `src`, so the browser fetches them from 4chan and
+ * 4chan sees the request. That is the documented arrangement and what every
+ * other client does, and it is the reason `concealed` is a server decision
+ * rather than a styling hint.
+ */
+export interface Attachment {
+    /** Pre-formatted name, dimensions and size, e.g. `x230.png · 1440x900 · 412 KB`. */
+    label: string;
+    /** The original filename with its extension, for the accessible name. */
+    filename: string;
+    /** Always JPEG, whatever the original was — upstream's rule, not a guess. */
+    thumbnailUrl: string;
+    fullUrl: string;
+    width: number | null;
+    height: number | null;
+    /** Reserve the thumbnail's box before it loads, so nothing shifts. */
+    thumbWidth: number | null;
+    thumbHeight: number | null;
+    /**
+     * Why this is covered, or null when it is shown outright.
+     *
+     * `spoiler` is 4chan's own flag, set by whoever posted it. `mature` is
+     * ours and covers every image on a board 4chan marks not worksafe.
+     *
+     * A covered attachment is not merely blurred: nothing sets `src` until an
+     * anon asks for it, so the file is never fetched. A CSS filter over an
+     * image the browser has already downloaded conceals nothing.
+     */
+    concealed: 'spoiler' | 'mature' | null;
+}
+
 export interface Thread {
     /** Post number, rendered as `>>58210441`. */
     no: number;
@@ -56,11 +94,8 @@ export interface Thread {
      * API actually returns instead of a number with no source.
      */
     images: string;
-    /**
-     * Media is never invented in mocks. When present this is the filename,
-     * dimensions and size — rendered over the placeholder weave, not an image.
-     */
-    media: string | null;
+    /** The OP's attachment, or null when the thread opened without one. */
+    media: Attachment | null;
     pinned: boolean;
 }
 
@@ -83,6 +118,12 @@ export interface Comment {
     blessings: number;
     /** True for the anon who opened the thread. */
     op: boolean;
+    /**
+     * This reply's own attachment. Replies carry images as often as the OP
+     * does, and rendering the thread without them drops most of what is on a
+     * board like /wg/ or /3/.
+     */
+    media: Attachment | null;
     replies: Comment[];
 }
 

@@ -166,33 +166,51 @@ final class Importer
     }
 
     /**
-     * Media is metadata only — a name, an extension, dimensions and a byte
-     * count. The file itself is never fetched or linked, so a post whose file
-     * upstream has deleted carries no media at all rather than a broken label.
+     * An attachment: what it was called, how big it is, and the id its file
+     * is addressed by on the CDN.
+     *
+     * `tim` is the load-bearing one and the original filename is not. 4chan
+     * stores the file under its own id, so `{tim}{ext}` builds the image URL
+     * and `{tim}s.jpg` the thumbnail, while `filename` is only ever the label
+     * an anon sees.
+     *
+     * A post whose file upstream has deleted carries no media at all rather
+     * than an id that resolves to nothing. `filedeleted` is the flag for it,
+     * and honouring it is the difference between an empty post and a broken
+     * image on every thread old enough to have been moderated.
      *
      * @param  array<string, mixed>  $row
-     * @return array<string, int|string|null>
+     * @return array<string, int|string|bool|null>
      */
     private function media(array $row): array
     {
         $filename = $this->nullableString($row, 'filename');
+        $tim = $this->int($row, 'tim') ?: null;
 
-        if ($filename === null || $this->bool($row, 'filedeleted')) {
+        if ($filename === null || $tim === null || $this->bool($row, 'filedeleted')) {
             return [
                 'media_filename' => null,
                 'media_extension' => null,
+                'media_tim' => null,
                 'media_width' => null,
                 'media_height' => null,
+                'media_thumb_width' => null,
+                'media_thumb_height' => null,
                 'media_size' => null,
+                'media_spoiler' => false,
             ];
         }
 
         return [
             'media_filename' => $filename,
             'media_extension' => $this->nullableString($row, 'ext'),
+            'media_tim' => $tim,
             'media_width' => $this->int($row, 'w') ?: null,
             'media_height' => $this->int($row, 'h') ?: null,
+            'media_thumb_width' => $this->int($row, 'tn_w') ?: null,
+            'media_thumb_height' => $this->int($row, 'tn_h') ?: null,
             'media_size' => $this->int($row, 'fsize') ?: null,
+            'media_spoiler' => $this->bool($row, 'spoiler'),
         ];
     }
 

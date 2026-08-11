@@ -255,7 +255,20 @@ export const BOOKMARKS: readonly Bookmark[] = [
             blessings: 5108,
             replies: 1204,
             images: '96',
-            media: 'progress-2y.jpg · 1440×1800 · 812 KB',
+            /* Shaped like a real ingested attachment, because `Thread.media`
+               is an `Attachment` now rather than a label. Bookmarks are still
+               fixture data until task 11b gives them a table. */
+            media: {
+                label: 'progress-2y.jpg · 1440x1800 · 812 KB',
+                filename: 'progress-2y.jpg',
+                thumbnailUrl: 'https://i.4cdn.org/fit/1745612650141704s.jpg',
+                fullUrl: 'https://i.4cdn.org/fit/1745612650141704.jpg',
+                width: 1440,
+                height: 1800,
+                thumbWidth: 200,
+                thumbHeight: 250,
+                concealed: null,
+            },
             pinned: false,
         },
         savedAt: 'Saved last week',
