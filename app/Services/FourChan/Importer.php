@@ -7,7 +7,7 @@ namespace App\Services\FourChan;
 use App\Models\Board;
 use App\Models\Post;
 use App\Models\Thread;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Date;
 
 /**
  * Turns a decoded upstream payload into rows.
@@ -32,7 +32,7 @@ final class Importer
     public function importBoards(array $payload): array
     {
         $categories = $this->categoryLookup();
-        $syncedAt = Carbon::now();
+        $syncedAt = Date::now();
         $slugs = [];
 
         foreach ($this->rows($payload, 'boards') as $row) {
@@ -89,7 +89,7 @@ final class Importer
 
         usort($stubs, fn (array $a, array $b): int => $this->bumpedAt($b) <=> $this->bumpedAt($a));
 
-        $syncedAt = Carbon::now();
+        $syncedAt = Date::now();
         $threads = [];
 
         /**
@@ -118,8 +118,8 @@ final class Importer
                     'closed' => $this->bool($stub, 'closed'),
                     'replies_count' => $this->int($stub, 'replies'),
                     'images_count' => $this->int($stub, 'images'),
-                    'posted_at' => Carbon::createFromTimestamp($this->int($stub, 'time'), 'UTC'),
-                    'bumped_at' => Carbon::createFromTimestamp($this->bumpedAt($stub), 'UTC'),
+                    'posted_at' => Date::createFromTimestamp($this->int($stub, 'time'), 'UTC'),
+                    'bumped_at' => Date::createFromTimestamp($this->bumpedAt($stub), 'UTC'),
                     'synced_at' => $syncedAt,
                 ],
             );
@@ -172,7 +172,7 @@ final class Importer
             $written++;
         }
 
-        $thread->forceFill(['posts_synced_at' => Carbon::now()])->save();
+        $thread->forceFill(['posts_synced_at' => Date::now()])->save();
 
         return $written;
     }
@@ -201,7 +201,7 @@ final class Importer
                 'capcode' => $this->nullableString($row, 'capcode'),
                 'body' => $comment['body'],
                 'quotes' => $comment['quotes'],
-                'posted_at' => Carbon::createFromTimestamp($this->int($row, 'time'), 'UTC'),
+                'posted_at' => Date::createFromTimestamp($this->int($row, 'time'), 'UTC'),
                 ...$this->media($row),
             ],
         );
