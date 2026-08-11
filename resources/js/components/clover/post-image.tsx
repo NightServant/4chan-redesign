@@ -202,7 +202,13 @@ function PostImage({ media, variant = 'card', className }: PostImageProps) {
             </button>
 
             <Dialog open={expanded} onOpenChange={setExpanded}>
-                <DialogContent className="max-w-[min(92vw,1100px)] sm:max-w-[min(92vw,1100px)]">
+                {/* Sized to whatever it holds rather than to a fixed column:
+                    the dialog exists to show one image at its own proportions,
+                    so a portrait shot should not sit in a landscape box with
+                    empty space either side of it. `w-fit` lets the panel
+                    shrink to the image; the viewport caps keep a large one on
+                    screen. */}
+                <DialogContent className="w-fit max-w-[min(94vw,1400px)] sm:max-w-[min(94vw,1400px)]">
                     <DialogTitle className="sr-only">
                         {media.filename}
                     </DialogTitle>
@@ -217,7 +223,12 @@ function PostImage({ media, variant = 'card', className }: PostImageProps) {
                             setFailed(true);
                             setExpanded(false);
                         }}
-                        className="max-h-[75vh] w-auto max-w-full self-center rounded-md object-contain"
+                        /* Both axes automatic, bounded by the viewport. The
+                           `width` and `height` attributes above are the file's
+                           real dimensions and would otherwise fix the rendered
+                           size, so `h-auto w-auto` is what actually hands the
+                           proportions back to the image. */
+                        className="h-auto max-h-[82vh] w-auto max-w-full justify-self-center rounded-md object-contain"
                     />
 
                     <MachineValue className="text-center text-faint">

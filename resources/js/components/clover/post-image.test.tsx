@@ -137,6 +137,40 @@ describe('PostImage', () => {
         ).toBe(true);
     });
 
+    /**
+     * The `width` and `height` attributes carry the file's real dimensions, so
+     * without both axes set to automatic they fix the rendered size and the
+     * dialog shows a 3000px image at 3000px. Automatic on both, bounded by the
+     * viewport, is what hands the proportions back to the image.
+     */
+    it('lets the opened image size itself on both axes', async () => {
+        const user = userEvent.setup();
+        const media = makeAttachment();
+
+        render(<PostImage media={media} />);
+
+        await user.click(screen.getByRole('button', { name: media.filename }));
+
+        const opened = screen
+            .getAllByRole('img', { name: media.filename })
+            .find((image) => image.getAttribute('src') === media.fullUrl);
+
+        expect(opened).toHaveClass('h-auto');
+        expect(opened).toHaveClass('w-auto');
+        expect(opened).toHaveClass('object-contain');
+    });
+
+    it('sizes the dialog to the image rather than to a fixed column', async () => {
+        const user = userEvent.setup();
+        const media = makeAttachment();
+
+        render(<PostImage media={media} />);
+
+        await user.click(screen.getByRole('button', { name: media.filename }));
+
+        expect(screen.getByRole('dialog')).toHaveClass('w-fit');
+    });
+
     it('is reachable and operable from the keyboard', async () => {
         const user = userEvent.setup();
         const media = makeAttachment();
