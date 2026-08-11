@@ -1,8 +1,14 @@
 import type {
+    ActivityEntry,
     Attachment,
     Board,
     BoardDirectoryEntry,
+    Bookmark,
     Comment,
+    HistoryEntry,
+    Profile,
+    ProfileComment,
+    ProfileStat,
     Thread,
     TrendingTag,
 } from '@/types/clover';
@@ -37,15 +43,18 @@ function nextPostNumber(): number {
 
 export function makeBoard(overrides: Partial<Board> = {}): Board {
     return {
+        id: nextPostNumber(),
         slug: '/g/',
         name: 'Technology',
         threads: '18,402',
+        subscribed: false,
         ...overrides,
     };
 }
 
 export function makeThread(overrides: Partial<Thread> = {}): Thread {
     return {
+        id: nextPostNumber(),
         no: nextPostNumber(),
         board: '/g/',
         boardName: 'Technology',
@@ -56,12 +65,15 @@ export function makeThread(overrides: Partial<Thread> = {}): Thread {
         images: '3',
         media: null,
         pinned: false,
+        voteState: null,
+        bookmarked: false,
         ...overrides,
     };
 }
 
 export function makeComment(overrides: Partial<Comment> = {}): Comment {
     return {
+        id: nextPostNumber(),
         no: nextPostNumber(),
         quotes: [],
         author: 'Anonymous',
@@ -106,7 +118,6 @@ export function makeDirectoryEntry(
         ...makeBoard(),
         description: 'Hardware, software and the arguments between them.',
         category: 'Interests',
-        subscribed: false,
         worksafe: true,
         ...overrides,
     };
@@ -118,6 +129,69 @@ export function makeTrendingTag(
     return {
         tag: '/g/',
         posts: '4,182 posts',
+        ...overrides,
+    };
+}
+
+export function makeProfile(overrides: Partial<Profile> = {}): Profile {
+    return {
+        handle: 'anon_4412',
+        tripcode: null,
+        bio: 'Reads /g/ at 3am.',
+        joined: '14 Mar 2024',
+        ...overrides,
+    };
+}
+
+export function makeStat(overrides: Partial<ProfileStat> = {}): ProfileStat {
+    return { label: 'Posts', value: '0', ...overrides };
+}
+
+export function makeActivity(
+    overrides: Partial<ActivityEntry> = {},
+): ActivityEntry {
+    return {
+        icon: 'message-square',
+        text: 'You replied in /g/',
+        time: '2 min ago',
+        ...overrides,
+    };
+}
+
+export function makeProfileComment(
+    overrides: Partial<ProfileComment> = {},
+): ProfileComment {
+    return {
+        no: nextPostNumber(),
+        board: '/g/',
+        threadNo: nextPostNumber(),
+        time: '2 min ago',
+        body: 'A reply this anon wrote.',
+        ...overrides,
+    };
+}
+
+export function makeHistoryEntry(
+    overrides: Partial<HistoryEntry> = {},
+): HistoryEntry {
+    return {
+        id: nextPostNumber(),
+        no: nextPostNumber(),
+        board: '/g/',
+        title: 'Anons are still arguing about init systems',
+        when: 'Today, 14:02',
+        day: 'Today',
+        progress: 40,
+        media: null,
+        ...overrides,
+    };
+}
+
+export function makeBookmark(overrides: Partial<Bookmark> = {}): Bookmark {
+    return {
+        thread: makeThread(),
+        savedAt: 'Saved 2 days ago',
+        note: '',
         ...overrides,
     };
 }

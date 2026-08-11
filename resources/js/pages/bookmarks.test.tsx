@@ -1,8 +1,9 @@
+import { router } from '@inertiajs/react';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { BOOKMARKS } from '@/fixtures/clover';
+import { makeBookmark, makeThread } from '@/fixtures/factories';
 import Bookmarks from '@/pages/bookmarks';
 
 /**
@@ -21,6 +22,10 @@ beforeAll(() => {
  * `Link` renders a plain anchor so thread titles stay queryable by role.
  */
 vi.mock('@inertiajs/react', () => ({
+    usePage: () => ({
+        props: { recentActivity: [], sidebarBoards: [] },
+    }),
+    router: { post: vi.fn(), delete: vi.fn(), visit: vi.fn() },
     Head: () => null,
     Link: ({
         href,
@@ -36,9 +41,41 @@ vi.mock('@inertiajs/react', () => ({
     ),
 }));
 
+const BOOKMARKS = [
+    makeBookmark({
+        thread: makeThread({
+            title: 'The Kola borehole and what stopped it',
+            blessings: 120,
+        }),
+        savedAt: 'Saved 2 days ago',
+        note: 'read later',
+    }),
+    makeBookmark({
+        thread: makeThread({
+            title: 'RISC-V laptops as daily drivers',
+            blessings: 90,
+        }),
+        savedAt: 'Saved 3 days ago',
+    }),
+    makeBookmark({
+        thread: makeThread({
+            title: 'Two years of walking 15k steps a day',
+            blessings: 5108,
+        }),
+        savedAt: 'Saved last week',
+        note: 'Track four timestamp is 11:42, not 11:24 like the OP says.',
+    }),
+    makeBookmark({
+        thread: makeThread({
+            title: 'Mainline kernel support or vendor tree',
+            blessings: 40,
+        }),
+        savedAt: 'Saved last month',
+    }),
+];
 const KOLA = BOOKMARKS[0].thread.title;
 const RISC_V = BOOKMARKS[1].thread.title;
-const WALKING = BOOKMARKS[3].thread.title;
+const WALKING = BOOKMARKS[2].thread.title;
 
 function savedTitles(): string[] {
     return within(screen.getByRole('list', { name: 'Saved threads' }))
@@ -48,7 +85,7 @@ function savedTitles(): string[] {
 
 describe('Bookmarks page', () => {
     it('counts the saved threads under a single page heading', () => {
-        render(<Bookmarks />);
+        render(<Bookmarks bookmarks={BOOKMARKS} />);
 
         expect(
             screen.getByRole('heading', { level: 1, name: 'Bookmarks' }),
@@ -58,14 +95,14 @@ describe('Bookmarks page', () => {
     });
 
     it('renders every saved thread with the date it was saved', () => {
-        render(<Bookmarks />);
+        render(<Bookmarks bookmarks={BOOKMARKS} />);
 
         expect(savedTitles()).toHaveLength(BOOKMARKS.length);
         expect(screen.getByText('Saved 2 days ago')).toBeInTheDocument();
     });
 
     it("marks the anon's own note as theirs, and omits it when unwritten", () => {
-        render(<Bookmarks />);
+        render(<Bookmarks bookmarks={BOOKMARKS} />);
 
         expect(screen.getAllByText('Your note')).toHaveLength(2);
         expect(
@@ -83,7 +120,7 @@ describe('Bookmarks page', () => {
 
     it('filters on thread title', async () => {
         const user = userEvent.setup();
-        render(<Bookmarks />);
+        render(<Bookmarks bookmarks={BOOKMARKS} />);
 
         await user.type(screen.getByLabelText('Search bookmarks'), 'borehole');
 
@@ -92,7 +129,7 @@ describe('Bookmarks page', () => {
 
     it('says what matched nothing', async () => {
         const user = userEvent.setup();
-        render(<Bookmarks />);
+        render(<Bookmarks bookmarks={BOOKMARKS} />);
 
         await user.type(screen.getByLabelText('Search bookmarks'), 'zzz');
 
@@ -104,7 +141,7 @@ describe('Bookmarks page', () => {
 
     it('reorders by blessings when the sort changes', async () => {
         const user = userEvent.setup();
-        render(<Bookmarks />);
+        render(<Bookmarks bookmarks={BOOKMARKS} />);
 
         expect(savedTitles()[0]).toBe(KOLA);
 
@@ -116,9 +153,14 @@ describe('Bookmarks page', () => {
         expect(savedTitles()[0]).toBe(WALKING);
     });
 
-    it('removes a bookmark and recounts', async () => {
+    /**
+     * Removal is a request now, not a local filter. The list this page holds
+     * is the server's answer, so it reloads rather than hiding a row it still
+     * has — an anon who removes a bookmark means it.
+     */
+    it('asks the server to remove a bookmark', async () => {
         const user = userEvent.setup();
-        render(<Bookmarks />);
+        render(<Bookmarks bookmarks={BOOKMARKS} />);
 
         await user.click(
             screen.getByRole('button', {
@@ -126,22 +168,20 @@ describe('Bookmarks page', () => {
             }),
         );
 
-        expect(savedTitles()).toHaveLength(3);
-        expect(savedTitles()).not.toContain(RISC_V);
-        expect(screen.getByText('3 saved threads')).toBeInTheDocument();
+        expect(router.delete).toHaveBeenCalledWith(
+            expect.stringContaining('/bookmark'),
+            expect.anything(),
+        );
     });
 
-    it('states the absence plainly once nothing is saved', async () => {
-        const user = userEvent.setup();
-        render(<Bookmarks />);
-
-        for (const bookmark of BOOKMARKS) {
-            await user.click(
-                screen.getByRole('button', {
-                    name: `Remove bookmark: ${bookmark.thread.title}`,
-                }),
-            );
-        }
+    /**
+     * The empty state is what the page renders when the server sends nothing,
+     * not something it reaches by removing rows locally. Removal is a request
+     * now, so emptying the list happens on the next response rather than in
+     * this component.
+     */
+    it('states the absence plainly when nothing is saved', () => {
+        render(<Bookmarks bookmarks={[]} />);
 
         expect(
             screen.getByRole('heading', { name: 'No bookmarks' }),
@@ -150,9 +190,6 @@ describe('Bookmarks page', () => {
             screen.getByText(
                 'Threads you save appear here and stay until you remove them.',
             ),
-        ).toBeInTheDocument();
-        expect(
-            screen.getByRole('link', { name: 'Browse the feed' }),
         ).toBeInTheDocument();
     });
 });

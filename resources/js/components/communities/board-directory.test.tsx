@@ -1,3 +1,4 @@
+import { router } from '@inertiajs/react';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
@@ -6,6 +7,10 @@ import { BoardDirectory } from '@/components/communities/board-directory';
 import { makeDirectoryEntry } from '@/fixtures/factories';
 
 vi.mock('@inertiajs/react', () => ({
+    usePage: () => ({
+        props: { recentActivity: [], sidebarBoards: [] },
+    }),
+    router: { post: vi.fn(), delete: vi.fn(), visit: vi.fn() },
     Link: ({
         href,
         children,
@@ -91,7 +96,13 @@ describe('BoardDirectory', () => {
         ).toEqual(['Technology', 'Paranormal']);
     });
 
-    it('recounts subscriptions as they are toggled', async () => {
+    /**
+     * Following is stored now, so the count and the pressed state come back
+     * from the server. This asserted a local flip — a button reporting
+     * `aria-pressed` for something nothing recorded, which forgot itself on
+     * reload.
+     */
+    it('asks the server to follow a board', async () => {
         const user = userEvent.setup();
         renderDirectory();
 
@@ -99,10 +110,17 @@ describe('BoardDirectory', () => {
             screen.getByRole('button', { name: 'Subscribe to /biz/' }),
         );
 
-        expect(screen.getByText('6 boards · 4 subscribed')).toBeInTheDocument();
-        expect(
-            screen.getByRole('button', { name: 'Subscribed to /biz/' }),
-        ).toHaveAttribute('aria-pressed', 'true');
+        expect(router.post).toHaveBeenCalledWith(
+            expect.stringContaining('/subscribe'),
+            {},
+            expect.anything(),
+        );
+    });
+
+    it('counts what the server says is followed', () => {
+        renderDirectory();
+
+        expect(screen.getByText('6 boards · 3 subscribed')).toBeInTheDocument();
     });
 
     it('filters on slug, name and description', async () => {

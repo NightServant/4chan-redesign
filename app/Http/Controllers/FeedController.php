@@ -46,7 +46,7 @@ class FeedController extends Controller
              * lazily loading a board and an OP is sixty extra queries for a
              * page that can be done in three.
              */
-            ->with(['board', 'originalPost' => fn ($op) => $op->withSum('votes', 'value')])
+            ->with(['board', 'originalPost' => fn ($op) => $op->withSum('votes', 'value')->with('votes'), 'bookmarks'])
 
             ->when($sort === 'bumped', fn ($query) => $query->orderByDesc('bumped_at'))
 

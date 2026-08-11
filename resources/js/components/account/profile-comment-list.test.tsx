@@ -1,7 +1,15 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { ProfileCommentList } from '@/components/account/profile-comment-list';
-import { PROFILE_COMMENTS } from '@/fixtures/clover';
+import { makeProfileComment } from '@/fixtures/factories';
+
+const PROFILE_COMMENTS = [
+    makeProfileComment({
+        body: 'Forty minutes for LLVM is not "fine".',
+        quoted: 'forty minutes is not "fine"',
+    }),
+    makeProfileComment({ body: 'Mainline boots but the GPU does nothing.' }),
+];
 
 describe('ProfileCommentList', () => {
     it('renders every reply with its board, parent thread and time', () => {

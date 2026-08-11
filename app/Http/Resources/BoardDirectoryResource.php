@@ -37,13 +37,6 @@ final class BoardDirectoryResource extends BoardResource
             ...parent::toArray($request),
             'category' => $board->category,
 
-            /**
-             * Subscriptions are task 11b: there is no table to read one from,
-             * so nobody is subscribed to anything. A true zero rather than a
-             * guess — the alternative would be inventing state for an anon.
-             */
-            'subscribed' => false,
-
             'worksafe' => $board->worksafe,
         ];
     }

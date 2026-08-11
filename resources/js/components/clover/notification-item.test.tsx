@@ -3,7 +3,21 @@ import userEvent from '@testing-library/user-event';
 import { MessageSquare, Shield } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
 import { NotificationItem } from '@/components/clover/notification-item';
-import { ACTIVITY } from '@/fixtures/clover';
+import { makeActivity } from '@/fixtures/factories';
+
+const ACTIVITY = [
+    makeActivity({ text: 'You replied in /g/', time: '2 min ago' }),
+    makeActivity({
+        icon: 'bookmark',
+        text: 'You saved a thread in /x/',
+        time: '1 hr ago',
+    }),
+    makeActivity({
+        icon: 'message-square',
+        text: 'You started a thread in /biz/',
+        time: '3 hr ago',
+    }),
+];
 
 describe('NotificationItem', () => {
     it('renders the title and meta text from the activity fixture shape', () => {

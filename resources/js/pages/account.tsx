@@ -1,19 +1,21 @@
 import { Head, Link } from '@inertiajs/react';
-import { Bookmark, PencilLine } from 'lucide-react';
+import { Bookmark, ImageIcon, MessageSquare, PencilLine } from 'lucide-react';
 import { AccountOverview } from '@/components/account/account-overview';
 import { ProfileCommentList } from '@/components/account/profile-comment-list';
 import { ProfileHeader } from '@/components/account/profile-header';
 import { EmptyState } from '@/components/clover/empty-state';
 import { MediaPlaceholder } from '@/components/clover/media-placeholder';
+import { ThreadCard } from '@/components/clover/thread-card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-    PROFILE,
-    PROFILE_COMMENTS,
-    PROFILE_MEDIA,
-    PROFILE_STATS,
-} from '@/fixtures/clover';
 import { bookmarks } from '@/routes';
+import type {
+    ActivityEntry,
+    Profile,
+    ProfileComment,
+    ProfileStat,
+    Thread,
+} from '@/types/clover';
 
 /**
  * The signed-in anon's own account screen.
@@ -33,13 +35,36 @@ const TABS = [
     { value: 'saved', label: 'Saved' },
 ] as const;
 
-export default function Account() {
+type AccountProps = {
+    profile: Profile;
+    /** Counted from this anon's own record. Zero where they have done nothing. */
+    stats: ProfileStat[];
+    /** Replies this anon wrote, newest first. */
+    comments: ProfileComment[];
+    /** Labels for attachments on their own posts. Empty until Clover accepts files. */
+    media: string[];
+    /** Threads they saved, as full cards. */
+    saved: Thread[];
+    /** Threads this anon started. */
+    started: Thread[];
+    activity: ActivityEntry[];
+};
+
+export default function Account({
+    profile,
+    stats,
+    comments,
+    media,
+    saved,
+    started,
+    activity,
+}: AccountProps) {
     return (
         <>
             <Head title="Account" />
 
             <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-5 px-6 py-6">
-                <ProfileHeader profile={PROFILE} stats={PROFILE_STATS} />
+                <ProfileHeader profile={profile} stats={stats} />
 
                 <Tabs defaultValue="overview">
                     <TabsList aria-label="Profile sections">
@@ -51,55 +76,91 @@ export default function Account() {
                     </TabsList>
 
                     <TabsContent value="overview">
-                        <AccountOverview />
+                        <AccountOverview activity={activity} />
                     </TabsContent>
 
-                    {/* Posts need authorship, and nothing attributes a post
-                        to an anon yet: posting arrives in task 11b. This tab
-                        used to list ingested threads as though this anon had
-                        written them, which was not true of any of them. Same
-                        treatment as the saved tab below. */}
+                    {/* Threads this anon started, which is now a real thing
+                        they can do. Empty until they do it, rather than a list
+                        of ingested threads presented as theirs. */}
                     <TabsContent value="posts">
-                        <EmptyState
-                            icon={<PencilLine />}
-                            title="No posts yet"
-                            body="Threads you start appear here in bump order."
-                        />
+                        {started.length === 0 ? (
+                            <EmptyState
+                                icon={<PencilLine />}
+                                title="No posts yet"
+                                body="Threads you start appear here in bump order."
+                            />
+                        ) : (
+                            <div className="flex flex-col gap-4">
+                                {started.map((thread) => (
+                                    <ThreadCard
+                                        key={thread.no}
+                                        thread={thread}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </TabsContent>
 
                     <TabsContent value="comments">
-                        <ProfileCommentList comments={PROFILE_COMMENTS} />
+                        {comments.length === 0 ? (
+                            <EmptyState
+                                icon={<MessageSquare />}
+                                title="No replies yet"
+                                body="Replies you write appear here, newest first."
+                            />
+                        ) : (
+                            <ProfileCommentList comments={comments} />
+                        )}
                     </TabsContent>
 
                     <TabsContent value="media">
-                        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
-                            {PROFILE_MEDIA.map((media) => (
-                                <MediaPlaceholder
-                                    key={media}
-                                    label={media}
-                                    height={150}
-                                />
-                            ))}
-                        </div>
+                        {/* Their own uploads. Clover accepts no files yet, so
+                            this is empty rather than filled with attachments
+                            from threads they merely read — which would claim
+                            they posted them. */}
+                        {media.length === 0 ? (
+                            <EmptyState
+                                icon={<ImageIcon />}
+                                title="No media yet"
+                                body="Attachments on your own posts appear here."
+                            />
+                        ) : (
+                            <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
+                                {media.map((label) => (
+                                    <MediaPlaceholder
+                                        key={label}
+                                        label={label}
+                                        height={150}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </TabsContent>
 
-                    {/* Saves live on /bookmarks, which is a real screen with
-                        real data. This tab is about saves surfaced on the
-                        profile, which nothing writes to, so it stays empty
-                        and sends the anon to the page that holds them. */}
                     <TabsContent value="saved">
-                        <EmptyState
-                            icon={<Bookmark />}
-                            title="Nothing saved yet"
-                            body="Bookmarked threads land here and stay until you remove them."
-                            action={
-                                <Button variant="outline" asChild>
-                                    <Link href={bookmarks()}>
-                                        Open bookmarks
-                                    </Link>
-                                </Button>
-                            }
-                        />
+                        {saved.length === 0 ? (
+                            <EmptyState
+                                icon={<Bookmark />}
+                                title="Nothing saved yet"
+                                body="Bookmarked threads land here and stay until you remove them."
+                                action={
+                                    <Button variant="outline" asChild>
+                                        <Link href={bookmarks()}>
+                                            Open bookmarks
+                                        </Link>
+                                    </Button>
+                                }
+                            />
+                        ) : (
+                            <div className="flex flex-col gap-4">
+                                {saved.map((thread) => (
+                                    <ThreadCard
+                                        key={thread.no}
+                                        thread={thread}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </TabsContent>
                 </Tabs>
             </div>

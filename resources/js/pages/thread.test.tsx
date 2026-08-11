@@ -21,6 +21,7 @@ const { usePage } = vi.hoisted(() => ({
 
 vi.mock('@inertiajs/react', () => ({
     usePage,
+    router: { post: vi.fn(), delete: vi.fn(), visit: vi.fn() },
     Head: () => null,
     Link: ({
         href,

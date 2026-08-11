@@ -5,9 +5,11 @@ import { BoardHeader } from '@/components/feed/board-header';
 import type { Board } from '@/types/clover';
 
 const TECH_BOARD: Board = {
+    id: 1,
     slug: '/g/',
     name: 'Technology',
     threads: '41,208',
+    subscribed: false,
 };
 
 describe('BoardHeader', () => {
@@ -100,9 +102,11 @@ describe('BoardHeader', () => {
         render(
             <BoardHeader
                 board={{
+                    id: 2,
                     slug: '/x/',
                     name: 'Paranormal',
                     threads: '7,442',
+                    subscribed: false,
                     description: 'Paranormal - Ghosts, cryptids, and dreams.',
                 }}
             />,
@@ -125,7 +129,13 @@ describe('BoardHeader', () => {
 
         render(
             <BoardHeader
-                board={{ slug: '/x/', name: 'Paranormal', threads: '7,442' }}
+                board={{
+                    id: 1,
+                    slug: '/x/',
+                    name: 'Paranormal',
+                    threads: '7,442',
+                    subscribed: false,
+                }}
             />,
         );
         const paranormalDescription =

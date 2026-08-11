@@ -4,10 +4,14 @@ import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { HistoryCard } from '@/components/history/history-card';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { HISTORY } from '@/fixtures/clover';
+import { makeAttachment, makeHistoryEntry } from '@/fixtures/factories';
 import type { HistoryEntry } from '@/types/clover';
 
 vi.mock('@inertiajs/react', () => ({
+    usePage: () => ({
+        props: { recentActivity: [], sidebarBoards: [] },
+    }),
+    router: { post: vi.fn(), delete: vi.fn(), visit: vi.fn() },
     Link: ({
         href,
         children,
@@ -26,6 +30,25 @@ vi.mock('@inertiajs/react', () => ({
     },
 }));
 
+const HISTORY = [
+    makeHistoryEntry({
+        no: 58210441,
+        title: 'Anons are still arguing about init systems',
+        when: 'Today, 14:02',
+        day: 'Today',
+        progress: 68,
+        media: makeAttachment({
+            label: 'thumb · 640×360',
+            filename: 'thumb.png',
+        }),
+    }),
+    makeHistoryEntry({
+        title: 'Mainline kernel support or vendor tree',
+        when: 'Yesterday, 09:15',
+        day: 'Yesterday',
+        progress: 100,
+    }),
+];
 const [unfinished, finished] = HISTORY;
 
 function renderCard(entry: HistoryEntry, onRemove = () => {}) {
@@ -101,12 +124,23 @@ describe('HistoryCard', () => {
         expect(onRemove).toHaveBeenCalledOnce();
     });
 
-    it('names the attachment placeholder rather than inventing an image', () => {
+    /**
+     * This asserted a labelled placeholder, which was right while media was
+     * metadata with no file behind it. There is a file now, so the row shows
+     * the thread's own attachment named after it — still only what 4chan
+     * reported, still nothing invented.
+     */
+    it('shows the thread attachment, named after the file', () => {
         renderCard(unfinished);
 
         expect(
-            screen.getByRole('img', { name: 'Attachment: thumb · 640×360' }),
+            screen.getByRole('img', { name: 'thumb.png' }),
         ).toBeInTheDocument();
-        expect(screen.queryByRole('presentation')).not.toBeInTheDocument();
+    });
+
+    it('shows nothing where a thread opened without an attachment', () => {
+        renderCard(finished);
+
+        expect(screen.queryByRole('img')).not.toBeInTheDocument();
     });
 });

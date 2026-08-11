@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { CompassIcon } from 'lucide-react';
 import { useState } from 'react';
 import { AuthGate } from '@/components/clover/auth-gate';
@@ -9,6 +9,7 @@ import { AnonBanner } from '@/components/feed/anon-banner';
 import { Rail } from '@/components/feed/rail';
 import { Button } from '@/components/ui/button';
 import { communities } from '@/routes';
+import { vote as voteOnThread } from '@/routes/threads';
 import type { Board, Thread, TrendingTag } from '@/types/clover';
 
 /**
@@ -44,14 +45,6 @@ const SORT_DESCRIPTIONS: Record<Sort, string> = {
     popular: 'Sorted by most blessed',
 };
 
-/**
- * A blessing the anon has added optimistically, held here because there is no
- * backend to hold it. The page feeds `ThreadCard` both an adjusted
- * `thread.blessings` and a `voteState`, so the press is signalled by
- * `aria-pressed` and not only by the count moving.
- */
-type BlessDelta = 0 | 1;
-
 type FeedProps = {
     sort: Sort;
     /** Already ordered for `sort`. Rendered in the order given. */
@@ -66,23 +59,29 @@ export default function Feed({ sort, threads, boards, trending }: FeedProps) {
     const { auth } = usePage().props;
     const signedIn = Boolean(auth.user);
 
-    const [blessed, setBlessed] = useState<Record<number, BlessDelta>>({});
     /* Signed-out anons get the gate rather than a redirect: sending them to
        /login throws away their place in the feed to answer a question they may
        not want to answer yet. Matches the thread page. */
     const [gatedAction, setGatedAction] = useState<string | null>(null);
 
-    function toggleBless(threadNo: number) {
+    /**
+     * The vote is stored, so the count and the pressed state come back from
+     * the server rather than being held here. The optimistic copy this
+     * replaced could disagree with the database the moment anyone else voted,
+     * and had no way to find out.
+     */
+    function bless(thread: Thread) {
         if (!signedIn) {
             setGatedAction('bless a thread');
 
             return;
         }
 
-        setBlessed((current) => ({
-            ...current,
-            [threadNo]: current[threadNo] ? 0 : 1,
-        }));
+        router.post(
+            voteOnThread(thread.id).url,
+            { value: 1 },
+            { preserveScroll: true },
+        );
     }
 
     return (
@@ -125,16 +124,9 @@ export default function Feed({ sort, threads, boards, trending }: FeedProps) {
                         {threads.map((thread) => (
                             <ThreadCard
                                 key={thread.no}
-                                thread={{
-                                    ...thread,
-                                    blessings:
-                                        thread.blessings +
-                                        (blessed[thread.no] ?? 0),
-                                }}
-                                voteState={
-                                    blessed[thread.no] ? 'blessed' : null
-                                }
-                                onBless={() => toggleBless(thread.no)}
+                                thread={thread}
+                                voteState={thread.voteState}
+                                onBless={() => bless(thread)}
                             />
                         ))}
                     </div>

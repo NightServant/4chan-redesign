@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Http\Resources\BoardResource;
 use App\Models\Board;
+use App\Support\RecentActivity;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -55,6 +56,19 @@ class HandleInertiaRequests extends Middleware
              * "nobody is signed in" to decide what it may show.
              */
             'showsMatureBoards' => (bool) $request->user()?->shows_mature_boards,
+
+            /**
+             * The sidebar's board list.
+             *
+             * What this anon has been doing. Shared because three surfaces
+             * read it — the header's notification menu, the feed rail and the
+             * account overview — and three copies of the derivation drift.
+             * Empty for a signed-out anon, who has done nothing here.
+             */
+            'recentActivity' => RecentActivity::for(
+                $request->user(),
+                (bool) $request->user()?->shows_mature_boards,
+            ),
 
             /**
              * The sidebar's board list.

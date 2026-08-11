@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { ProfileHeader } from '@/components/account/profile-header';
-import { PROFILE, PROFILE_STATS } from '@/fixtures/clover';
+import { makeProfile, makeStat } from '@/fixtures/factories';
 
 vi.mock('@inertiajs/react', () => ({
     Link: ({
@@ -24,6 +24,15 @@ vi.mock('@inertiajs/react', () => ({
     },
 }));
 
+const PROFILE = makeProfile({ tripcode: '!!Xk29fLp2' });
+
+const PROFILE_STATS = [
+    makeStat({ label: 'Posts', value: '412' }),
+    makeStat({ label: 'Comments', value: '3,908' }),
+    makeStat({ label: 'Reputation', value: '11,204' }),
+    makeStat({ label: 'Bookmarks', value: '96' }),
+];
+
 describe('ProfileHeader', () => {
     it('renders the handle as the only first-level heading', () => {
         render(<ProfileHeader profile={PROFILE} stats={PROFILE_STATS} />);
@@ -41,25 +50,17 @@ describe('ProfileHeader', () => {
         expect(screen.getByText('!!Xk29fLp2')).toBeInTheDocument();
     });
 
-    it('marks a janitor and names the boards they janitor', () => {
+    /**
+     * Janitor scope named a moderation system that does not exist — no report
+     * queue, no janitor role, nothing to be in scope of. The badge and the
+     * second half of the meta line went with it.
+     */
+    it('shows the join date alone, with no janitor claim', () => {
         render(<ProfileHeader profile={PROFILE} stats={PROFILE_STATS} />);
 
-        expect(screen.getByText('Janitor')).toBeInTheDocument();
-        expect(
-            screen.getByText('Joined 14 Mar 2024 · Janitor scope: /g/, /wg/'),
-        ).toBeInTheDocument();
-    });
-
-    it('drops the janitor mark and the scope for an anon who janitors nothing', () => {
-        render(
-            <ProfileHeader
-                profile={{ ...PROFILE, janitorScope: [] }}
-                stats={PROFILE_STATS}
-            />,
-        );
-
-        expect(screen.queryByText('Janitor')).not.toBeInTheDocument();
         expect(screen.getByText('Joined 14 Mar 2024')).toBeInTheDocument();
+        expect(screen.queryByText('Janitor')).not.toBeInTheDocument();
+        expect(screen.queryByText(/Janitor scope/)).not.toBeInTheDocument();
     });
 
     it('omits the tripcode when the anon never set one', () => {

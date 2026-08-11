@@ -1,6 +1,6 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Archive, ArrowLeft } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AuthGate } from '@/components/clover/auth-gate';
 import { CommentTree } from '@/components/clover/comment-tree';
 import { EmptyState } from '@/components/clover/empty-state';
@@ -10,6 +10,12 @@ import { OriginalPost } from '@/components/thread/original-post';
 import { ReplyComposer } from '@/components/thread/reply-composer';
 import { Button } from '@/components/ui/button';
 import { board } from '@/routes';
+import { store as storeReply } from '@/routes/replies';
+import {
+    bookmark as bookmarkThread,
+    read as recordRead,
+    vote as voteOnThread,
+} from '@/routes/threads';
 import type { BoardSlug, Comment, Thread as ThreadType } from '@/types/clover';
 
 /**
@@ -52,6 +58,32 @@ export default function Thread({
 
     const [authGateAction, setAuthGateAction] = useState<string | null>(null);
 
+    /**
+     * Reading a thread records that it was read.
+     *
+     * Fired once per thread rather than on every render, and only for a
+     * signed-in anon — there is nowhere to record it otherwise. `only: []`
+     * keeps the response empty: this is a write, and re-rendering the page
+     * around it would fight the scroll position an anon is reading at.
+     *
+     * Progress is left at nought here. Tracking how far down someone scrolled
+     * is a real feature and inventing a number for it would be worse than
+     * admitting the page has not measured one.
+     */
+    const threadId = thread?.id;
+
+    useEffect(() => {
+        if (!signedIn || threadId === undefined) {
+            return;
+        }
+
+        router.post(
+            recordRead(threadId).url,
+            {},
+            { preserveScroll: true, preserveState: true, only: [] },
+        );
+    }, [signedIn, threadId]);
+
     function requireAuth(action: string, perform: () => void) {
         if (!signedIn) {
             setAuthGateAction(action);
@@ -63,12 +95,49 @@ export default function Thread({
     }
 
     /**
-     * There is no backend: a reply lands nowhere and would vanish on reload.
-     * Logged rather than faked as a persisted post, so nothing here pretends
-     * to have succeeded.
+     * A reply is stored and never sent upstream: 4chan's API accepts GET,
+     * HEAD and OPTIONS only, so nothing written here reaches the board being
+     * read. The composer has said so since it was built; this is what finally
+     * makes it true rather than a comment.
      */
     function handleReply(body: string) {
-        console.info('Simulated reply (no backend yet):', body);
+        if (!thread) {
+            return;
+        }
+
+        router.post(
+            storeReply({ board: boardToken(slug), thread: thread.no }).url,
+            { body },
+            { preserveScroll: true },
+        );
+    }
+
+    function vote(value: 1 | -1) {
+        if (!thread) {
+            return;
+        }
+
+        router.post(
+            voteOnThread(thread.id).url,
+            { value },
+            { preserveScroll: true },
+        );
+    }
+
+    function toggleBookmark() {
+        if (!thread) {
+            return;
+        }
+
+        const url = bookmarkThread(thread.id).url;
+
+        if (thread.bookmarked) {
+            router.delete(url, { preserveScroll: true });
+
+            return;
+        }
+
+        router.post(url, {}, { preserveScroll: true });
     }
 
     if (!thread) {
@@ -113,10 +182,14 @@ export default function Thread({
 
                 <OriginalPost
                     thread={thread}
-                    onBless={() => requireAuth('bless this post', () => {})}
-                    onCurse={() => requireAuth('curse this post', () => {})}
+                    onBless={() =>
+                        requireAuth('bless this post', () => vote(1))
+                    }
+                    onCurse={() =>
+                        requireAuth('curse this post', () => vote(-1))
+                    }
                     onBookmark={() =>
-                        requireAuth('bookmark this thread', () => {})
+                        requireAuth('bookmark this thread', toggleBookmark)
                     }
                 />
 

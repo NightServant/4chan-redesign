@@ -37,6 +37,7 @@ function rowFor(no: number): HTMLElement {
  */
 const COMMENTS: readonly Comment[] = [
     {
+        id: 58210447,
         no: 58210447,
         quotes: [],
         author: 'Anonymous',
@@ -47,6 +48,7 @@ const COMMENTS: readonly Comment[] = [
         media: null,
         replies: [
             {
+                id: 58210452,
                 no: 58210452,
                 quotes: [58210447],
                 author: 'Anonymous',
@@ -57,6 +59,7 @@ const COMMENTS: readonly Comment[] = [
                 media: null,
                 replies: [
                     {
+                        id: 58210461,
                         no: 58210461,
                         quotes: [58210452],
                         author: 'Anonymous',
@@ -70,6 +73,7 @@ const COMMENTS: readonly Comment[] = [
                 ],
             },
             {
+                id: 58210455,
                 no: 58210455,
                 quotes: [58210447],
                 author: 'Anonymous',
@@ -83,6 +87,7 @@ const COMMENTS: readonly Comment[] = [
         ],
     },
     {
+        id: 58210449,
         no: 58210449,
         quotes: [],
         author: 'Anonymous',
@@ -93,6 +98,7 @@ const COMMENTS: readonly Comment[] = [
         media: null,
         replies: [
             {
+                id: 58210458,
                 no: 58210458,
                 quotes: [58210449],
                 author: 'Anonymous',
@@ -106,6 +112,7 @@ const COMMENTS: readonly Comment[] = [
         ],
     },
     {
+        id: 58210463,
         no: 58210463,
         quotes: [],
         author: 'Anonymous',

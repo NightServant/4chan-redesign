@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { Eraser, History as HistoryIcon, Search } from 'lucide-react';
 import { useState } from 'react';
 import { EmptyState } from '@/components/clover/empty-state';
@@ -15,7 +15,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { HISTORY } from '@/fixtures/clover';
+import { destroy as clearHistory } from '@/routes/history';
+import { forget as forgetRead } from '@/routes/threads/read';
 import type { HistoryEntry } from '@/types/clover';
 
 type SortOption = 'recent' | 'unfinished';
@@ -36,16 +37,16 @@ const PAGE_SIZE = 4;
  * read off its prefix. That is all the fixture carries and all the backend
  * will need to carry: the grouping is a display concern either way.
  */
+/**
+ * The day an entry belongs to.
+ *
+ * Read off `day`, which the server decides. This used to parse the front of
+ * `when` for the words `Today,` and `Yesterday,`, which worked only because a
+ * fixture wrote them by hand — a real timestamp knows its own day, and the
+ * client should not be recovering it from prose.
+ */
 function groupOf(entry: HistoryEntry): Group {
-    if (entry.when.startsWith('Today')) {
-        return 'Today';
-    }
-
-    if (entry.when.startsWith('Yesterday')) {
-        return 'Yesterday';
-    }
-
-    return 'Earlier';
+    return entry.day;
 }
 
 function matches(entry: HistoryEntry, query: string): boolean {
@@ -91,15 +92,18 @@ function sortEntries(
  * up correctly it could not discriminate, since every entry falls inside
  * seven days, so all three options would render the same list.
  */
-export default function History() {
+type HistoryProps = {
+    /** One entry per thread, most recently read first. */
+    entries: HistoryEntry[];
+};
+
+export default function History({ entries }: HistoryProps) {
     const [query, setQuery] = useState('');
     const [sort, setSort] = useState<SortOption>('recent');
-    const [removed, setRemoved] = useState<readonly number[]>([]);
     const [page, setPage] = useState(1);
 
-    const remaining = HISTORY.filter((entry) => !removed.includes(entry.no));
     const matched = sortEntries(
-        remaining.filter((entry) => matches(entry, query)),
+        entries.filter((entry) => matches(entry, query)),
         sort,
     );
 
@@ -110,17 +114,18 @@ export default function History() {
         current * PAGE_SIZE,
     );
 
-    function remove(no: number) {
-        setRemoved((entries) => [...entries, no]);
+    /* Forgotten on the server, not filtered out of a copy the page still
+       holds: an anon who removes a row means it. */
+    function remove(id: number) {
+        router.delete(forgetRead(id).url, { preserveScroll: true });
     }
 
     function clearAll() {
-        setRemoved(HISTORY.map((entry) => entry.no));
+        router.delete(clearHistory().url);
     }
 
     function reset() {
         setQuery('');
-        setRemoved([]);
         setPage(1);
     }
 
@@ -138,7 +143,7 @@ export default function History() {
                         <Button
                             variant="ghost"
                             onClick={clearAll}
-                            disabled={remaining.length === 0}
+                            disabled={entries.length === 0}
                         >
                             <Eraser aria-hidden="true" />
                             Clear all
@@ -227,7 +232,7 @@ export default function History() {
                                                 key={entry.no}
                                                 entry={entry}
                                                 onRemove={() =>
-                                                    remove(entry.no)
+                                                    remove(entry.id)
                                                 }
                                             />
                                         ))}

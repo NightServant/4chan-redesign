@@ -1,14 +1,18 @@
 <?php
 
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\BoardController;
 use App\Http\Controllers\BoardSubscriptionController;
 use App\Http\Controllers\BookmarkController;
+use App\Http\Controllers\BookmarksController;
 use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\FeedController;
+use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PostVoteController;
 use App\Http\Controllers\ReplyController;
 use App\Http\Controllers\ThreadController;
+use App\Http\Controllers\ThreadCreationController;
 use App\Http\Controllers\ThreadReadController;
 use App\Support\RoutableBoards;
 use Illuminate\Support\Facades\Route;
@@ -33,9 +37,9 @@ Route::get('latest', FeedController::class)->defaults('sort', 'latest')->name('l
 Route::get('communities', CommunityController::class)->name('communities');
 
 Route::middleware('auth')->group(function () {
-    Route::inertia('account', 'account')->name('account');
-    Route::inertia('bookmarks', 'bookmarks')->name('bookmarks');
-    Route::inertia('history', 'history')->name('history');
+    Route::get('account', AccountController::class)->name('account');
+    Route::get('bookmarks', BookmarksController::class)->name('bookmarks');
+    Route::get('history', HistoryController::class)->name('history');
 
     /**
      * The last destination still without a screen. It keeps the shared
@@ -53,11 +57,13 @@ Route::middleware('auth')->group(function () {
      * double submit is a double press, not an error.
      */
     Route::post('posts/{post}/vote', [PostVoteController::class, 'store'])->name('posts.vote');
+    Route::post('threads/{thread}/vote', [PostVoteController::class, 'storeForThread'])->name('threads.vote');
 
     Route::post('threads/{thread}/bookmark', [BookmarkController::class, 'store'])->name('threads.bookmark');
     Route::delete('threads/{thread}/bookmark', [BookmarkController::class, 'destroy'])->name('threads.bookmark.destroy');
 
     Route::post('threads/{thread}/read', [ThreadReadController::class, 'store'])->name('threads.read');
+    Route::delete('threads/{thread}/read', [ThreadReadController::class, 'forget'])->name('threads.read.forget');
     Route::delete('history', [ThreadReadController::class, 'destroy'])->name('history.destroy');
 
     Route::post('boards/{board}/subscribe', [BoardSubscriptionController::class, 'store'])->name('boards.subscribe');
@@ -120,6 +126,11 @@ Route::get('{board}/{thread}', ThreadController::class)
  * account actions, because it takes the same two constrained segments and
  * splitting it from them is how the constraint gets forgotten.
  */
+Route::post('{board}/threads', [ThreadCreationController::class, 'store'])
+    ->middleware('auth')
+    ->where('board', $boardPattern)
+    ->name('threads.store');
+
 Route::post('{board}/{thread}/replies', [ReplyController::class, 'store'])
     ->middleware('auth')
     ->where(['board' => $boardPattern, 'thread' => '[0-9]+'])

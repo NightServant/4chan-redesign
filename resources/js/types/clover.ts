@@ -17,6 +17,8 @@
 export type BoardSlug = `/${string}/`;
 
 export interface Board {
+    /** This application's own id, which the subscribe route takes. */
+    id: number;
     slug: BoardSlug;
     name: string;
     /**
@@ -29,6 +31,8 @@ export interface Board {
      * and it is counted rather than estimated.
      */
     threads: string;
+    /** Whether this anon follows it. Always false when signed out. */
+    subscribed: boolean;
 }
 
 /**
@@ -81,6 +85,14 @@ export interface Attachment {
 }
 
 export interface Thread {
+    /**
+     * This application's own id, which the write routes take.
+     *
+     * Not `no`: post numbers are a per-board sequence upstream, so `/g/1234`
+     * and `/b/1234` can both exist and a route keyed on the number alone is
+     * ambiguous. The number is what an anon sees; this is what identifies it.
+     */
+    id: number;
     /** Post number, rendered as `>>58210441`. */
     no: number;
     board: BoardSlug;
@@ -108,6 +120,14 @@ export interface Thread {
     /** The OP's attachment, or null when the thread opened without one. */
     media: Attachment | null;
     pinned: boolean;
+    /**
+     * How the anon reading this voted on it, or null for both "not signed in"
+     * and "signed in and has not voted" — the control renders the same either
+     * way, and the route is what stops a signed-out anon voting.
+     */
+    voteState: 'blessed' | 'cursed' | null;
+    /** Whether this anon has saved it. Always false when signed out. */
+    bookmarked: boolean;
 }
 
 /**
@@ -118,6 +138,8 @@ export interface Thread {
  * board has always worked and is the one convention worth preserving.
  */
 export interface Comment {
+    /** This application's own id, which the vote route takes. See `Thread.id`. */
+    id: number;
     no: number;
     /** Post numbers this reply quotes. Empty for a direct reply to the OP. */
     quotes: number[];
@@ -152,14 +174,25 @@ export interface ActivityEntry {
 }
 
 export interface HistoryEntry {
+    /** The thread's own id, which the forget route takes. See `Thread.id`. */
+    id: number;
     no: number;
     board: BoardSlug;
     title: string;
     /** Absolute and pre-formatted, e.g. `Today, 14:02`. */
     when: string;
+    /**
+     * Which day it belongs to, decided server-side.
+     *
+     * The screen used to read this off the front of `when`, which only worked
+     * because a fixture wrote `Today,` and `Yesterday,` by hand. A real
+     * timestamp knows its own day and the client should not be parsing prose
+     * to recover it.
+     */
+    day: 'Today' | 'Yesterday' | 'Earlier';
     /** Read progress, 0-100. */
     progress: number;
-    media: string;
+    media: Attachment | null;
 }
 
 /**
@@ -177,8 +210,6 @@ export interface Profile {
     bio: string;
     /** Absolute and pre-formatted, e.g. `14 Mar 2024`. */
     joined: string;
-    /** Boards this anon janitors. Empty for anons who do not. */
-    janitorScope: BoardSlug[];
 }
 
 /**
@@ -189,14 +220,6 @@ export interface ProfileStat {
     label: string;
     /** Pre-formatted, e.g. `11,204`. */
     value: string;
-}
-
-export interface Achievement {
-    /** Lucide icon name. */
-    icon: string;
-    title: string;
-    /** Pre-formatted, e.g. `Since Mar 2024`. */
-    meta: string;
 }
 
 /**
@@ -240,7 +263,6 @@ export interface BoardDirectoryEntry extends Board {
      * worksafe — `worksafe` is the field that decides what an anon is shown.
      */
     category: string;
-    subscribed: boolean;
     /**
      * 4chan's own `ws_board` flag. Boards where this is false are hidden
      * unless an anon has opted into seeing them.
@@ -263,7 +285,6 @@ export interface BoardDirectoryEntry extends Board {
      * worksafe — `worksafe` is the field that decides what an anon is shown.
      */
     category: string;
-    subscribed: boolean;
     /**
      * 4chan's own `ws_board` flag. Boards where this is false are hidden
      * unless an anon has opted into seeing them.

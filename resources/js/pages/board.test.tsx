@@ -2,9 +2,10 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { makeBoard, makeThread } from '@/fixtures/factories';
+import { makeBoard, makeThread, makeActivity } from '@/fixtures/factories';
 import Board from '@/pages/board';
 import type { User } from '@/types/auth';
+import type { ActivityEntry, Board as BoardType } from '@/types/clover';
 
 /**
  * The real `Link`/`usePage` require an Inertia page context that only exists
@@ -14,11 +15,25 @@ import type { User } from '@/types/auth';
  * fixture reset in `beforeEach`, which the chrome `Board` renders through
  * `AppLayout` (sidebar, header, mobile nav) also needs.
  */
+const ACTIVITY_DOUBLE = [
+    makeActivity({ text: 'You replied in /g/', time: '2 min ago' }),
+];
+
 const mockPage: {
-    props: { auth: { user: User | null }; sidebarOpen: boolean };
+    props: {
+        auth: { user: User | null };
+        sidebarOpen: boolean;
+        recentActivity: ActivityEntry[];
+        sidebarBoards: BoardType[];
+    };
     url: string;
 } = {
-    props: { auth: { user: null }, sidebarOpen: true },
+    props: {
+        auth: { user: null },
+        sidebarOpen: true,
+        recentActivity: ACTIVITY_DOUBLE,
+        sidebarBoards: [],
+    },
     url: '/g/',
 };
 
@@ -68,7 +83,12 @@ const G_THREADS = [
 ];
 
 beforeEach(() => {
-    mockPage.props = { auth: { user: null }, sidebarOpen: true };
+    mockPage.props = {
+        auth: { user: null },
+        sidebarOpen: true,
+        recentActivity: ACTIVITY_DOUBLE,
+        sidebarBoards: [],
+    };
     mockPage.url = '/g/';
 });
 

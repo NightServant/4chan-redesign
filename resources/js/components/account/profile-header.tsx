@@ -3,7 +3,6 @@ import { Settings, Share2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AnonAvatar } from '@/components/clover/anon-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn, toUrl } from '@/lib/utils';
@@ -35,18 +34,15 @@ type ProfileHeaderProps = {
 };
 
 /**
- * `Joined 14 Mar 2024 · Janitor scope: /g/, /wg/`, or just the joined date
- * for an anon who janitors nothing. An empty scope must not leave a trailing
- * separator pointing at nothing.
+ * The join date, and nothing else.
+ *
+ * It read `Joined 14 Mar 2024 · Janitor scope: /g/, /wg/` while the profile was
+ * a fixture. Janitor scope named a moderation system that does not exist —
+ * there is no report queue, no janitor role and nothing to be in scope of — so
+ * the badge and this half of the line went with it.
  */
 function metaLine(profile: Profile): string {
-    const joined = `Joined ${profile.joined}`;
-
-    if (profile.janitorScope.length === 0) {
-        return joined;
-    }
-
-    return `${joined} · Janitor scope: ${profile.janitorScope.join(', ')}`;
+    return `Joined ${profile.joined}`;
 }
 
 function ProfileHeader({ profile, stats }: ProfileHeaderProps) {
@@ -104,10 +100,6 @@ function ProfileHeader({ profile, stats }: ProfileHeaderProps) {
                         <h1 className="font-display text-h1 font-semibold text-foreground">
                             {profile.handle}
                         </h1>
-
-                        {profile.janitorScope.length > 0 ? (
-                            <Badge tone="primary">Janitor</Badge>
-                        ) : null}
 
                         {profile.tripcode ? (
                             <MachineValue>{profile.tripcode}</MachineValue>

@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { BookmarkIcon, BookmarkXIcon, SearchXIcon } from 'lucide-react';
 import { useState } from 'react';
 import { EmptyState } from '@/components/clover/empty-state';
@@ -22,9 +22,9 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { BOOKMARKS } from '@/fixtures/clover';
 import { plural } from '@/lib/utils';
 import { dashboard } from '@/routes';
+import { destroy as bookmarkDestroy } from '@/routes/threads/bookmark';
 import type { Bookmark } from '@/types/clover';
 
 type Sort = 'saved' | 'blessed';
@@ -57,15 +57,14 @@ function sortBookmarks(bookmarks: Bookmark[], sort: Sort): Bookmark[] {
  * use, with the two things only a bookmark carries beneath it: when it was
  * saved, and the note the anon wrote on it.
  */
-export default function Bookmarks() {
+type BookmarksProps = {
+    /** Already filtered to boards this anon may see, newest saved first. */
+    bookmarks: Bookmark[];
+};
+
+export default function Bookmarks({ bookmarks: saved }: BookmarksProps) {
     const [query, setQuery] = useState('');
     const [sort, setSort] = useState<Sort>('saved');
-    /* Removal is local state: there is no backend to delete a bookmark on. */
-    const [removed, setRemoved] = useState<number[]>([]);
-
-    const saved = BOOKMARKS.filter(
-        (bookmark) => !removed.includes(bookmark.thread.no),
-    );
 
     const needle = query.trim().toLowerCase();
     const visible = sortBookmarks(
@@ -195,13 +194,22 @@ export default function Bookmarks() {
                                                     variant="ghost"
                                                     size="icon"
                                                     aria-label={`Remove bookmark: ${bookmark.thread.title}`}
+                                                    /* Deleted, not hidden.
+                                                       An anon who removes a
+                                                       bookmark means it, and
+                                                       the list reloads from
+                                                       the server rather than
+                                                       filtering a copy it
+                                                       still holds. */
                                                     onClick={() =>
-                                                        setRemoved(
-                                                            (current) => [
-                                                                ...current,
+                                                        router.delete(
+                                                            bookmarkDestroy(
                                                                 bookmark.thread
-                                                                    .no,
-                                                            ],
+                                                                    .id,
+                                                            ).url,
+                                                            {
+                                                                preserveScroll: true,
+                                                            },
                                                         )
                                                     }
                                                 >

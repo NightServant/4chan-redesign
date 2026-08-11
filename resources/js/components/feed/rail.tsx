@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import {
     ArrowBigUpIcon,
     BookmarkIcon,
@@ -8,15 +8,14 @@ import {
     ShieldIcon,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useState } from 'react';
 import { BoardAvatar } from '@/components/clover/board-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
 import { Panel } from '@/components/clover/panel';
 import { Button } from '@/components/ui/button';
-import { ACTIVITY } from '@/fixtures/clover';
 import { cn } from '@/lib/utils';
 import { communities, search } from '@/routes';
-import type { Board, BoardSlug, TrendingTag } from '@/types/clover';
+import { subscribe as subscribeToBoard } from '@/routes/boards';
+import type { Board, TrendingTag } from '@/types/clover';
 
 /**
  * The feed's sticky sidebar: trending boards, a handful of boards to join, the
@@ -41,8 +40,8 @@ import type { Board, BoardSlug, TrendingTag } from '@/types/clover';
  * affordance hides it from screen-reader navigation and makes the rail read as
  * broken, while leaving the copy in place would simply be a lie.
  *
- * `ACTIVITY` is still a fixture. Activity is account-shaped and belongs to
- * task 11b along with bookmarks, history and votes.
+ * Recent activity comes from the shared props, derived from this anon's own
+ * record. It is empty for a signed-out anon, who has done nothing here.
  */
 
 const POPULAR_BOARDS_COUNT = 4;
@@ -56,8 +55,7 @@ const COMMUNITY_RULES = [
 
 /**
  * `ActivityEntry.icon` is a Lucide icon name carried as a plain string so the
- * fixture (and the server-driven data that replaces it later) stays
- * framework-agnostic. An unrecognised name falls back to a plain circle: a
+ * payload stays framework-agnostic. An unrecognised name falls back to a plain circle: a
  * neutral marker that does not claim a meaning the data never promised,
  * unlike e.g. a bell or a warning glyph.
  */
@@ -122,12 +120,22 @@ function TrendingPanel({ trending }: { trending: TrendingTag[] }) {
 }
 
 function PopularBoardsPanel({ boards }: { boards: Board[] }) {
-    const [joined, setJoined] = useState<Partial<Record<BoardSlug, boolean>>>(
-        {},
-    );
+    /**
+     * Following is stored, so the pressed state comes back from the server
+     * rather than being held here. It used to be local state that forgot
+     * itself on reload — a button that reported `aria-pressed` for something
+     * nothing recorded.
+     */
+    function toggleJoined(board: Board) {
+        const url = subscribeToBoard(board.id).url;
 
-    function toggleJoined(slug: BoardSlug) {
-        setJoined((previous) => ({ ...previous, [slug]: !previous[slug] }));
+        if (board.subscribed) {
+            router.delete(url, { preserveScroll: true });
+
+            return;
+        }
+
+        router.post(url, {}, { preserveScroll: true });
     }
 
     return (
@@ -141,7 +149,7 @@ function PopularBoardsPanel({ boards }: { boards: Board[] }) {
         >
             <ul role="list" className="flex flex-col gap-3">
                 {boards.slice(0, POPULAR_BOARDS_COUNT).map((board) => {
-                    const isJoined = joined[board.slug] ?? false;
+                    const isJoined = board.subscribed;
 
                     return (
                         <li
@@ -167,7 +175,7 @@ function PopularBoardsPanel({ boards }: { boards: Board[] }) {
                                 size="sm"
                                 pill
                                 aria-pressed={isJoined}
-                                onClick={() => toggleJoined(board.slug)}
+                                onClick={() => toggleJoined(board)}
                                 className="shrink-0 px-3"
                             >
                                 {isJoined ? (
@@ -219,10 +227,12 @@ function ModerationNoticesPanel() {
 }
 
 function RecentActivityPanel() {
+    const { recentActivity } = usePage().props;
+
     return (
         <Panel title="Recent activity">
             <ul role="list" className="flex flex-col gap-3">
-                {ACTIVITY.map((entry, index) => {
+                {recentActivity.map((entry, index) => {
                     const Icon = activityIconFor(entry.icon);
 
                     return (
