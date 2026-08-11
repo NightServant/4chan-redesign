@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -67,6 +68,18 @@ class AppServiceProvider extends ServiceProvider
     protected function configureDefaults(): void
     {
         Date::use(CarbonImmutable::class);
+
+        /**
+         * Resources are Inertia props here, not a JSON API envelope.
+         *
+         * `JsonResource` wraps a collection in a `data` key by default, which
+         * is right for an API response and wrong for a page prop: the client
+         * types declare `threads: Thread[]`, so every collection would arrive
+         * as `{ data: Thread[] }` and every page would read `undefined` off it.
+         * That fails as an empty list rather than an error, which is this
+         * project's least favourite kind of bug.
+         */
+        JsonResource::withoutWrapping();
 
         DB::prohibitDestructiveCommands(
             app()->isProduction(),

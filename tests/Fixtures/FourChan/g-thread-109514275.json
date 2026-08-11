@@ -1,0 +1,77 @@
+{
+  "posts": [
+    {
+      "no": 109514275,
+      "now": "08/10/26(Mon)01:05:03",
+      "name": "Anonymous",
+      "sub": "/pcbg/ - PC Building General",
+      "com": "<span class=\"quote\">&gt;UPGRADE &amp; BUILD ADVICE</span><br>Post build list or current specs including MONITOR: https://pcpartpicker.com/<br>Provide specific use cases<br>State BUDGET and COUNTRY or you will NOT be helped<br><br><span class=\"quote\">&gt;CASE</span><br>mATX: AP201, Lian Li A3, XT M3<br>ATX: XT PRO (ULTRA), AIR 903 Base/MAX, Lancool 207/217, Flux Pro, Meshify 3, 4000D FRAME, X50, BF360<br>Dual Chamber: Y60/70, O11 Vision, Antec C8<br><br><span class=\"quote\">&gt;CPU</span><br>Budget: 7500F, 7/9600/X, 225/F, 12600K/F, 5600/X<br>Gaming: 9850X3D, 9/7800X3D, 250K, 5800XT<br>Workstation: 9950X/3D(2), 9900X/3D, 270K<br><br><span class=\"quote\">&gt;COOLER</span><br>AIO: Thermalright Frozen Edge, Cooler Master Atmos, Lian Li GA II Lite, Corsair Nautilus RS, be Quiet Silent Loop 3<br>Dual tower: A620 PRO SE, Phantom Spirit, NH-D15 G2<br>ITX/&gt;42mm RAM: Mugen 6 Dual Fan, AXP120-X67<br><br>TIM: MX-7, Duronaut, PTM7950 (phase change), KryoSheet (carbon sheet)<br>*Most listings online are not actually 7950<br><br><span class=\"quote\">&gt;MOTHERBOARD</span><br>Avoid ASRock AM5 boards, CPU degradation issues still reported<br>Choose boards with ALC1220 audio codec if possible<br><br><span class=\"quote\">&gt;RAM</span><br>DDR5: 2x16GB or 2x24GB, 6000CL30 (AMD), 6400CL32 (Intel)<br>Workstation: 2x 32GB (budget), 2x48GB or 2x64GB (high-end)<br>DDR4: 3200CL16, 3600CL18<br><br><span class=\"quote\">&gt;SSD (Keep firmware updated)</span><br>DRAMless: 7100, NM790<br>PCIe Gen 4.0: 850X<br>Gen 5.0: 8100<br>https://borecraft.com/<br><br><span class=\"quote\">&gt;GPU</span><br>Budget: Arc B580, 9060 XT 16GB, 5060, used card<br>*8GB has become a major constraint even at 1080p<br>Midrange: 9070, 5070<br>High-end: 9070 XT, 5070 Ti<br>Workstation: 7900XTX, 5090<br>AI: Radeon AI PRO R9700, blackwell 6000<br><br><span class=\"quote\">&gt;PSU</span><br>Buying guide:<br>https://hwbusters.com/best_picks/be<wbr>st-atxv3-pcie5-ready-psus-picks-har<wbr>dware-busters/<br><br><span class=\"quote\">&gt;MONITOR</span><br>1080p: 24&quot; 165/180hz IPS, KTC H25X7<br>1440p: 27&quot; 165/180hz IPS, KTC M27T6 (miniLED), discounted OLED<br>4K:KTC M27P6 (miniLED), discounted OLED<br><br><span class=\"quote\">&gt;OS</span><br>Activate Windows @ <a href=\"//boards.4chan.org/g/catalog#s=fwt\" class=\"quotelink\">&gt;&gt;&gt;/g/fwt</a><br><br><span class=\"quote\">&gt;CASE FANS</span><br>Meta: Case with good stock PWM fans<br>Midrange: Pure Wings 3, Arctic P12 Pro, P14 Pro (5-pack, loud @ higher RPM)<br>High-end: Fractal Momentum, Noctua G2 (140mm or 120mm)<br><br>Prev: <a href=\"/g/thread/109502641#p109502641\" rel=\"nofollow ugc\" class=\"quotelink\">&gt;&gt;109502641</a>",
+      "filename": "file",
+      "ext": ".jpg",
+      "w": 1836,
+      "h": 3264,
+      "tn_w": 140,
+      "tn_h": 250,
+      "tim": 1786338303451988,
+      "time": 1786338303,
+      "md5": "dearSeHYYwENmeq5ohjmlQ==",
+      "fsize": 792692,
+      "resto": 0,
+      "bumplimit": 0,
+      "imagelimit": 0,
+      "semantic_url": "pcbg-pc-building-general",
+      "replies": 292,
+      "images": 44,
+      "tail_size": 50
+    },
+    {
+      "no": 109514277,
+      "now": "08/10/26(Mon)01:05:18",
+      "name": "Anonymous",
+      "com": "Think for yourself. Do not blindly trust advice given here.<br><br><span class=\"quote\">&gt;A /pcbg/ for every use case and budget!</span><br><br><span class=\"quote\">&gt;Price tracking</span><br>RAM: https://www.tomshardware.com/pc-com<wbr>ponents/ram/ram-price-index-2026-lo<wbr>west-price-on-ddr5-and-ddr4-memory-<wbr>of-all-capacities<br>SSD: https://www.tomshardware.com/pc-com<wbr>ponents/ssds/ssd-price-tracking-202<wbr>6-lowest-price-on-every-m-2-ssd<br>GPU: https://www.tomshardware.com/pc-com<wbr>ponents/gpus/lowest-gpu-prices-trac<wbr>king<br><br><span class=\"quote\">&gt;GPU hierarchy 2026</span><br>https://www.tomshardware.com/review<wbr>s/gpu-hierarchy,4388.html<br><br><span class=\"quote\">&gt;PSU Reviews</span><br>https://www.tomshardware.com/pc-com<wbr>ponents/power-supplies<br>https://www.lttlabs.com/<br>https://www.kitguru.net/reviews/?ca<wbr>tegory_name=power-supplies<br>https://www.techpowerup.com/review/<wbr>?category=Power+Supplies<br><br>For tier-list enjoyers:<br>https://docs.google.com/spreadsheet<wbr>s/d/1akCHL7Vhzk_EhrpIGkz8zTEvYfLDca<wbr>SpZRB6Xt6JWkc/<br><br><span class=\"quote\">&gt;Storage Reviews</span><br>https://www.phoronix.com/reviews/St<wbr>orage (Linux performance)<br>https://www.tweaktown.com/cat/stora<wbr>ge/index.html<br>https://www.techpowerup.com/review/<wbr>?category=SSD<br>https://www.tomshardware.com/pc-com<wbr>ponents/storage/ssds/reviews<br>https://www.servethehome.com/catego<wbr>ry/storage/<br><br><span class=\"quote\">&gt;Monitor Hunter</span><br>https://docs.google.com/document/d/<wbr>1illeNLsUfZ4KuJ9cIWKwTDUEXUVpplhUYH<wbr>Aiom-FaDo/<br><br><span class=\"quote\">&gt;Other helpful Links</span><br>Mobomaps: https://mobomaps.com/<br>A PC build guide: https://igwiki.lyci.de/wiki/Build_a<wbr>_PC<br>German autism: https://www.igorslab.de/en/<br>Alternate to pcpartpicker: https://pangoly.com/en/pc-builder",
+      "time": 1786338318,
+      "resto": 109514275
+    },
+    {
+      "no": 109514287,
+      "now": "08/10/26(Mon)01:08:28",
+      "name": "Anonymous",
+      "com": "i only play factorio with my new pc. i could probably play that game on my old thinkpad.",
+      "filename": "1761907872079211",
+      "ext": ".jpg",
+      "w": 720,
+      "h": 762,
+      "tn_w": 118,
+      "tn_h": 125,
+      "tim": 1786338508450320,
+      "time": 1786338508,
+      "md5": "OJeTGwwl4dimkPQIfXcScA==",
+      "fsize": 43913,
+      "resto": 109514275
+    },
+    {
+      "no": 109514346,
+      "now": "08/10/26(Mon)01:20:17",
+      "name": "Anonymous",
+      "com": "zen 6 waiting room.<br><br><a href=\"#p109514287\" class=\"quotelink\">&gt;&gt;109514287</a><br><span class=\"quote\">&gt;factorio</span><br>I wonder if I have a copy...<br><br>ever play the square thing, that&#039;s crazy fun lmao",
+      "time": 1786339217,
+      "resto": 109514275
+    },
+    {
+      "no": 109514385,
+      "now": "08/10/26(Mon)01:27:23",
+      "name": "Anonymous",
+      "com": "<a href=\"#p109514287\" class=\"quotelink\">&gt;&gt;109514287</a><br><span class=\"quote\">&gt;playing video games</span>",
+      "time": 1786339643,
+      "resto": 109514275
+    },
+    {
+      "no": 109514414,
+      "now": "08/10/26(Mon)01:31:16",
+      "name": "Anonymous",
+      "com": "<a href=\"#p109514385\" class=\"quotelink\">&gt;&gt;109514385</a><br><span class=\"quote\">&gt;&gt;playing video games</span><br>Factorio isn&#039;t a videogame, it&#039;s a brain trainer.<br><br>What we do is, we carefully hide brain augmentation technology, so the men in black don&#039;t show up and demand our loosh.",
+      "time": 1786339876,
+      "resto": 109514275
+    }
+  ]
+}

@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Database\Factories\ThreadFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -78,6 +79,30 @@ class Thread extends Model
     public function originalPost(): HasOne
     {
         return $this->hasOne(Post::class)->where('is_op', true);
+    }
+
+    /**
+     * Threads on a board this anon is allowed to see.
+     *
+     * Every surface that lists threads has to apply this, not just the two
+     * that take a board slug in the URL: a board hidden from its own page and
+     * still named in the feed is not hidden.
+     *
+     * A subquery rather than `whereHas`, which would be the obvious spelling.
+     * It reads as one set membership test instead of a correlated exists, and
+     * it keeps the board scope's own type — a closure passed to `whereHas`
+     * arrives as a builder over `Model`, so the visibility rule silently stops
+     * being checked at all by static analysis.
+     *
+     * @param  Builder<Thread>  $query
+     * @return Builder<Thread>
+     */
+    public function scopeOnVisibleBoard(Builder $query, bool $showsMatureBoards): Builder
+    {
+        return $query->whereIn(
+            'board_id',
+            Board::query()->visible($showsMatureBoards)->select('id'),
+        );
     }
 
     /**
