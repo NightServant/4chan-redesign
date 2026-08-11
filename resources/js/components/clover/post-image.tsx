@@ -40,35 +40,82 @@ const CONCEALMENT_COPY = {
 } as const;
 
 /**
- * The box the thumbnail occupies before it arrives.
+ * Where an attachment is being drawn, which decides how large it may draw.
  *
- * 4chan reports the thumbnail's own dimensions, so the space is reserved
- * rather than guessed. Without this every image in a feed shifts the page as
- * it loads, which is the layout-shift version of inventing a number.
+ * `card` is a thread in a list; `post` is a thread being read. Both fetch the
+ * file itself and differ only in how much room it is given.
+ *
+ * Neither uses the thumbnail, which is the part worth explaining. 4chan caps
+ * thumbnails at 250px on the long side for an OP and **125px for a reply**,
+ * measured across the ingested rows — a reply thumbnail is smaller than the
+ * avatar beside it. Scaling one to a readable width is a 125px image stretched
+ * threefold, which is blur rather than detail, and there is no intermediate
+ * rendition to ask for: upstream offers the thumbnail or the original and
+ * nothing in between. So the original is what loads, held to a sane size by
+ * the caps below.
+ *
+ * That is affordable only because every image is lazy. A feed loads the two or
+ * three attachments actually on screen, not all thirty.
  */
-function thumbnailBox(media: Attachment): {
+type PostImageVariant = 'card' | 'post';
+
+/**
+ * The box the image occupies before it arrives.
+ *
+ * The file's own dimensions, so the browser reserves the correct aspect ratio
+ * and nothing shifts as it loads. Handing it the thumbnail's dimensions while
+ * loading the original would reserve the wrong shape and reintroduce exactly
+ * the shift this prevents.
+ */
+function intrinsicBox(media: Attachment): {
     width: number | undefined;
     height: number | undefined;
 } {
     return {
-        width: media.thumbWidth ?? undefined,
-        height: media.thumbHeight ?? undefined,
+        width: media.width ?? undefined,
+        height: media.height ?? undefined,
     };
 }
 
+/**
+ * How large the image is allowed to draw.
+ *
+ * The image fills the column's full width, and that is the load-bearing part.
+ * Sizing from the height cap instead (`w-auto` under a `max-h`) leaves every
+ * landscape image short of the right edge by however much its aspect ratio
+ * happens to differ — a ragged margin down one side of the feed that reads as
+ * a layout bug rather than a decision.
+ *
+ * So width is fixed and height follows the image's own ratio, capped. The cap
+ * is what stops a 1920x4000 infographic taking over the page, and `object-cover`
+ * is what happens when it bites: a very tall image is cropped to the cap
+ * rather than letterboxed, because letterboxing would put the gaps back, just
+ * on both sides instead of one.
+ *
+ * Only genuinely tall images are ever cropped. A landscape or roughly square
+ * one scaled to the column width lands under the cap and is untouched. Opening
+ * the image shows it whole either way.
+ */
+const VARIANT_CLASSES: Record<PostImageVariant, string> = {
+    card: 'h-auto max-h-[460px] w-full object-cover',
+    post: 'h-auto max-h-[640px] w-full object-cover',
+};
+
 type PostImageProps = {
     media: Attachment;
+    /** Defaults to `card`, the tighter cap. */
+    variant?: PostImageVariant;
     className?: string;
 };
 
-function PostImage({ media, className }: PostImageProps) {
+function PostImage({ media, variant = 'card', className }: PostImageProps) {
     /* Concealment is the initial state, not a permanent one: revealing is a
        per-attachment decision an anon makes and it does not persist. */
     const [revealed, setRevealed] = useState(media.concealed === null);
     const [expanded, setExpanded] = useState(false);
     const [failed, setFailed] = useState(false);
 
-    const box = thumbnailBox(media);
+    const box = intrinsicBox(media);
 
     /**
      * A file 4chan has since pruned still has a `tim`, so the URL is
@@ -86,9 +133,15 @@ function PostImage({ media, className }: PostImageProps) {
         return (
             <div
                 data-slot="post-image-cover"
-                style={{ minHeight: box.height }}
                 className={cn(
-                    'flex flex-col items-center justify-center gap-2 rounded-lg border border-border bg-surface-elevated p-6 text-center',
+                    /* A fixed, modest band, sized to its own copy rather than
+                       to the file behind it. It briefly took the image's
+                       intrinsic height, which reserved 2000px of empty box for
+                       a 3000x2000 attachment — and would have leaked the
+                       dimensions of something an anon has not agreed to see.
+                       A cover is a placeholder; how large it is says nothing
+                       about what it covers. */
+                    'flex min-h-[180px] w-full flex-col items-center justify-center gap-2 rounded-lg border border-border bg-surface-elevated p-6 text-center',
                     className,
                 )}
             >
@@ -125,14 +178,16 @@ function PostImage({ media, className }: PostImageProps) {
                 data-slot="post-image"
                 onClick={() => setExpanded(true)}
                 className={cn(
-                    'group block overflow-hidden rounded-lg border border-border bg-surface-elevated',
+                    /* Full width too: an image that fills its box is still
+                       inset if the box itself does not fill the column. */
+                    'group block w-full overflow-hidden rounded-lg border border-border bg-surface-elevated',
                     'transition-colors duration-[var(--duration-hover)] ease-standard hover:border-border-strong',
                     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                     className,
                 )}
             >
                 <img
-                    src={media.thumbnailUrl}
+                    src={media.fullUrl}
                     alt={media.filename}
                     width={box.width}
                     height={box.height}
@@ -142,12 +197,18 @@ function PostImage({ media, className }: PostImageProps) {
                        at least keeps which page an anon was reading out of it. */
                     referrerPolicy="no-referrer"
                     onError={() => setFailed(true)}
-                    className="block h-auto max-w-full object-cover"
+                    className={cn('block', VARIANT_CLASSES[variant])}
                 />
             </button>
 
             <Dialog open={expanded} onOpenChange={setExpanded}>
-                <DialogContent className="max-w-[min(92vw,1100px)] sm:max-w-[min(92vw,1100px)]">
+                {/* Sized to whatever it holds rather than to a fixed column:
+                    the dialog exists to show one image at its own proportions,
+                    so a portrait shot should not sit in a landscape box with
+                    empty space either side of it. `w-fit` lets the panel
+                    shrink to the image; the viewport caps keep a large one on
+                    screen. */}
+                <DialogContent className="w-fit max-w-[min(94vw,1400px)] sm:max-w-[min(94vw,1400px)]">
                     <DialogTitle className="sr-only">
                         {media.filename}
                     </DialogTitle>
@@ -162,7 +223,12 @@ function PostImage({ media, className }: PostImageProps) {
                             setFailed(true);
                             setExpanded(false);
                         }}
-                        className="max-h-[75vh] w-auto max-w-full self-center rounded-md object-contain"
+                        /* Both axes automatic, bounded by the viewport. The
+                           `width` and `height` attributes above are the file's
+                           real dimensions and would otherwise fix the rendered
+                           size, so `h-auto w-auto` is what actually hands the
+                           proportions back to the image. */
+                        className="h-auto max-h-[82vh] w-auto max-w-full justify-self-center rounded-md object-contain"
                     />
 
                     <MachineValue className="text-center text-faint">
@@ -182,17 +248,19 @@ function PostImage({ media, className }: PostImageProps) {
  */
 function PostAttachment({
     media,
+    variant,
     className,
 }: {
     media: Attachment | null;
+    variant?: PostImageVariant;
     className?: string;
 }) {
     if (media === null) {
         return null;
     }
 
-    return <PostImage media={media} className={className} />;
+    return <PostImage media={media} variant={variant} className={className} />;
 }
 
 export { PostAttachment, PostImage };
-export type { PostImageProps };
+export type { PostImageProps, PostImageVariant };

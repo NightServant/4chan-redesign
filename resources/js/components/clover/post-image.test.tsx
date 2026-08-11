@@ -5,32 +5,111 @@ import { PostAttachment, PostImage } from '@/components/clover/post-image';
 import { makeAttachment } from '@/fixtures/factories';
 
 describe('PostImage', () => {
-    it('renders the thumbnail, not the full image', () => {
-        const media = makeAttachment();
+    /**
+     * Neither variant uses the thumbnail, and that is the sizing decision.
+     *
+     * 4chan caps thumbnails at 250px on the long side for an OP and 125px for
+     * a reply — a reply thumbnail is smaller than the avatar beside it. There
+     * is no intermediate rendition to ask for, so the original is what loads,
+     * held to a sane size by CSS.
+     */
+    it.each(['card', 'post'] as const)(
+        'loads the file itself on a %s, since the thumbnail is too small to read',
+        (variant) => {
+            const media = makeAttachment();
 
-        render(<PostImage media={media} />);
+            render(<PostImage media={media} variant={variant} />);
 
-        const image = screen.getByRole('img', { name: media.filename });
+            const image = screen.getByRole('img', { name: media.filename });
 
-        expect(image).toHaveAttribute('src', media.thumbnailUrl);
-        expect(image).not.toHaveAttribute('src', media.fullUrl);
+            expect(image).toHaveAttribute('src', media.fullUrl);
+            expect(image).not.toHaveAttribute('src', media.thumbnailUrl);
+        },
+    );
+
+    /**
+     * The image fills the column, which is what stops a ragged margin down
+     * one side of the feed. Sizing from the height cap instead leaves every
+     * landscape image short of the right edge by however much its aspect
+     * ratio happens to differ.
+     */
+    it.each(['card', 'post'] as const)(
+        'fills the column width on a %s rather than sizing from its height',
+        (variant) => {
+            render(<PostImage media={makeAttachment()} variant={variant} />);
+
+            const image = screen.getByRole('img');
+
+            expect(image).toHaveClass('w-full');
+            expect(image).not.toHaveClass('w-auto');
+        },
+    );
+
+    it('does not inset the image inside a narrower box', () => {
+        render(<PostImage media={makeAttachment()} />);
+
+        expect(screen.getByRole('button')).toHaveClass('w-full');
     });
 
     /**
-     * A feed of thirty cards each pulling a four-megabyte original is the
-     * difference between a page that loads and one that does not.
+     * An aspect ratio alone does not stop a 1920x4000 infographic taking over
+     * the page, so each variant is capped — a card tighter than a post, being
+     * one item in a list rather than the thing being read.
      */
-    it('lazy-loads the thumbnail and reserves its box', () => {
-        const media = makeAttachment({ thumbWidth: 250, thumbHeight: 156 });
+    it('caps a card tighter than a post', () => {
+        const media = makeAttachment();
 
-        render(<PostImage media={media} />);
+        const { unmount } = render(<PostImage media={media} variant="card" />);
 
-        const image = screen.getByRole('img', { name: media.filename });
+        expect(screen.getByRole('img')).toHaveClass('max-h-[460px]');
 
-        expect(image).toHaveAttribute('loading', 'lazy');
-        expect(image).toHaveAttribute('width', '250');
-        expect(image).toHaveAttribute('height', '156');
+        unmount();
+
+        render(<PostImage media={media} variant="post" />);
+
+        expect(screen.getByRole('img')).toHaveClass('max-h-[640px]');
     });
+
+    it('defaults to the card variant, the tighter cap', () => {
+        render(<PostImage media={makeAttachment()} />);
+
+        expect(screen.getByRole('img')).toHaveClass('max-h-[460px]');
+    });
+
+    /**
+     * The file's own dimensions, not the thumbnail's. Reserving the
+     * thumbnail's shape while loading the original would reserve the wrong
+     * aspect ratio and reintroduce the shift this prevents.
+     */
+    it('reserves the box from the full image dimensions', () => {
+        const media = makeAttachment({
+            width: 1920,
+            height: 1080,
+            thumbWidth: 250,
+            thumbHeight: 140,
+        });
+
+        render(<PostImage media={media} variant="card" />);
+
+        const image = screen.getByRole('img');
+
+        expect(image).toHaveAttribute('width', '1920');
+        expect(image).toHaveAttribute('height', '1080');
+    });
+
+    /**
+     * Lazily in both variants. Loading the original is only affordable
+     * because a feed fetches the two or three attachments on screen rather
+     * than all thirty.
+     */
+    it.each(['card', 'post'] as const)(
+        'lazy-loads the %s variant',
+        (variant) => {
+            render(<PostImage media={makeAttachment()} variant={variant} />);
+
+            expect(screen.getByRole('img')).toHaveAttribute('loading', 'lazy');
+        },
+    );
 
     it('sends no referrer to the CDN', () => {
         render(<PostImage media={makeAttachment()} />);
@@ -56,6 +135,40 @@ describe('PostImage', () => {
         expect(
             full.some((image) => image.getAttribute('src') === media.fullUrl),
         ).toBe(true);
+    });
+
+    /**
+     * The `width` and `height` attributes carry the file's real dimensions, so
+     * without both axes set to automatic they fix the rendered size and the
+     * dialog shows a 3000px image at 3000px. Automatic on both, bounded by the
+     * viewport, is what hands the proportions back to the image.
+     */
+    it('lets the opened image size itself on both axes', async () => {
+        const user = userEvent.setup();
+        const media = makeAttachment();
+
+        render(<PostImage media={media} />);
+
+        await user.click(screen.getByRole('button', { name: media.filename }));
+
+        const opened = screen
+            .getAllByRole('img', { name: media.filename })
+            .find((image) => image.getAttribute('src') === media.fullUrl);
+
+        expect(opened).toHaveClass('h-auto');
+        expect(opened).toHaveClass('w-auto');
+        expect(opened).toHaveClass('object-contain');
+    });
+
+    it('sizes the dialog to the image rather than to a fixed column', async () => {
+        const user = userEvent.setup();
+        const media = makeAttachment();
+
+        render(<PostImage media={media} />);
+
+        await user.click(screen.getByRole('button', { name: media.filename }));
+
+        expect(screen.getByRole('dialog')).toHaveClass('w-fit');
     });
 
     it('is reachable and operable from the keyboard', async () => {
@@ -99,7 +212,7 @@ describe('PostImage', () => {
 
                 expect(
                     screen.getByRole('img', { name: media.filename }),
-                ).toHaveAttribute('src', media.thumbnailUrl);
+                ).toHaveAttribute('src', media.fullUrl);
             },
         );
 
@@ -118,6 +231,29 @@ describe('PostImage', () => {
 
             expect(screen.getByText('Spoilered')).toBeInTheDocument();
             expect(screen.queryByText('Not worksafe')).not.toBeInTheDocument();
+        });
+
+        /**
+         * The cover briefly took the image's intrinsic height, which reserved
+         * 2000px of empty box for a 3000x2000 attachment. It also leaked the
+         * dimensions of something an anon had not agreed to see: how large a
+         * placeholder is should say nothing about what it covers.
+         */
+        it('is a modest fixed band, not sized to the file behind it', () => {
+            const media = makeAttachment({
+                concealed: 'mature',
+                width: 3000,
+                height: 2000,
+            });
+
+            const { container } = render(<PostImage media={media} />);
+
+            const cover = container.querySelector(
+                '[data-slot="post-image-cover"]',
+            );
+
+            expect(cover).toHaveClass('min-h-[180px]');
+            expect(cover).not.toHaveAttribute('style');
         });
 
         it('still reports what the file is while covered', () => {

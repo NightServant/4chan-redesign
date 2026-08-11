@@ -26,7 +26,9 @@ function postWithMedia(array $attributes = [], bool $worksafe = true): Post
 
     $thread = Thread::factory()->for($board)->create();
 
-    return Post::factory()->for($thread)->create([
+    /* The OP, because a thread card renders the opening post's attachment and
+       a reply's would never reach it. */
+    return Post::factory()->for($thread)->op()->create([
         'media_filename' => 'x230',
         'media_extension' => '.png',
         'media_tim' => 1745612650141704,
@@ -117,4 +119,49 @@ describe('concealment', function (): void {
                 ->mediaConcealment(),
         )->toBeNull();
     });
+});
+
+/**
+ * The homepage previews real threads and withholds their images.
+ *
+ * The threads themselves are the point — they are what the product actually
+ * contains. Their attachments are a different matter: this is the first screen
+ * a visitor sees, and whatever anons uploaded in the last hour is not
+ * something to put behind the product's own pitch.
+ *
+ * Asserted on the payload rather than on the markup, because withholding and
+ * hiding are not the same thing. A URL that reaches the page can be requested
+ * whatever the components do with it; the point of doing this server-side is
+ * that the homepage cannot make a request to 4chan's CDN at all.
+ */
+it('sends the homepage no attachments', function (): void {
+    postWithMedia();
+
+    $this->get('/')->assertInertia(
+        fn ($page) => $page
+            ->component('welcome')
+            ->has('threads', 1)
+            ->where('threads.0.media', null),
+    );
+});
+
+it('never puts a CDN URL on the homepage', function (): void {
+    postWithMedia();
+
+    expect($this->get('/')->getContent())->not->toContain('4cdn.org');
+});
+
+/**
+ * The suppression is the homepage's alone. A board or feed listing the same
+ * thread still carries its image, so this must not be a change to the resource
+ * everybody shares.
+ */
+it('still sends attachments to the board page', function (): void {
+    $post = postWithMedia();
+
+    $this->get("/{$post->thread->board->slug}")->assertInertia(
+        fn ($page) => $page
+            ->component('board')
+            ->where('threads.0.media.thumbnailUrl', $post->mediaThumbnailUrl()),
+    );
 });

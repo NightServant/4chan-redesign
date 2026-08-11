@@ -97,13 +97,19 @@ describe('OriginalPost', () => {
      * now, and the rule it protected moved rather than went away: still only
      * what 4chan reported, still nothing estimated.
      */
-    it('renders the attachment thumbnail when the thread has one', () => {
+    /**
+     * The full file, not the thumbnail. This is the thread being read, and
+     * 4chan caps an OP's thumbnail at 250px on the long side — big enough to
+     * identify an image, not to look at one.
+     */
+    it('renders the full attachment when the thread has one', () => {
         render(<OriginalPost thread={MEDIA_THREAD} />);
 
         const media = MEDIA_THREAD.media!;
         const image = screen.getByRole('img', { name: media.filename });
 
-        expect(image).toHaveAttribute('src', media.thumbnailUrl);
+        expect(image).toHaveAttribute('src', media.fullUrl);
+        expect(image).not.toHaveAttribute('src', media.thumbnailUrl);
     });
 
     it('renders no attachment when media is null', () => {

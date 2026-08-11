@@ -48,12 +48,23 @@ export interface Attachment {
     label: string;
     /** The original filename with its extension, for the accessible name. */
     filename: string;
-    /** Always JPEG, whatever the original was — upstream's rule, not a guess. */
+    /**
+     * Always JPEG, whatever the original was — upstream's rule, not a guess.
+     *
+     * **Nothing renders this today.** 4chan caps a thumbnail at 250px on the
+     * long side for an OP and 125px for a reply, which is too small to look
+     * at and too small to scale up, so both the card and the post load the
+     * original instead. It is kept because it is real data that costs one
+     * `sprintf` and is the right source the moment a dense grid exists — the
+     * account screen's media tab, in task 11b. If that never lands, this and
+     * the two `thumb` dimensions below should go.
+     */
     thumbnailUrl: string;
     fullUrl: string;
+    /** The original's dimensions. What reserves the box before it loads. */
     width: number | null;
     height: number | null;
-    /** Reserve the thumbnail's box before it loads, so nothing shifts. */
+    /** See `thumbnailUrl`: carried, not currently rendered. */
     thumbWidth: number | null;
     thumbHeight: number | null;
     /**

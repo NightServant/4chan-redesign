@@ -193,8 +193,13 @@ function CommentNode({
 
                         {/* Replies carry files as often as the OP does; a
                             thread rendered without them drops most of what is
-                            actually on a board like /wg/ or /3/. */}
-                        <PostAttachment media={comment.media} />
+                            actually on a board like /wg/ or /3/.
+
+                            The full file, not the thumbnail: 4chan caps a
+                            reply's thumbnail at 125px on the long side, which
+                            is too small to make out and too small to scale up
+                            without turning to mush. */}
+                        <PostAttachment media={comment.media} variant="post" />
 
                         <footer className="flex items-center gap-3">
                             <span
