@@ -33,6 +33,16 @@ class CommunityController extends Controller
 
         return Inertia::render('communities', [
             'boards' => BoardDirectoryResource::collection($boards),
+
+            /**
+             * A count, never the boards themselves. The directory says it is
+             * incomplete — otherwise the setting is undiscoverable to anyone
+             * who never thinks to look for it — and it says so without the
+             * browser receiving a single board the anon asked not to see.
+             */
+            'hiddenCount' => $this->showsMatureBoards($request)
+                ? 0
+                : Board::query()->where('worksafe', false)->count(),
         ]);
     }
 }

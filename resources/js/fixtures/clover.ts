@@ -1,124 +1,38 @@
 import type {
     Achievement,
     ActivityEntry,
-    Board,
-    BoardDirectoryEntry,
     Bookmark,
-    Comment,
     Conversation,
     HistoryEntry,
     Profile,
     ProfileComment,
     ProfileStat,
     Thread,
-    TrendingTag,
 } from '@/types/clover';
 
 /**
- * Design fixtures.
+ * Account-shaped design fixtures.
  *
- * Lifted verbatim from the Clover design prototype so screens can be built and
- * reviewed before the backend exists. Copy is part of the design — it
- * demonstrates the product's voice (blessings, anons, dry specifics) and
- * should not be paraphrased.
+ * Everything board-shaped has left this file. Boards, threads, posts and the
+ * directory are ingested from 4chan's read-only JSON API and reach the screens
+ * as Inertia props, so `BOARDS`, `THREADS`, `COMMENTS`, `BOARD_DIRECTORY` and
+ * `TRENDING` were deleted rather than left behind as a second, staler copy of
+ * data the server now owns.
  *
- * These are replaced by Inertia props from Eloquent models in the backend
- * task; the `@/types/clover` contracts stay the same across that swap.
+ * What remains is the half 4chan cannot supply, because it is not 4chan's:
+ * this anon's profile, their history, their bookmarks, their messages and
+ * their notifications. None of it has a backend yet. It is still lifted from
+ * the Clover design prototype, and the copy is part of the design — it carries
+ * the product's voice (blessings, anons, dry specifics) and should not be
+ * paraphrased.
+ *
+ * These go the same way as the rest in the account task; the
+ * `@/types/clover` contracts stay the same across that swap.
+ *
+ * One consequence of the API landing: `Thread` no longer carries `views`,
+ * because nothing upstream counts views. The bookmarked threads below spell
+ * out `images` instead, which is the figure the API does report.
  */
-
-export const BOARDS: readonly Board[] = [
-    { slug: '/g/', name: 'Technology', online: '41,208' },
-    { slug: '/wg/', name: 'Wallpapers', online: '9,114' },
-    { slug: '/biz/', name: 'Business', online: '12,860' },
-    { slug: '/x/', name: 'Paranormal', online: '7,442' },
-    { slug: '/fit/', name: 'Fitness', online: '15,309' },
-    { slug: '/co/', name: 'Comics', online: '6,027' },
-
-    /* Routable, so it must be here: `config/clover.php` accepts `/b/`, and a
-       slug the router serves but this list does not carry renders a blank
-       page rather than a 404. See `BoardCatalogueTest`. */
-    { slug: '/b/', name: 'Random', online: '58,730' },
-] as const;
-
-export const THREADS: readonly Thread[] = [
-    {
-        no: 58210441,
-        board: '/g/',
-        boardName: 'Technology',
-        time: '4 min ago',
-        title: 'RISC-V laptops are finally usable as daily drivers',
-        excerpt:
-            'Ordered the DC-ROMA II in March. Compiling LLVM takes 40 minutes but everything else is fine. Ask me anything.',
-        blessings: 2412,
-        replies: 318,
-        views: '48,201',
-        media: null,
-        pinned: false,
-    },
-    {
-        no: 58210398,
-        board: '/wg/',
-        boardName: 'Wallpapers',
-        time: '11 min ago',
-        title: 'Dark minimal wallpaper thread — 3840x2160 only',
-        excerpt: 'Dumping my folder. No AI slop, no logos, no watermarks.',
-        blessings: 884,
-        replies: 96,
-        views: '21,455',
-        media: 'ridge-4k.png · 3840×2160 · 4.1 MB',
-        pinned: false,
-    },
-    {
-        no: 58210277,
-        board: '/biz/',
-        boardName: 'Business',
-        time: '38 min ago',
-        title: 'Anyone else notice freelance rates collapsing this quarter?',
-        excerpt:
-            'Three agencies I work with cut their day rate by a third. Curious whether this is regional.',
-        blessings: 1207,
-        replies: 542,
-        views: '90,338',
-        media: null,
-        pinned: true,
-    },
-    {
-        no: 58209914,
-        board: '/x/',
-        boardName: 'Paranormal',
-        time: '1 hr ago',
-        title: 'The 1993 Kola borehole tapes have a fourth track nobody transcribed',
-        excerpt:
-            'Pulled the archive off a university FTP. Track four is 19 minutes of nothing and then a click.',
-        blessings: 3391,
-        replies: 811,
-        views: '156,092',
-        media: null,
-        pinned: false,
-    },
-    {
-        no: 58209502,
-        board: '/fit/',
-        boardName: 'Fitness',
-        time: '2 hr ago',
-        title: 'Two years of walking 15k steps a day, no gym. Results inside.',
-        excerpt:
-            'Started at 118 kg. No diet changes for the first year, then cut sugar drinks only.',
-        blessings: 5108,
-        replies: 1204,
-        views: '312,770',
-        media: 'progress-2y.jpg · 1440×1800 · 812 KB',
-        pinned: false,
-    },
-] as const;
-
-export const TRENDING: readonly TrendingTag[] = [
-    { tag: 'risc-v', posts: '4,182 posts' },
-    { tag: 'kola-borehole', posts: '3,905 posts' },
-    { tag: 'freelance-rates', posts: '2,760 posts' },
-    { tag: 'oled-burn-in', posts: '2,118 posts' },
-    { tag: 'homelab', posts: '1,904 posts' },
-] as const;
 
 export const ACTIVITY: readonly ActivityEntry[] = [
     {
@@ -263,118 +177,90 @@ export const PROFILE_MEDIA: readonly string[] = [
 ] as const;
 
 /**
- * Threads the anon saved. Wraps entries from `THREADS` rather than restating
- * their titles, so a bookmark can never drift out of sync with its thread.
+ * Threads the anon saved.
+ *
+ * These used to point into `THREADS`, so a bookmark could never drift out of
+ * sync with its thread. `THREADS` is gone: the real ones arrive as props, and
+ * a bookmark cannot reference a row this file no longer holds. So each entry
+ * now carries its own `Thread`, which is what a saved thread will look like
+ * anyway once bookmarks are stored — a snapshot the anon kept, joined back to
+ * a real thread by `no` and `board` rather than by array index.
  *
  * `note` is the anon's own annotation. Two are empty on purpose: a note is
  * optional, and a list where every row has one would not exercise the case.
  */
 export const BOOKMARKS: readonly Bookmark[] = [
     {
-        thread: THREADS[3],
+        thread: {
+            no: 58209914,
+            board: '/x/',
+            boardName: 'Paranormal',
+            time: '1 hr ago',
+            title: 'The 1993 Kola borehole tapes have a fourth track nobody transcribed',
+            excerpt:
+                'Pulled the archive off a university FTP. Track four is 19 minutes of nothing and then a click.',
+            blessings: 3391,
+            replies: 811,
+            images: '112',
+            media: null,
+            pinned: false,
+        },
         savedAt: 'Saved 2 days ago',
         note: 'Track four timestamp is 11:42, not 11:24 like the OP says.',
     },
-    { thread: THREADS[0], savedAt: 'Saved 4 days ago', note: '' },
     {
-        thread: THREADS[2],
+        thread: {
+            no: 58210441,
+            board: '/g/',
+            boardName: 'Technology',
+            time: '4 min ago',
+            title: 'RISC-V laptops are finally usable as daily drivers',
+            excerpt:
+                'Ordered the DC-ROMA II in March. Compiling LLVM takes 40 minutes but everything else is fine. Ask me anything.',
+            blessings: 2412,
+            replies: 318,
+            images: '41',
+            media: null,
+            pinned: false,
+        },
+        savedAt: 'Saved 4 days ago',
+        note: '',
+    },
+    {
+        thread: {
+            no: 58210277,
+            board: '/biz/',
+            boardName: 'Business',
+            time: '38 min ago',
+            title: 'Anyone else notice freelance rates collapsing this quarter?',
+            excerpt:
+                'Three agencies I work with cut their day rate by a third. Curious whether this is regional.',
+            blessings: 1207,
+            replies: 542,
+            images: '18',
+            media: null,
+            pinned: true,
+        },
         savedAt: 'Saved last week',
         note: 'Check whether this held up next quarter.',
     },
-    { thread: THREADS[4], savedAt: 'Saved last week', note: '' },
-] as const;
-
-/**
- * The board directory.
- *
- * Every slug here is routable — it is the same six the router accepts, from
- * `config/clover.php`. A directory whose entire purpose is links must not
- * list a board the router will 404, so this stays in step with that config
- * rather than inventing the full board list.
- */
-export const BOARD_DIRECTORY: readonly BoardDirectoryEntry[] = [
     {
-        slug: '/g/',
-        name: 'Technology',
-        online: '41,208',
-        threads: '18,402',
-        category: 'Interests',
-        subscribed: true,
-        worksafe: true,
-        description:
-            'Hardware, software and the arguments between them. Homelabs, compilers, and one thread per week about mechanical keyboards.',
-    },
-    {
-        slug: '/wg/',
-        name: 'Wallpapers',
-        online: '9,114',
-        threads: '4,190',
-        category: 'Creative',
-        subscribed: true,
-        worksafe: true,
-        description:
-            'Wallpaper dumps at native resolution. No upscales, no watermarks, no AI slop.',
-    },
-    {
-        slug: '/biz/',
-        name: 'Business',
-        online: '12,860',
-        threads: '11,067',
-        category: 'Work',
-        subscribed: false,
-        worksafe: true,
-        description:
-            'Markets, freelancing and small business. Half of it is useful and the other half is someone selling a course.',
-    },
-    {
-        slug: '/x/',
-        name: 'Paranormal',
-        online: '7,442',
-        threads: '9,338',
-        category: 'Interests',
-        subscribed: true,
-        worksafe: true,
-        description:
-            'Unexplained recordings, missing footage and long transcripts. Sourcing is expected even here.',
-    },
-    {
-        slug: '/fit/',
-        name: 'Fitness',
-        online: '15,309',
-        threads: '13,551',
-        category: 'Life',
-        subscribed: false,
-        worksafe: true,
-        description:
-            'Training, food and progress logs. Ask about form, expect to be told your form is bad.',
-    },
-    {
-        slug: '/co/',
-        name: 'Comics',
-        online: '6,027',
-        threads: '7,802',
-        category: 'Creative',
-        subscribed: false,
-        worksafe: true,
-        description:
-            'Comics and animation, print and web. Storyboards, panel layouts and long-running adaptation grudges.',
-    },
-    {
-        slug: '/b/',
-        name: 'Random',
-        online: '58,730',
-        threads: '31,204',
-        category: 'Other',
-        subscribed: false,
-        /**
-         * The only board here 4chan marks `ws_board: 0`. It exists in this
-         * fixture so the mature-boards setting has something to act on: a
-         * filter that cannot change what is on screen is indistinguishable
-         * from a broken one, which is why the history range filter was cut.
-         */
-        worksafe: false,
-        description:
-            'No topic and no rules beyond the global ones. Adult content, and the reason the mature-boards setting exists.',
+        thread: {
+            no: 58209502,
+            board: '/fit/',
+            boardName: 'Fitness',
+            time: '2 hr ago',
+            title: 'Two years of walking 15k steps a day, no gym. Results inside.',
+            excerpt:
+                'Started at 118 kg. No diet changes for the first year, then cut sugar drinks only.',
+            blessings: 5108,
+            replies: 1204,
+            images: '96',
+            media: 'progress-2y.jpg · 1440×1800 · 812 KB',
+            pinned: false,
+        },
+        savedAt: 'Saved last week',
+        note: '',
     },
 ] as const;
 
@@ -456,88 +342,3 @@ export const CONVERSATIONS: readonly Conversation[] = [
         ],
     },
 ] as const;
-
-/**
- * Replies on thread 58210441. Unlike the other fixtures this one has no
- * counterpart in the design prototype, which shows a comment tree without
- * publishing its data. Written here in the same register: dry, specific,
- * technical, and unimpressed.
- *
- * Nesting goes three deep deliberately, so indentation, the depth cap and the
- * collapse affordance all have something real to act on.
- */
-export const COMMENTS: readonly Comment[] = [
-    {
-        no: 58210447,
-        quotes: [],
-        author: 'Anonymous',
-        time: '3 min ago',
-        body: 'Forty minutes for LLVM is not "fine", that is a full coffee break per build. What is the core count?',
-        blessings: 214,
-        op: false,
-        replies: [
-            {
-                no: 58210452,
-                quotes: [58210447],
-                author: 'Anonymous',
-                time: '2 min ago',
-                body: 'Eight cores, 16 GB. It is not fast, it is usable. Those are different claims.',
-                blessings: 388,
-                op: true,
-                replies: [
-                    {
-                        no: 58210461,
-                        quotes: [58210452],
-                        author: 'Anonymous',
-                        time: '1 min ago',
-                        body: 'Fair. What is battery like under sustained load?',
-                        blessings: 42,
-                        op: false,
-                        replies: [],
-                    },
-                ],
-            },
-            {
-                no: 58210455,
-                quotes: [58210447],
-                author: 'Anonymous',
-                time: '2 min ago',
-                body: 'Cross compile on an x86 box and rsync the artifacts. Nobody builds LLVM natively on these.',
-                blessings: 156,
-                op: false,
-                replies: [],
-            },
-        ],
-    },
-    {
-        no: 58210449,
-        quotes: [],
-        author: 'Anonymous',
-        time: '2 min ago',
-        body: 'Mainline kernel support or vendor tree? This is the only question that matters and every one of these threads dodges it.',
-        blessings: 512,
-        op: false,
-        replies: [
-            {
-                no: 58210458,
-                quotes: [58210449],
-                author: 'Anonymous',
-                time: '1 min ago',
-                body: 'Vendor tree, 6.6 based. Mainline boots but the GPU does nothing.',
-                blessings: 297,
-                op: true,
-                replies: [],
-            },
-        ],
-    },
-    {
-        no: 58210463,
-        quotes: [],
-        author: 'Anonymous',
-        time: 'just now',
-        body: 'Bought one in April and returned it in May. Your mileage will vary wildly by workload.',
-        blessings: 8,
-        op: false,
-        replies: [],
-    },
-];

@@ -6,21 +6,38 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Board } from '@/types/clover';
 
+/**
+ * The board-agnostic line shown when a board has no description of its own.
+ *
+ * One fact true of every board on the product, not a summary of any board's
+ * topic. It exists because inventing six lines of flavour text for `/x/` and
+ * `/biz/` would be fabricating product copy.
+ */
+const GENERIC_DESCRIPTION = 'Anonymous threads, bumped by reply.';
+
 type BoardHeaderProps = {
-    board: Board;
+    board: Board & {
+        /**
+         * The board's own description, from 4chan's `meta_description`. Absent
+         * on surfaces that only carry the short `Board` shape, which is why
+         * this widens `Board` rather than requiring a new type everywhere.
+         */
+        description?: string;
+    };
     className?: string;
 };
 
 /**
  * The board's identity strip above its thread list: avatar, name, a
- * `MachineValue` of slug and online count, one description line, and a
+ * `MachineValue` of slug and thread count, one description line, and a
  * Subscribe toggle.
  *
- * The fixtures carry no per-board description, and inventing six lines of
- * flavour text for boards like `/x/` and `/biz/` would be fabricating
- * product copy. The line here is instead one fact true of every board on
- * the product (threads are anonymous and bump on reply), not a summary of
- * this board's topic.
+ * The `MachineValue` used to read `/g/ · 41,208 online`. It does not any more,
+ * and not because the layout changed: 4chan's JSON API publishes no online
+ * count at any scope, so that number could only ever have been invented on
+ * every render. Thread count replaces it because the API genuinely reports it
+ * and the copy beside it says exactly what it counts. A stat whose label does
+ * not describe the number under it is the same lie in a smaller font.
  *
  * Deliberately not a `Panel` or `Card`: the thread list underneath is
  * already a stack of cards, and wrapping this in one too would read as a
@@ -43,10 +60,11 @@ function BoardHeader({ board, className }: BoardHeaderProps) {
                             {board.name}
                         </h1>
                         <MachineValue>
-                            {board.slug} · {board.online} online
+                            {board.slug} · {board.threads}{' '}
+                            {board.threads === '1' ? 'thread' : 'threads'}
                         </MachineValue>
                         <p className="max-w-[52ch] text-body-sm text-pretty text-muted-foreground">
-                            Anonymous threads, bumped by reply.
+                            {board.description || GENERIC_DESCRIPTION}
                         </p>
                     </div>
                 </div>

@@ -7,6 +7,7 @@ import {
 import { useId, useState } from 'react';
 import { AnonAvatar } from '@/components/clover/anon-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
+import { PostBody } from '@/components/clover/post-body';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { Comment } from '@/types/clover';
@@ -176,9 +177,18 @@ function CommentNode({
                             </div>
                         )}
 
-                        <p className="max-w-prose text-body-sm text-foreground">
-                            {comment.body}
-                        </p>
+                        {/* `{comment.body}` in a single `<p>` was fine against
+                            fixtures, whose bodies were one tidy sentence each.
+                            Real replies are multi-line and lean on greentext, and
+                            a plain text node collapses every newline: the whole
+                            reply arrived as one run-on paragraph with `>` lines
+                            reading as stray punctuation. `PostBody` does the line
+                            splitting and the greentext, from plain text and
+                            without `dangerouslySetInnerHTML`. */}
+                        <PostBody
+                            body={comment.body}
+                            className="max-w-prose text-body-sm text-foreground"
+                        />
 
                         <footer className="flex items-center gap-3">
                             <span
