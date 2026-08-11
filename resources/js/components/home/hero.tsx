@@ -34,8 +34,8 @@ const INTRO =
 
 const GRID_BACKGROUND = {
     backgroundImage: [
-        'repeating-linear-gradient(to right, var(--border) 0, var(--border) 1px, transparent 1px, transparent 64px)',
-        'repeating-linear-gradient(to bottom, var(--border) 0, var(--border) 1px, transparent 1px, transparent 64px)',
+        'repeating-linear-gradient(to right, var(--color-border) 0, var(--color-border) 1px, transparent 1px, transparent 64px)',
+        'repeating-linear-gradient(to bottom, var(--color-border) 0, var(--color-border) 1px, transparent 1px, transparent 64px)',
     ].join(', '),
     maskImage:
         'radial-gradient(100% 80% at 30% 20%, #000 20%, transparent 75%)',

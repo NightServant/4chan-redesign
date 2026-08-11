@@ -6,9 +6,8 @@ import { cn } from '@/lib/utils';
  * genuine container boundary helps. Cards never nest, and never rest with a
  * shadow.
  *
- * tailwind-merge (inside `cn`) does not know Clover's type scale, so it reads
- * `text-body-sm` as a text colour and drops it next to `text-muted-foreground`.
- * Where a section needs both, the scale is applied outside the merge.
+ * `cn` extends tailwind-merge with the Clover type scale, so a size and a
+ * colour survive the same merge and a caller can override either.
  */
 
 type CardProps = ComponentProps<'div'> & {

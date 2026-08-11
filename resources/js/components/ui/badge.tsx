@@ -10,12 +10,7 @@ import { cn } from '@/lib/utils';
  * never turns into a traffic light.
  */
 
-/**
- * tailwind-merge (inside `cn`) does not know Clover's type scale, so it reads
- * `text-caption` as a text colour and drops it next to `text-danger`. Applying
- * the scale outside the merge keeps both. Remove the split once `cn` is taught
- * the Clover font sizes.
- */
+/** The badge's own type scale. Merged, so a caller can override it. */
 const typeScale = 'text-caption font-medium';
 
 const badgeVariants = cva(
@@ -48,7 +43,7 @@ function Badge({ className, tone, asChild = false, ...props }: BadgeProps) {
     return (
         <Comp
             data-slot="badge"
-            className={`${typeScale} ${cn(badgeVariants({ tone }), className)}`}
+            className={cn(typeScale, badgeVariants({ tone }), className)}
             {...props}
         />
     );

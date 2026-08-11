@@ -3,11 +3,10 @@ import {
     index as confirmOptions,
     store as confirmStore,
 } from '@/actions/Laravel/Passkeys/Http/Controllers/PasskeyConfirmationController';
-import InputError from '@/components/input-error';
+import { AuthPasswordInput } from '@/components/auth/auth-input';
+import { FormField } from '@/components/clover/form-field';
 import PasskeyVerify from '@/components/passkey-verify';
-import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { store } from '@/routes/password/confirm';
 
@@ -22,37 +21,41 @@ export default function ConfirmPassword() {
                     submit: confirmStore(),
                 }}
                 label="Confirm with passkey"
-                loadingLabel="Confirming..."
+                loadingLabel="Confirming…"
                 separator="Or confirm with password"
             />
 
-            <Form {...store.form()} resetOnSuccess={['password']}>
+            <Form
+                {...store.form()}
+                resetOnSuccess={['password']}
+                className="flex flex-col gap-6"
+            >
                 {({ processing, errors }) => (
-                    <div className="space-y-6">
-                        <div className="grid gap-2">
-                            <Label htmlFor="password">Password</Label>
-                            <PasswordInput
-                                id="password"
+                    <>
+                        <FormField
+                            id="password"
+                            label="Password"
+                            error={errors.password}
+                        >
+                            <AuthPasswordInput
                                 name="password"
                                 placeholder="Password"
                                 autoComplete="current-password"
                                 autoFocus
                             />
+                        </FormField>
 
-                            <InputError message={errors.password} />
-                        </div>
-
-                        <div className="flex items-center">
-                            <Button
-                                className="w-full"
-                                disabled={processing}
-                                data-test="confirm-password-button"
-                            >
-                                {processing && <Spinner />}
-                                Confirm password
-                            </Button>
-                        </div>
-                    </div>
+                        <Button
+                            type="submit"
+                            size="lg"
+                            className="w-full"
+                            disabled={processing}
+                            data-test="confirm-password-button"
+                        >
+                            {processing && <Spinner />}
+                            {processing ? 'Confirming…' : 'Confirm password'}
+                        </Button>
+                    </>
                 )}
             </Form>
         </>
@@ -62,5 +65,5 @@ export default function ConfirmPassword() {
 ConfirmPassword.layout = {
     title: 'Confirm password',
     description:
-        'This is a secure area of the application. Please confirm your password before continuing.',
+        'This is a secure area. Confirm your password before continuing.',
 };

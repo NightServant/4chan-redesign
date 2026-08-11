@@ -39,3 +39,16 @@ export function cn(...inputs: ClassValue[]) {
 export function toUrl(url: NonNullable<InertiaLinkProps['href']>): string {
     return typeof url === 'string' ? url : url.url;
 }
+
+/**
+ * `3 boards`, `1 board`. For the counts in page descriptions.
+ *
+ * Naive `-s` suffixing, which is all this needs: every noun it is called with
+ * is one Clover writes itself (board, conversation, saved thread), so an
+ * irregular plural can only appear here by someone adding one deliberately.
+ * A full pluralisation library for that would be a dependency bought to solve
+ * a problem the copy does not have.
+ */
+export function plural(count: number, noun: string): string {
+    return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
