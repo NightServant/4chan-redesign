@@ -199,6 +199,29 @@ describe('PostImage', () => {
             expect(screen.queryByText('Not worksafe')).not.toBeInTheDocument();
         });
 
+        /**
+         * The cover briefly took the image's intrinsic height, which reserved
+         * 2000px of empty box for a 3000x2000 attachment. It also leaked the
+         * dimensions of something an anon had not agreed to see: how large a
+         * placeholder is should say nothing about what it covers.
+         */
+        it('is a modest fixed band, not sized to the file behind it', () => {
+            const media = makeAttachment({
+                concealed: 'mature',
+                width: 3000,
+                height: 2000,
+            });
+
+            const { container } = render(<PostImage media={media} />);
+
+            const cover = container.querySelector(
+                '[data-slot="post-image-cover"]',
+            );
+
+            expect(cover).toHaveClass('min-h-[180px]');
+            expect(cover).not.toHaveAttribute('style');
+        });
+
         it('still reports what the file is while covered', () => {
             const media = makeAttachment({ concealed: 'spoiler' });
 

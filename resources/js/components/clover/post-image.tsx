@@ -133,9 +133,15 @@ function PostImage({ media, variant = 'card', className }: PostImageProps) {
         return (
             <div
                 data-slot="post-image-cover"
-                style={{ minHeight: box.height }}
                 className={cn(
-                    'flex flex-col items-center justify-center gap-2 rounded-lg border border-border bg-surface-elevated p-6 text-center',
+                    /* A fixed, modest band, sized to its own copy rather than
+                       to the file behind it. It briefly took the image's
+                       intrinsic height, which reserved 2000px of empty box for
+                       a 3000x2000 attachment — and would have leaked the
+                       dimensions of something an anon has not agreed to see.
+                       A cover is a placeholder; how large it is says nothing
+                       about what it covers. */
+                    'flex min-h-[180px] w-full flex-col items-center justify-center gap-2 rounded-lg border border-border bg-surface-elevated p-6 text-center',
                     className,
                 )}
             >
