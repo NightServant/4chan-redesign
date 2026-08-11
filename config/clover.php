@@ -97,15 +97,19 @@ return [
     | Sync
     |---------------------------------------------------------------------------
     |
-    | What `clover:sync` pulls on an unqualified run. Threads are capped per
-    | board because a catalog is eleven pages deep and the feed only ever shows
-    | the most recently bumped few; pulling all of them would spend the rate
-    | limit on rows nothing reads.
+    | What `clover:sync` pulls on an unqualified run.
+    |
+    | `threads_per_board` is null: take the catalog whole. One request returns
+    | every thread on a board, across all its pages, so a cap throws away rows
+    | that have already been fetched and paid for at the rate limit. It was 30,
+    | which is why most of 4chan was missing from the boards.
+    |
+    | Set a number while developing if a short list is easier to work with.
     |
     */
 
     'sync' => [
-        'threads_per_board' => 30,
+        'threads_per_board' => null,
 
         /**
          * Boards synced when none are named. Empty means every board the API
