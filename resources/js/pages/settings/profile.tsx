@@ -3,6 +3,7 @@ import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileCo
 import { FormField } from '@/components/clover/form-field';
 import { Panel } from '@/components/clover/panel';
 import DeleteUser from '@/components/delete-user';
+import { MatureBoardsToggle } from '@/components/settings/mature-boards-toggle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { send } from '@/routes/verification';
@@ -113,6 +114,10 @@ export default function Profile({
                         </>
                     )}
                 </Form>
+            </Panel>
+
+            <Panel title="Content">
+                <MatureBoardsToggle />
             </Panel>
 
             {/* `Panel` forwards className to the section, not to the card it

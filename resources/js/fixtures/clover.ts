@@ -295,6 +295,7 @@ export const BOARD_DIRECTORY: readonly BoardDirectoryEntry[] = [
         threads: '18,402',
         category: 'Interests',
         subscribed: true,
+        worksafe: true,
         description:
             'Hardware, software and the arguments between them. Homelabs, compilers, and one thread per week about mechanical keyboards.',
     },
@@ -305,6 +306,7 @@ export const BOARD_DIRECTORY: readonly BoardDirectoryEntry[] = [
         threads: '4,190',
         category: 'Creative',
         subscribed: true,
+        worksafe: true,
         description:
             'Wallpaper dumps at native resolution. No upscales, no watermarks, no AI slop.',
     },
@@ -315,6 +317,7 @@ export const BOARD_DIRECTORY: readonly BoardDirectoryEntry[] = [
         threads: '11,067',
         category: 'Work',
         subscribed: false,
+        worksafe: true,
         description:
             'Markets, freelancing and small business. Half of it is useful and the other half is someone selling a course.',
     },
@@ -325,6 +328,7 @@ export const BOARD_DIRECTORY: readonly BoardDirectoryEntry[] = [
         threads: '9,338',
         category: 'Interests',
         subscribed: true,
+        worksafe: true,
         description:
             'Unexplained recordings, missing footage and long transcripts. Sourcing is expected even here.',
     },
@@ -335,6 +339,7 @@ export const BOARD_DIRECTORY: readonly BoardDirectoryEntry[] = [
         threads: '13,551',
         category: 'Life',
         subscribed: false,
+        worksafe: true,
         description:
             'Training, food and progress logs. Ask about form, expect to be told your form is bad.',
     },
@@ -345,8 +350,26 @@ export const BOARD_DIRECTORY: readonly BoardDirectoryEntry[] = [
         threads: '7,802',
         category: 'Creative',
         subscribed: false,
+        worksafe: true,
         description:
             'Comics and animation, print and web. Storyboards, panel layouts and long-running adaptation grudges.',
+    },
+    {
+        slug: '/b/',
+        name: 'Random',
+        online: '58,730',
+        threads: '31,204',
+        category: 'Other',
+        subscribed: false,
+        /**
+         * The only board here 4chan marks `ws_board: 0`. It exists in this
+         * fixture so the mature-boards setting has something to act on: a
+         * filter that cannot change what is on screen is indistinguishable
+         * from a broken one, which is why the history range filter was cut.
+         */
+        worksafe: false,
+        description:
+            'No topic and no rules beyond the global ones. Adult content, and the reason the mature-boards setting exists.',
     },
 ] as const;
 

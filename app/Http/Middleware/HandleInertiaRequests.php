@@ -42,6 +42,14 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+
+            /**
+             * Adult boards are hidden unless an anon opts in, so a request
+             * with no account resolves to false rather than to null. The
+             * directory is a public page and must not have to special-case
+             * "nobody is signed in" to decide what it may show.
+             */
+            'showsMatureBoards' => (bool) $request->user()?->shows_mature_boards,
         ];
     }
 }

@@ -20,6 +20,6 @@ return [
     |
     */
 
-    'boards' => ['g', 'wg', 'biz', 'x', 'fit', 'co'],
+    'boards' => ['g', 'wg', 'biz', 'x', 'fit', 'co', 'b'],
 
 ];

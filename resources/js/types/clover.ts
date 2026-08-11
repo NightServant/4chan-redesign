@@ -160,6 +160,11 @@ export interface BoardDirectoryEntry extends Board {
     threads: string;
     category: string;
     subscribed: boolean;
+    /**
+     * 4chan's own `ws_board` flag. Boards where this is false are hidden
+     * unless an anon has opted into seeing them.
+     */
+    worksafe: boolean;
 }
 
 /** One message in a conversation. */

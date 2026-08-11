@@ -1,3 +1,4 @@
+import { Link } from '@inertiajs/react';
 import { LayoutGridIcon } from 'lucide-react';
 import { useState } from 'react';
 import { EmptyState } from '@/components/clover/empty-state';
@@ -7,6 +8,7 @@ import { SectionLabel } from '@/components/clover/section-label';
 import { BoardCard } from '@/components/communities/board-card';
 import { Input } from '@/components/ui/input';
 import { plural } from '@/lib/utils';
+import { edit as editProfile } from '@/routes/profile';
 import type { BoardDirectoryEntry } from '@/types/clover';
 
 /** Subscription state, keyed by slug. Local: there is no backend. */
@@ -35,6 +37,13 @@ function categoriesOf(boards: readonly BoardDirectoryEntry[]): string[] {
 
 export interface BoardDirectoryProps {
     boards: readonly BoardDirectoryEntry[];
+    /**
+     * Whether this anon has opted into boards 4chan marks as not worksafe.
+     * Defaults to false, so a caller that forgets to pass it hides them
+     * rather than showing them: the safe way round is the one that survives
+     * a mistake.
+     */
+    showsMature?: boolean;
 }
 
 /**
@@ -45,7 +54,10 @@ export interface BoardDirectoryProps {
  * short directory. The list therefore tracks `config/clover.php` through the
  * fixture and is never padded out with plausible board names.
  */
-export function BoardDirectory({ boards }: BoardDirectoryProps) {
+export function BoardDirectory({
+    boards,
+    showsMature = false,
+}: BoardDirectoryProps) {
     const [query, setQuery] = useState('');
     const [subscriptions, setSubscriptions] = useState<Subscriptions>(() =>
         Object.fromEntries(
@@ -53,10 +65,15 @@ export function BoardDirectory({ boards }: BoardDirectoryProps) {
         ),
     );
 
-    const subscribedCount = boards.filter(
+    /* Every count, the search and the grid all read from this rather than
+       from `boards`, so a hidden board cannot leak back through a total. */
+    const permitted = boards.filter((entry) => showsMature || entry.worksafe);
+    const hiddenCount = boards.length - permitted.length;
+
+    const subscribedCount = permitted.filter(
         (entry) => subscriptions[entry.slug],
     ).length;
-    const visible = boards.filter((entry) => matches(entry, query));
+    const visible = permitted.filter((entry) => matches(entry, query));
 
     function toggleSubscription(slug: string) {
         setSubscriptions((current) => ({
@@ -69,8 +86,28 @@ export function BoardDirectory({ boards }: BoardDirectoryProps) {
         <>
             <PageHeader
                 title="Communities"
-                description={`${plural(boards.length, 'board')} · ${subscribedCount} subscribed`}
+                description={`${plural(permitted.length, 'board')} · ${subscribedCount} subscribed`}
             />
+
+            {/* Hiding boards without saying so leaves the directory quietly
+                incomplete, and leaves the setting undiscoverable for anyone
+                who never thinks to go looking for it. */}
+            {hiddenCount > 0 ? (
+                <p
+                    data-slot="mature-notice"
+                    className="text-meta text-muted-foreground"
+                >
+                    {plural(hiddenCount, 'board')} hidden by your content
+                    settings.{' '}
+                    <Link
+                        href={editProfile()}
+                        className="text-primary underline decoration-primary-line underline-offset-2"
+                    >
+                        Change what you see
+                    </Link>
+                    .
+                </p>
+            ) : null}
 
             <FormField
                 label="Search boards"
@@ -89,7 +126,7 @@ export function BoardDirectory({ boards }: BoardDirectoryProps) {
                 <EmptyState
                     icon={<LayoutGridIcon />}
                     title="No boards match"
-                    body={`Nothing matches "${query}". Clover has six boards.`}
+                    body={`Nothing matches "${query}".`}
                 />
             ) : (
                 <div className="flex flex-col gap-8">

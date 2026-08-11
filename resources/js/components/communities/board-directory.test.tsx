@@ -69,7 +69,10 @@ describe('BoardDirectory', () => {
 
         await user.type(search, 'wallpaper');
 
-        expect(screen.getAllByRole('link')).toHaveLength(1);
+        /* Scoped to the grid: the mature-boards notice is a link too, and
+           counting every link on the page would fold it into the total. */
+        const grid = screen.getByRole('region', { name: 'Creative' });
+        expect(within(grid).getAllByRole('link')).toHaveLength(1);
         expect(
             screen.getByRole('link', { name: 'Wallpapers' }),
         ).toBeInTheDocument();
@@ -111,8 +114,87 @@ describe('BoardDirectory', () => {
             screen.getByRole('heading', { name: 'No boards match' }),
         ).toBeInTheDocument();
         expect(
-            screen.getByText('Nothing matches "anime". Clover has six boards.'),
+            screen.getByText('Nothing matches "anime".'),
         ).toBeInTheDocument();
-        expect(screen.queryAllByRole('link')).toHaveLength(0);
+        /* No *board* is offered. The mature-boards notice links to settings
+           and is not part of the result set, so the assertion names what it
+           actually cares about instead of counting every anchor. */
+        const boardLinks = screen
+            .queryAllByRole('link')
+            .filter((link) =>
+                /^\/[a-z]+\/$/.test(link.getAttribute('href') ?? ''),
+            );
+        expect(boardLinks).toHaveLength(0);
+    });
+});
+
+/**
+ * Adult boards are hidden unless an anon opts in. The filter is only worth
+ * having if something can fail it, so the fixture carries one board 4chan
+ * marks `ws_board: 0`; these tests are what stop that from silently becoming
+ * a control with nothing to act on.
+ */
+describe('BoardDirectory mature filter', () => {
+    const mature = BOARD_DIRECTORY.filter((entry) => !entry.worksafe);
+
+    it('has something to filter', () => {
+        expect(mature.length).toBeGreaterThan(0);
+    });
+
+    it('hides adult boards by default', () => {
+        render(<BoardDirectory boards={BOARD_DIRECTORY} showsMature={false} />);
+
+        for (const entry of mature) {
+            expect(screen.queryByText(entry.name)).not.toBeInTheDocument();
+        }
+    });
+
+    it('shows them once the anon has opted in', () => {
+        render(<BoardDirectory boards={BOARD_DIRECTORY} showsMature />);
+
+        for (const entry of mature) {
+            expect(screen.getByText(entry.name)).toBeInTheDocument();
+        }
+    });
+
+    it('counts only what it is showing', () => {
+        render(<BoardDirectory boards={BOARD_DIRECTORY} showsMature={false} />);
+
+        const shown = BOARD_DIRECTORY.length - mature.length;
+        expect(
+            screen.getByText(new RegExp(`^${shown} boards`)),
+        ).toBeInTheDocument();
+    });
+
+    /**
+     * Hiding boards without saying so leaves the directory quietly incomplete,
+     * and leaves the setting undiscoverable for anyone who never goes looking.
+     */
+    it('says how many it is hiding, and where to change that', () => {
+        render(<BoardDirectory boards={BOARD_DIRECTORY} showsMature={false} />);
+
+        expect(
+            screen.getByText(/1 board hidden by your content settings/i),
+        ).toBeInTheDocument();
+    });
+
+    it('says nothing about hidden boards when none are hidden', () => {
+        render(<BoardDirectory boards={BOARD_DIRECTORY} showsMature />);
+
+        expect(
+            screen.queryByText(/hidden by your content settings/i),
+        ).toBeNull();
+    });
+
+    it('does not claim a fixed board count in the no-match copy', async () => {
+        const user = userEvent.setup();
+        render(<BoardDirectory boards={BOARD_DIRECTORY} showsMature={false} />);
+
+        await user.type(screen.getByLabelText('Search boards'), 'zzzznope');
+
+        expect(
+            screen.getByText(/Nothing matches "zzzznope"/),
+        ).toBeInTheDocument();
+        expect(screen.queryByText(/six boards/i)).toBeNull();
     });
 });
