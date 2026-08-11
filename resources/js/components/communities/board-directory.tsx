@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { LayoutGridIcon } from 'lucide-react';
 import { useState } from 'react';
 import { EmptyState } from '@/components/clover/empty-state';
@@ -8,12 +8,11 @@ import { SectionLabel } from '@/components/clover/section-label';
 import { BoardCard } from '@/components/communities/board-card';
 import { Input } from '@/components/ui/input';
 import { plural } from '@/lib/utils';
+import { subscribe as subscribeToBoard } from '@/routes/boards';
 import { edit as editProfile } from '@/routes/profile';
 import type { BoardDirectoryEntry } from '@/types/clover';
 
 /** Subscription state, keyed by slug. Local: there is no backend. */
-type Subscriptions = Record<string, boolean>;
-
 function matches(entry: BoardDirectoryEntry, query: string): boolean {
     const needle = query.trim().toLowerCase();
 
@@ -70,11 +69,6 @@ export function BoardDirectory({
     hiddenCount = 0,
 }: BoardDirectoryProps) {
     const [query, setQuery] = useState('');
-    const [subscriptions, setSubscriptions] = useState<Subscriptions>(() =>
-        Object.fromEntries(
-            boards.map((entry) => [entry.slug, entry.subscribed]),
-        ),
-    );
 
     /* Nothing to filter: the server sent exactly the boards this anon may
        see. `permitted` stays as the name every count and the grid read from,
@@ -83,15 +77,25 @@ export function BoardDirectory({
     const permitted = boards;
 
     const subscribedCount = permitted.filter(
-        (entry) => subscriptions[entry.slug],
+        (entry) => entry.subscribed,
     ).length;
     const visible = permitted.filter((entry) => matches(entry, query));
 
-    function toggleSubscription(slug: string) {
-        setSubscriptions((current) => ({
-            ...current,
-            [slug]: !current[slug],
-        }));
+    /**
+     * Following is stored, so the pressed state and the count come back from
+     * the server. This was local state seeded from the prop and then diverging
+     * from it — a button reporting `aria-pressed` for something nothing kept.
+     */
+    function toggleSubscription(entry: BoardDirectoryEntry) {
+        const url = subscribeToBoard(entry.id).url;
+
+        if (entry.subscribed) {
+            router.delete(url, { preserveScroll: true });
+
+            return;
+        }
+
+        router.post(url, {}, { preserveScroll: true });
     }
 
     return (
@@ -162,13 +166,9 @@ export function BoardDirectory({
                                         >
                                             <BoardCard
                                                 entry={entry}
-                                                subscribed={Boolean(
-                                                    subscriptions[entry.slug],
-                                                )}
+                                                subscribed={entry.subscribed}
                                                 onToggleSubscribe={() =>
-                                                    toggleSubscription(
-                                                        entry.slug,
-                                                    )
+                                                    toggleSubscription(entry)
                                                 }
                                             />
                                         </li>

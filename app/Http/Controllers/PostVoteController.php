@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use App\Models\PostVote;
+use App\Models\Thread;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -21,6 +22,23 @@ use Illuminate\Http\Request;
  */
 class PostVoteController extends Controller
 {
+    /**
+     * Voting on a thread, which means voting on its opening post.
+     *
+     * A card offers one blessing button and the thread page offers the same
+     * one on the same post. Routing the card through the thread keeps the
+     * client from having to know the OP's own id, and keeps both spellings
+     * writing to the single row the count is read from.
+     */
+    public function storeForThread(Request $request, Thread $thread): RedirectResponse
+    {
+        $op = $thread->originalPost;
+
+        abort_if($op === null, 404);
+
+        return $this->store($request, $op);
+    }
+
     public function store(Request $request, Post $post): RedirectResponse
     {
         $validated = $request->validate([

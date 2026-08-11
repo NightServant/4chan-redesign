@@ -2,8 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { AccountOverview } from '@/components/account/account-overview';
-import { ACHIEVEMENTS, ACTIVITY } from '@/fixtures/clover';
-import { makeBoard } from '@/fixtures/factories';
+import { makeActivity, makeBoard } from '@/fixtures/factories';
 
 /**
  * The board list comes from the shared prop the sidebar also reads, so the
@@ -35,9 +34,18 @@ vi.mock('@inertiajs/react', () => ({
     },
 }));
 
+const ACTIVITY = [
+    makeActivity({ text: 'You replied in /g/', time: '2 min ago' }),
+    makeActivity({
+        icon: 'bookmark',
+        text: 'You saved a thread in /x/',
+        time: '1 hr ago',
+    }),
+];
+
 describe('AccountOverview', () => {
     it('lists every recent activity entry with its time', () => {
-        render(<AccountOverview />);
+        render(<AccountOverview activity={ACTIVITY} />);
 
         const region = screen.getByRole('region', { name: 'Recent activity' });
 
@@ -47,19 +55,18 @@ describe('AccountOverview', () => {
         }
     });
 
-    it('lists every achievement with its meta line', () => {
-        render(<AccountOverview />);
+    /**
+     * The panel is gone. Its badges were fixture claims every account
+     * displayed identically, and computing them honestly would leave an empty
+     * panel on any real account for a very long time — a badge for something
+     * nothing measures is the same defect as an online count with no source.
+     */
+    it('has no achievements panel', () => {
+        render(<AccountOverview activity={ACTIVITY} />);
 
-        const region = screen.getByRole('region', { name: 'Achievements' });
-
-        for (const achievement of ACHIEVEMENTS) {
-            expect(
-                within(region).getByText(achievement.title),
-            ).toBeInTheDocument();
-            expect(
-                within(region).getByText(achievement.meta),
-            ).toBeInTheDocument();
-        }
+        expect(
+            screen.queryByRole('region', { name: 'Achievements' }),
+        ).not.toBeInTheDocument();
     });
 
     /**
@@ -68,7 +75,7 @@ describe('AccountOverview', () => {
      * task 11b — so the card claimed they had written something they had not.
      */
     it('says there is no top thread rather than showing one nobody wrote', () => {
-        render(<AccountOverview />);
+        render(<AccountOverview activity={ACTIVITY} />);
 
         const region = screen.getByRole('region', { name: 'Top thread' });
 
@@ -77,7 +84,7 @@ describe('AccountOverview', () => {
     });
 
     it('links one button per board at that board', () => {
-        render(<AccountOverview />);
+        render(<AccountOverview activity={ACTIVITY} />);
 
         const region = screen.getByRole('region', { name: 'Boards' });
 
@@ -89,7 +96,7 @@ describe('AccountOverview', () => {
     });
 
     it('links the boards action at the directory', () => {
-        render(<AccountOverview />);
+        render(<AccountOverview activity={ACTIVITY} />);
 
         expect(screen.getByRole('link', { name: 'Manage' })).toHaveAttribute(
             'href',

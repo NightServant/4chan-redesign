@@ -1,4 +1,4 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import {
     ArrowBigUpIcon,
     BookmarkIcon,
@@ -8,14 +8,14 @@ import {
     ShieldIcon,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useState } from 'react';
 import { BoardAvatar } from '@/components/clover/board-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
 import { Panel } from '@/components/clover/panel';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { communities, search } from '@/routes';
-import type { Board, BoardSlug, TrendingTag } from '@/types/clover';
+import { subscribe as subscribeToBoard } from '@/routes/boards';
+import type { Board, TrendingTag } from '@/types/clover';
 
 /**
  * The feed's sticky sidebar: trending boards, a handful of boards to join, the
@@ -120,12 +120,22 @@ function TrendingPanel({ trending }: { trending: TrendingTag[] }) {
 }
 
 function PopularBoardsPanel({ boards }: { boards: Board[] }) {
-    const [joined, setJoined] = useState<Partial<Record<BoardSlug, boolean>>>(
-        {},
-    );
+    /**
+     * Following is stored, so the pressed state comes back from the server
+     * rather than being held here. It used to be local state that forgot
+     * itself on reload — a button that reported `aria-pressed` for something
+     * nothing recorded.
+     */
+    function toggleJoined(board: Board) {
+        const url = subscribeToBoard(board.id).url;
 
-    function toggleJoined(slug: BoardSlug) {
-        setJoined((previous) => ({ ...previous, [slug]: !previous[slug] }));
+        if (board.subscribed) {
+            router.delete(url, { preserveScroll: true });
+
+            return;
+        }
+
+        router.post(url, {}, { preserveScroll: true });
     }
 
     return (
@@ -139,7 +149,7 @@ function PopularBoardsPanel({ boards }: { boards: Board[] }) {
         >
             <ul role="list" className="flex flex-col gap-3">
                 {boards.slice(0, POPULAR_BOARDS_COUNT).map((board) => {
-                    const isJoined = joined[board.slug] ?? false;
+                    const isJoined = board.subscribed;
 
                     return (
                         <li
@@ -165,7 +175,7 @@ function PopularBoardsPanel({ boards }: { boards: Board[] }) {
                                 size="sm"
                                 pill
                                 aria-pressed={isJoined}
-                                onClick={() => toggleJoined(board.slug)}
+                                onClick={() => toggleJoined(board)}
                                 className="shrink-0 px-3"
                             >
                                 {isJoined ? (

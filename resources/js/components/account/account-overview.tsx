@@ -18,8 +18,8 @@ import { SectionLabel } from '@/components/clover/section-label';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import type { ActivityEntry } from '@/types/clover';
 import { board, communities } from '@/routes';
+import type { ActivityEntry } from '@/types/clover';
 
 /**
  * Fixture icons arrive as kebab-case lucide names. The lookup is an explicit

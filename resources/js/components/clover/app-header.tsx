@@ -80,7 +80,10 @@ function AppHeader({ className, onCompose, ...props }: AppHeaderProps) {
     const settingsItem = findNavItem('Settings');
     const notificationsItem = findNavItem('Notifications');
 
-    const notificationPreview = recentActivity.slice(0, NOTIFICATION_PREVIEW_COUNT);
+    const notificationPreview = recentActivity.slice(
+        0,
+        NOTIFICATION_PREVIEW_COUNT,
+    );
     const unreadCount = notificationPreview.length;
 
     return (

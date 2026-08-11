@@ -57,6 +57,7 @@ Route::middleware('auth')->group(function () {
      * double submit is a double press, not an error.
      */
     Route::post('posts/{post}/vote', [PostVoteController::class, 'store'])->name('posts.vote');
+    Route::post('threads/{thread}/vote', [PostVoteController::class, 'storeForThread'])->name('threads.vote');
 
     Route::post('threads/{thread}/bookmark', [BookmarkController::class, 'store'])->name('threads.bookmark');
     Route::delete('threads/{thread}/bookmark', [BookmarkController::class, 'destroy'])->name('threads.bookmark.destroy');

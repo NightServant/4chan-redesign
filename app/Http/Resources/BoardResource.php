@@ -44,9 +44,17 @@ class BoardResource extends JsonResource
         $board = $this->board();
 
         return [
+            'id' => $board->id,
             'slug' => $board->displaySlug(),
             'name' => $board->title,
             'threads' => number_format(self::threadCount($board)),
+
+            /**
+             * Whether this anon follows the board. Was a hardcoded false while
+             * the Join buttons were local component state that forgot itself
+             * on reload; there is a table behind it now.
+             */
+            'subscribed' => $this->isSubscribed($request),
             'description' => $this->when($this->describes, fn (): string => $board->description),
         ];
     }
@@ -67,6 +75,31 @@ class BoardResource extends JsonResource
         }
 
         return (int) $counted;
+    }
+
+    /**
+     * Whether this anon follows the board.
+     *
+     * Reads a preloaded relation when the caller supplied one, so a directory
+     * of seventy-seven boards costs one query rather than seventy-seven.
+     * Protected rather than private because `BoardDirectoryResource` extends
+     * this one and calls it through the parent's `toArray`.
+     */
+    protected function isSubscribed(Request $request): bool
+    {
+        $user = $request->user();
+
+        if ($user === null) {
+            return false;
+        }
+
+        $board = $this->board();
+
+        if ($board->relationLoaded('subscribers')) {
+            return $board->subscribers->contains('id', $user->id);
+        }
+
+        return $board->subscribers()->where('users.id', $user->id)->exists();
     }
 
     protected function board(): Board

@@ -1,9 +1,9 @@
+import { router } from '@inertiajs/react';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { activityIconFor, Rail } from '@/components/feed/rail';
-import { ACTIVITY } from '@/fixtures/clover';
 import { makeBoard, makeTrendingTag } from '@/fixtures/factories';
 
 /**
@@ -12,7 +12,28 @@ import { makeBoard, makeTrendingTag } from '@/fixtures/factories';
  * `app-sidebar.test.tsx` already use: a plain anchor, still queryable by role
  * and accessible name.
  */
+/* Hoisted so the mock factory can close over it: `vi.mock` is lifted above
+   every other statement in the file. */
+const { ACTIVITY } = vi.hoisted(() => ({
+    ACTIVITY: [
+        {
+            icon: 'message-square',
+            text: 'You replied in /g/',
+            time: '2 min ago',
+        },
+        {
+            icon: 'bookmark',
+            text: 'You saved a thread in /x/',
+            time: '1 hr ago',
+        },
+    ],
+}));
+
 vi.mock('@inertiajs/react', () => ({
+    usePage: () => ({
+        props: { recentActivity: ACTIVITY, sidebarBoards: [] },
+    }),
+    router: { post: vi.fn(), delete: vi.fn(), visit: vi.fn() },
     Link: ({
         href,
         children,
@@ -34,7 +55,12 @@ vi.mock('@inertiajs/react', () => ({
 /* Five boards so the "does not render beyond the first four" case has a fifth
    to leave out, and the rail is handed exactly what the feed page sends it. */
 const BOARDS = [
-    makeBoard({ slug: '/g/', name: 'Technology', threads: '18,402' }),
+    makeBoard({
+        slug: '/g/',
+        name: 'Technology',
+        threads: '18,402',
+        subscribed: true,
+    }),
     makeBoard({ slug: '/biz/', name: 'Business', threads: '11,067' }),
     makeBoard({ slug: '/x/', name: 'Paranormal', threads: '6,204' }),
     makeBoard({ slug: '/fit/', name: 'Fitness', threads: '5,118' }),
@@ -141,59 +167,62 @@ describe('Rail', () => {
         expect(screen.queryByText(fifthBoard.name)).not.toBeInTheDocument();
     });
 
-    it('toggles Join per row and exposes the pressed state non-visually', async () => {
-        const user = userEvent.setup();
+    /**
+     * Following is stored now, so the pressed state comes back from the server
+     * rather than flipping locally. These asserted the local flip, which was a
+     * button reporting `aria-pressed` for something nothing recorded — it
+     * forgot itself on reload.
+     */
+    it('reports the followed state the server sent', () => {
         render(<Rail boards={BOARDS} trending={TRENDING} />);
 
-        const firstBoard = BOARDS[0];
         const boardsRegion = screen.getByRole('region', {
             name: 'Popular boards',
         });
-        const row = within(boardsRegion)
-            .getByText(firstBoard.name)
-            .closest('li') as HTMLElement;
 
-        const joinButton = within(row).getByRole('button', {
-            name: /join/i,
+        expect(
+            within(boardsRegion).getByRole('button', { name: /^joined$/i }),
+        ).toHaveAttribute('aria-pressed', 'true');
+        expect(
+            within(boardsRegion).getAllByRole('button', { name: /^join$/i })[0],
+        ).toHaveAttribute('aria-pressed', 'false');
+    });
+
+    it('asks the server to follow a board that is not followed', async () => {
+        const user = userEvent.setup();
+        render(<Rail boards={BOARDS} trending={TRENDING} />);
+
+        const boardsRegion = screen.getByRole('region', {
+            name: 'Popular boards',
         });
-        expect(joinButton).toHaveAttribute('aria-pressed', 'false');
 
-        await user.click(joinButton);
+        await user.click(
+            within(boardsRegion).getAllByRole('button', { name: /^join$/i })[0],
+        );
 
-        const joinedButton = within(row).getByRole('button', {
-            name: /joined/i,
-        });
-        expect(joinedButton).toHaveAttribute('aria-pressed', 'true');
-        expect(joinedButton).toHaveAccessibleName(
-            expect.stringMatching(/joined/i),
+        expect(router.post).toHaveBeenCalledWith(
+            expect.stringContaining('/subscribe'),
+            {},
+            expect.anything(),
         );
     });
 
-    it('only toggles the board row that was clicked', async () => {
+    it('asks the server to unfollow one that is', async () => {
         const user = userEvent.setup();
         render(<Rail boards={BOARDS} trending={TRENDING} />);
 
-        const [firstBoard, secondBoard] = BOARDS;
         const boardsRegion = screen.getByRole('region', {
             name: 'Popular boards',
         });
-        const firstRow = within(boardsRegion)
-            .getByText(firstBoard.name)
-            .closest('li') as HTMLElement;
-        const secondRow = within(boardsRegion)
-            .getByText(secondBoard.name)
-            .closest('li') as HTMLElement;
 
         await user.click(
-            within(firstRow).getByRole('button', { name: /join/i }),
+            within(boardsRegion).getByRole('button', { name: /^joined$/i }),
         );
 
-        expect(
-            within(firstRow).getByRole('button', { name: /joined/i }),
-        ).toBeInTheDocument();
-        expect(
-            within(secondRow).getByRole('button', { name: /^join$/i }),
-        ).toHaveAttribute('aria-pressed', 'false');
+        expect(router.delete).toHaveBeenCalledWith(
+            expect.stringContaining('/subscribe'),
+            expect.anything(),
+        );
     });
 
     it('renders the community rules verbatim as an ordered list', () => {

@@ -32,6 +32,7 @@ vi.mock('@inertiajs/react', () => ({
 }));
 
 const baseThread: Thread = {
+    id: 1,
     no: 58210441,
     board: '/g/',
     boardName: 'Technology',
@@ -43,6 +44,8 @@ const baseThread: Thread = {
     images: '48',
     media: null,
     pinned: false,
+    voteState: null,
+    bookmarked: false,
 };
 
 describe('ThreadCard', () => {

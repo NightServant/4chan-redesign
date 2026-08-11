@@ -17,6 +17,8 @@
 export type BoardSlug = `/${string}/`;
 
 export interface Board {
+    /** This application's own id, which the subscribe route takes. */
+    id: number;
     slug: BoardSlug;
     name: string;
     /**
@@ -29,6 +31,8 @@ export interface Board {
      * and it is counted rather than estimated.
      */
     threads: string;
+    /** Whether this anon follows it. Always false when signed out. */
+    subscribed: boolean;
 }
 
 /**
@@ -259,7 +263,6 @@ export interface BoardDirectoryEntry extends Board {
      * worksafe — `worksafe` is the field that decides what an anon is shown.
      */
     category: string;
-    subscribed: boolean;
     /**
      * 4chan's own `ws_board` flag. Boards where this is false are hidden
      * unless an anon has opted into seeing them.
@@ -282,7 +285,6 @@ export interface BoardDirectoryEntry extends Board {
      * worksafe — `worksafe` is the field that decides what an anon is shown.
      */
     category: string;
-    subscribed: boolean;
     /**
      * 4chan's own `ws_board` flag. Boards where this is false are hidden
      * unless an anon has opted into seeing them.

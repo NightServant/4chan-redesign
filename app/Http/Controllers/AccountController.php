@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -108,8 +109,38 @@ class AccountController extends Controller
                 'threadNo' => $post->thread->no,
                 'time' => RelativeTime::since($post->posted_at),
                 'body' => $post->body,
+
+                /**
+                 * The opening line of whatever this reply answered, kept apart
+                 * from the body so the screen can render it in the quote
+                 * colour without parsing the body for a leading chevron.
+                 * Absent when the reply quoted nothing, or when what it quoted
+                 * is no longer here.
+                 */
+                'quoted' => $this->quotedLine($post),
             ])
             ->all();
+    }
+
+    /**
+     * The first line of the post this reply was answering.
+     */
+    private function quotedLine(Post $post): ?string
+    {
+        $first = Arr::first($post->quotes);
+
+        if ($first === null) {
+            return null;
+        }
+
+        $quoted = Post::query()
+            ->where('thread_id', $post->thread_id)
+            ->where('no', (int) $first)
+            ->first();
+
+        $line = trim(Str::before((string) $quoted?->body, "\n"));
+
+        return $line === '' ? null : Str::limit($line, 120);
     }
 
     /**

@@ -3,7 +3,6 @@ import { Settings, Share2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AnonAvatar } from '@/components/clover/anon-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn, toUrl } from '@/lib/utils';

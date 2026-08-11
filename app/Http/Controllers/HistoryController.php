@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Http\Resources\AttachmentResource;
 use App\Models\Thread;
 use App\Models\ThreadRead;
+use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -61,7 +62,15 @@ class HistoryController extends Controller
     /**
      * `Today, 14:02`, `Yesterday, 09:15`, or a date for anything older.
      */
-    private function when(Carbon $moment, Carbon $now): string
+    /**
+     * Typed to the interface, not to `Illuminate\Support\Carbon`.
+     *
+     * The models cast their timestamps to `CarbonImmutable`, so a concrete
+     * hint type-errors on every row — the same mistake `RelativeTime` made in
+     * task 11a, where it only surfaced on threads older than a day and so
+     * survived that resource's own tests.
+     */
+    private function when(CarbonInterface $moment, CarbonInterface $now): string
     {
         return match ($this->day($moment, $now)) {
             'Today' => 'Today, '.$moment->format('H:i'),
@@ -74,7 +83,7 @@ class HistoryController extends Controller
      * Calendar days, not elapsed ones: an anon reading "Yesterday" means the
      * day before today, and thirty hours ago can be either.
      */
-    private function day(Carbon $moment, Carbon $now): string
+    private function day(CarbonInterface $moment, CarbonInterface $now): string
     {
         $days = $moment->copy()->startOfDay()->diffInDays($now->copy()->startOfDay(), absolute: true);
 

@@ -1,10 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import {
-    Bookmark,
-    ImageIcon,
-    MessageSquare,
-    PencilLine,
-} from 'lucide-react';
+import { Bookmark, ImageIcon, MessageSquare, PencilLine } from 'lucide-react';
 import { AccountOverview } from '@/components/account/account-overview';
 import { ProfileCommentList } from '@/components/account/profile-comment-list';
 import { ProfileHeader } from '@/components/account/profile-header';

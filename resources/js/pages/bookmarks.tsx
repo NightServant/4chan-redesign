@@ -208,8 +208,7 @@ export default function Bookmarks({ bookmarks: saved }: BookmarksProps) {
                                                                     .id,
                                                             ).url,
                                                             {
-                                                                preserveScroll:
-                                                                    true,
+                                                                preserveScroll: true,
                                                             },
                                                         )
                                                     }

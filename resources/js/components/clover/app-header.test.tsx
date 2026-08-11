@@ -11,8 +11,9 @@ import {
     vi,
 } from 'vitest';
 import { AppHeader } from '@/components/clover/app-header';
-import { ACTIVITY } from '@/fixtures/clover';
+import { makeActivity } from '@/fixtures/factories';
 import type { User } from '@/types/auth';
+import type { ActivityEntry, Board } from '@/types/clover';
 
 /**
  * The real `Link`/`usePage` require an Inertia page context that only exists
@@ -21,11 +22,43 @@ import type { User } from '@/types/auth';
  * is given, matching Inertia's own behaviour for non-GET links), and
  * `usePage` reads a mutable fixture reset in `beforeEach`.
  */
+/**
+ * Four entries, because the header previews three and names its button with
+ * the count it is showing — the fourth is what proves the preview stops.
+ */
+const ACTIVITY = [
+    makeActivity({ text: 'You replied in /g/', time: '2 min ago' }),
+    makeActivity({
+        icon: 'bookmark',
+        text: 'You saved a thread in /x/',
+        time: '1 hr ago',
+    }),
+    makeActivity({
+        text: 'You started a thread in /biz/',
+        time: '3 hr ago',
+    }),
+    makeActivity({
+        icon: 'bookmark',
+        text: 'You saved a thread in /fit/',
+        time: '5 hr ago',
+    }),
+];
+
 const mockPage: {
-    props: { auth: { user: User | null }; sidebarOpen: boolean };
+    props: {
+        auth: { user: User | null };
+        sidebarOpen: boolean;
+        recentActivity: ActivityEntry[];
+        sidebarBoards: Board[];
+    };
     url: string;
 } = {
-    props: { auth: { user: null }, sidebarOpen: true },
+    props: {
+        auth: { user: null },
+        sidebarOpen: true,
+        recentActivity: ACTIVITY,
+        sidebarBoards: [],
+    },
     url: '/',
 };
 
@@ -81,7 +114,12 @@ const SIGNED_IN_USER: User = {
 };
 
 beforeEach(() => {
-    mockPage.props = { auth: { user: null }, sidebarOpen: true };
+    mockPage.props = {
+        auth: { user: null },
+        sidebarOpen: true,
+        recentActivity: ACTIVITY,
+        sidebarBoards: [],
+    };
     mockPage.url = '/';
     document.documentElement.classList.remove('dark');
 });

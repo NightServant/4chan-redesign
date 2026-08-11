@@ -1,12 +1,17 @@
+import { router } from '@inertiajs/react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { HISTORY } from '@/fixtures/clover';
+import { makeHistoryEntry } from '@/fixtures/factories';
 import History from '@/pages/history';
 
 vi.mock('@inertiajs/react', () => ({
+    usePage: () => ({
+        props: { recentActivity: [], sidebarBoards: [] },
+    }),
+    router: { post: vi.fn(), delete: vi.fn(), visit: vi.fn() },
     Head: () => null,
     Link: ({
         href,
@@ -39,7 +44,7 @@ beforeAll(() => {
 function renderHistory() {
     return render(
         <TooltipProvider>
-            <History />
+            <History entries={HISTORY} />
         </TooltipProvider>,
     );
 }
@@ -50,6 +55,45 @@ function titles() {
         .map((heading) => heading.textContent);
 }
 
+/**
+ * Five entries across the three day groups, sized against the page's own
+ * `PAGE_SIZE` of four: the first page holds Today and Yesterday, and Earlier
+ * only appears on the second. Progress is set so that sorting by least
+ * finished drops the one at 95% off the first page, which is what makes the
+ * sort observable as a different set rather than a reshuffle.
+ */
+const HISTORY = [
+    makeHistoryEntry({
+        title: 'Anons are still arguing about init systems',
+        day: 'Today',
+        when: 'Today, 14:02',
+        progress: 10,
+    }),
+    makeHistoryEntry({
+        title: 'Dark minimal wallpaper thread — 3840x2160 only',
+        day: 'Today',
+        when: 'Today, 11:20',
+        progress: 95,
+    }),
+    makeHistoryEntry({
+        title: 'Mainline kernel support or vendor tree',
+        day: 'Yesterday',
+        when: 'Yesterday, 09:15',
+        progress: 20,
+    }),
+    makeHistoryEntry({
+        title: 'Battery life under sustained load',
+        day: 'Yesterday',
+        when: 'Yesterday, 08:02',
+        progress: 30,
+    }),
+    makeHistoryEntry({
+        title: 'Cross compiling on an x86 box',
+        day: 'Earlier',
+        when: '3 Aug 2026, 21:40',
+        progress: 40,
+    }),
+];
 describe('History', () => {
     it('names the screen and says where the data lives', () => {
         renderHistory();
@@ -119,30 +163,41 @@ describe('History', () => {
         expect(titles()).toHaveLength(4);
     });
 
-    it('drops a single entry when its remove control is pressed', async () => {
+    /**
+     * Removal is a request now, not a local filter: an anon who forgets a
+     * thread means it, so the entry is deleted and the list comes back from
+     * the server rather than being hidden in a copy the page still holds.
+     */
+    it('asks the server to forget a single entry', async () => {
         const user = userEvent.setup();
         renderHistory();
-
-        const before = titles();
 
         await user.click(
             screen.getAllByRole('button', { name: 'Remove from history' })[0],
         );
 
-        expect(titles()).not.toContain(before[0]);
-        /* Four entries left is one page, so the pager stops being offered. */
-        expect(
-            screen.queryByRole('navigation', { name: 'Pagination' }),
-        ).not.toBeInTheDocument();
+        expect(router.delete).toHaveBeenCalledWith(
+            expect.stringContaining('/read'),
+            expect.anything(),
+        );
     });
 
-    it('empties the whole list from Clear all', async () => {
+    it('asks the server to forget everything from Clear all', async () => {
         const user = userEvent.setup();
         renderHistory();
 
         await user.click(screen.getByRole('button', { name: 'Clear all' }));
 
-        expect(titles()).toHaveLength(0);
+        expect(router.delete).toHaveBeenCalledWith('/history');
+    });
+
+    it('states the absence plainly when there is no history', () => {
+        render(
+            <TooltipProvider>
+                <History entries={[]} />
+            </TooltipProvider>,
+        );
+
         expect(
             screen.getByRole('heading', { name: 'No history to show' }),
         ).toBeInTheDocument();

@@ -19,7 +19,7 @@ import type { User } from '@/types/auth';
  */
 const { usePage, router } = vi.hoisted(() => ({
     usePage: vi.fn(),
-    router: { visit: vi.fn() },
+    router: { visit: vi.fn(), post: vi.fn(), delete: vi.fn() },
 }));
 
 vi.mock('@inertiajs/react', () => ({
@@ -220,7 +220,15 @@ describe('Feed', () => {
         );
     });
 
-    it('increments the blessing count when a signed-in anon presses bless, and undoes it on a second press', async () => {
+    /**
+     * The count and the pressed state come back from the server now, so this
+     * asserts the request rather than a local increment.
+     *
+     * It used to hold an optimistic copy and add one to it, which could
+     * disagree with the database the moment anyone else voted and had no way
+     * to find out.
+     */
+    it('asks the server to bless when a signed-in anon presses bless', async () => {
         const user = userEvent.setup();
         mockPage({ signedIn: true });
         const thread = THREADS[0];
@@ -238,25 +246,32 @@ describe('Feed', () => {
             .getByRole('heading', { level: 3, name: thread.title })
             .closest('[data-slot="thread-card"]') as HTMLElement;
 
-        expect(
-            within(card).getByText(String(thread.blessings)),
-        ).toBeInTheDocument();
-
         await user.click(
             within(card).getByRole('button', { name: 'Bless this post' }),
         );
 
-        expect(
-            within(card).getByText(String(thread.blessings + 1)),
-        ).toBeInTheDocument();
+        expect(router.post).toHaveBeenCalledWith(
+            expect.stringContaining('/vote'),
+            { value: 1 },
+            expect.anything(),
+        );
+    });
 
-        await user.click(
-            within(card).getByRole('button', { name: 'Bless this post' }),
+    it('reports the vote the server sent, not a local guess', () => {
+        mockPage({ signedIn: true });
+
+        render(
+            <Feed
+                sort="bumped"
+                threads={[{ ...THREADS[0], voteState: 'blessed' }]}
+                boards={BOARDS}
+                trending={TRENDING}
+            />,
         );
 
         expect(
-            within(card).getByText(String(thread.blessings)),
-        ).toBeInTheDocument();
+            screen.getByRole('button', { name: 'Bless this post' }),
+        ).toHaveAttribute('aria-pressed', 'true');
     });
 
     /**
@@ -355,28 +370,6 @@ describe('Feed', () => {
      * can report. This is the half that could not be built until `ThreadCard`
      * gained a `voteState` prop.
      */
-    it('marks a blessed thread as pressed, not only as one count higher', async () => {
-        const user = userEvent.setup();
-        mockPage({ signedIn: true });
-        render(
-            <Feed
-                sort="bumped"
-                threads={THREADS}
-                boards={BOARDS}
-                trending={TRENDING}
-            />,
-        );
-
-        const bless = screen.getAllByRole('button', { name: /bless/i })[0];
-
-        expect(bless).toHaveAttribute('aria-pressed', 'false');
-
-        await user.click(bless);
-
-        expect(
-            screen.getAllByRole('button', { name: /bless/i })[0],
-        ).toHaveAttribute('aria-pressed', 'true');
-    });
 
     /**
      * The sort tabs were removed as visual overload: the sidebar already lists
