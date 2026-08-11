@@ -15,19 +15,22 @@ Route::inertia('popular', 'feed', ['sort' => 'popular'])->name('popular');
 Route::inertia('latest', 'feed', ['sort' => 'latest'])->name('latest');
 
 /**
- * Destinations the Clover sidebar links to that have no screen yet. They
- * resolve to a shared placeholder rather than a 404 so the nav is honest
- * about being unfinished instead of looking broken. Each passes the key its
- * copy is written against; replacing one with a real screen is a matter of
- * pointing the route at a different component.
+ * The board directory. Public, like the boards it lists: an anon deciding
+ * whether the site is worth an account has to be able to see what is on it.
  */
-Route::inertia('communities', 'placeholder', ['destination' => 'communities'])->name('communities');
+Route::inertia('communities', 'communities')->name('communities');
 
 Route::middleware('auth')->group(function () {
-    Route::inertia('account', 'placeholder', ['destination' => 'account'])->name('account');
-    Route::inertia('bookmarks', 'placeholder', ['destination' => 'bookmarks'])->name('bookmarks');
-    Route::inertia('history', 'placeholder', ['destination' => 'history'])->name('history');
-    Route::inertia('messages', 'placeholder', ['destination' => 'messages'])->name('messages');
+    Route::inertia('account', 'account')->name('account');
+    Route::inertia('bookmarks', 'bookmarks')->name('bookmarks');
+    Route::inertia('history', 'history')->name('history');
+    Route::inertia('messages', 'messages')->name('messages');
+
+    /**
+     * The last destination still without a screen. It keeps the shared
+     * placeholder rather than 404ing, so the nav stays honest about being
+     * unfinished instead of looking broken.
+     */
     Route::inertia('notifications', 'placeholder', ['destination' => 'notifications'])->name('notifications');
 });
 

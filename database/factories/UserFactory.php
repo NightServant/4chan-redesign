@@ -33,6 +33,12 @@ class UserFactory extends Factory
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,
+
+            /* Stated rather than left to the column default, so a
+               factory-built model in memory matches the row the database
+               would hold. Omitted, it reads back as null and any test
+               asserting the default sees neither true nor false. */
+            'shows_mature_boards' => false,
         ];
     }
 

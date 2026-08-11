@@ -1,6 +1,6 @@
-// Components
 import { Form, Head } from '@inertiajs/react';
-import TextLink from '@/components/text-link';
+import { AuthLink } from '@/components/auth/auth-link';
+import { AuthStatus } from '@/components/auth/auth-status';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { logout } from '@/routes';
@@ -12,26 +12,30 @@ export default function VerifyEmail({ status }: { status?: string }) {
             <Head title="Email verification" />
 
             {status === 'verification-link-sent' && (
-                <div className="mb-4 text-center text-sm font-medium text-green-600">
-                    A new verification link has been sent to the email address
-                    you provided during registration.
-                </div>
+                <AuthStatus>
+                    A new verification link has been sent to the address you
+                    registered with.
+                </AuthStatus>
             )}
 
-            <Form {...send.form()} className="space-y-6 text-center">
+            <Form {...send.form()} className="flex flex-col gap-6">
                 {({ processing }) => (
                     <>
-                        <Button disabled={processing} variant="secondary">
+                        <Button
+                            type="submit"
+                            size="lg"
+                            variant="outline"
+                            className="w-full"
+                            disabled={processing}
+                        >
                             {processing && <Spinner />}
                             Resend verification email
                         </Button>
 
-                        <TextLink
-                            href={logout()}
-                            className="mx-auto block text-sm"
-                        >
-                            Log out
-                        </TextLink>
+                        <p className="text-center text-body-sm text-muted-foreground">
+                            Wrong account?{' '}
+                            <AuthLink href={logout()}>Sign out</AuthLink>
+                        </p>
                     </>
                 )}
             </Form>
@@ -40,7 +44,7 @@ export default function VerifyEmail({ status }: { status?: string }) {
 }
 
 VerifyEmail.layout = {
-    title: 'Email verification',
+    title: 'Verify your email',
     description:
-        'Please verify your email address by clicking on the link we just emailed to you.',
+        'Open the link just emailed to you to finish setting up this account.',
 };

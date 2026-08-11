@@ -11,7 +11,6 @@ export type FlashToast = {
 
 export type AuthLayoutProps = {
     children?: ReactNode;
-    name?: string;
     title?: string;
     description?: string;
 };

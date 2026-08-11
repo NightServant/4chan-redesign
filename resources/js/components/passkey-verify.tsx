@@ -1,8 +1,7 @@
 import type { UrlMethodPair } from '@inertiajs/core';
 import { router } from '@inertiajs/react';
 import { usePasskeyVerify } from '@laravel/passkeys/react';
-import { KeyRound } from 'lucide-react';
-import InputError from '@/components/input-error';
+import { CircleAlert, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
@@ -17,6 +16,11 @@ type Props = {
     separator?: string;
 };
 
+/**
+ * The passkey path on an auth screen, plus the rule dividing it from the email
+ * path below. Every string is overridable because the same control appears on
+ * sign-in and on password confirmation, where it means different things.
+ */
 export default function PasskeyVerify({
     routes,
     label,
@@ -41,7 +45,7 @@ export default function PasskeyVerify({
 
     return (
         <>
-            <div className="grid gap-2">
+            <div className="flex flex-col gap-2">
                 <Button
                     type="button"
                     variant="outline"
@@ -49,13 +53,23 @@ export default function PasskeyVerify({
                     onClick={verify}
                     disabled={isLoading}
                 >
-                    {isLoading ? <Spinner /> : <KeyRound className="h-4 w-4" />}
+                    {isLoading ? <Spinner /> : <KeyRound aria-hidden="true" />}
                     {isLoading
-                        ? (loadingLabel ?? 'Authenticating...')
+                        ? (loadingLabel ?? 'Authenticating')
                         : (label ?? 'Sign in with a passkey')}
                 </Button>
+
                 {error && (
-                    <InputError message={error} className="text-center" />
+                    <p
+                        role="alert"
+                        className="flex items-start justify-center gap-1.5 text-meta text-danger"
+                    >
+                        <CircleAlert
+                            aria-hidden="true"
+                            className="mt-px size-3.5 shrink-0"
+                        />
+                        {error}
+                    </p>
                 )}
             </div>
 
@@ -63,8 +77,12 @@ export default function PasskeyVerify({
                 <div className="absolute inset-0 flex items-center">
                     <Separator className="w-full" />
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
+                {/* The chip masks the rule behind it, so its fill has to match
+                    whatever it sits on. This renders inside the auth card,
+                    which is `bg-surface`; on `bg-bg` it read as a slightly
+                    darker rectangle floating over the line. */}
+                <div className="relative flex justify-center">
+                    <span className="bg-surface px-2 text-label font-semibold tracking-[1.2px] text-faint uppercase">
                         {separator ?? 'Or continue with email'}
                     </span>
                 </div>

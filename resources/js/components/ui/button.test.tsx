@@ -197,3 +197,30 @@ describe('Button', () => {
         );
     });
 });
+
+/**
+ * `typeScale` used to be concatenated outside `cn`, back when tailwind-merge
+ * did not know the Clover scale and would have dropped it. That workaround
+ * emitted two font-size utilities on one element, so which one won came down
+ * to their order in the stylesheet rather than what the caller asked for.
+ * `cn` understands the scale now, so the override has to be decided by the
+ * merge.
+ */
+describe('type scale overrides', () => {
+    it('lets a caller replace the button type scale', () => {
+        render(<Button className="text-h3">Open</Button>);
+
+        const button = screen.getByRole('button', { name: 'Open' });
+
+        expect(button).toHaveClass('text-h3');
+        expect(button).not.toHaveClass('text-body-sm');
+    });
+
+    it('keeps the default type scale when no override is given', () => {
+        render(<Button>Open</Button>);
+
+        expect(screen.getByRole('button', { name: 'Open' })).toHaveClass(
+            'text-body-sm',
+        );
+    });
+});

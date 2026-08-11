@@ -1,21 +1,29 @@
 import { Form, Head } from '@inertiajs/react';
 import { useRef } from 'react';
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
-import Heading from '@/components/heading';
-import InputError from '@/components/input-error';
+import { FormField } from '@/components/clover/form-field';
+import { Panel } from '@/components/clover/panel';
 import type { Props as ManagePasskeysProps } from '@/components/manage-passkeys';
 import ManagePasskeys from '@/components/manage-passkeys';
 import type { Props as ManageTwoFactorProps } from '@/components/manage-two-factor';
 import ManageTwoFactor from '@/components/manage-two-factor';
 import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 
 type Props = {
     passwordRules: string;
 } & ManagePasskeysProps &
     ManageTwoFactorProps;
 
+/**
+ * The settings layout supplies this screen's h1, so nothing here renders a
+ * heading of its own.
+ *
+ * The two feature panels are gated on the same flags their components check.
+ * That looks like a duplicated guard, and is not: a component returning null
+ * inside a `Panel` leaves a titled, empty region on the page, which reads as a
+ * broken feature rather than an absent one.
+ */
 export default function Security(props: Props) {
     const passwordInput = useRef<HTMLInputElement>(null);
     const currentPasswordInput = useRef<HTMLInputElement>(null);
@@ -24,15 +32,7 @@ export default function Security(props: Props) {
         <>
             <Head title="Security settings" />
 
-            <h1 className="sr-only">Security settings</h1>
-
-            <div className="space-y-6">
-                <Heading
-                    variant="small"
-                    title="Update password"
-                    description="Ensure your account is using a long, random password to stay secure"
-                />
-
+            <Panel title="Password">
                 <Form
                     {...SecurityController.update.form()}
                     options={{
@@ -53,63 +53,52 @@ export default function Security(props: Props) {
                             currentPasswordInput.current?.focus();
                         }
                     }}
-                    className="space-y-6"
+                    className="flex flex-col gap-5"
                 >
                     {({ errors, processing }) => (
                         <>
-                            <div className="grid gap-2">
-                                <Label htmlFor="current_password">
-                                    Current password
-                                </Label>
-
+                            <FormField
+                                label="Current password"
+                                error={errors.current_password}
+                            >
                                 <PasswordInput
                                     id="current_password"
                                     ref={currentPasswordInput}
                                     name="current_password"
-                                    className="mt-1 block w-full"
                                     autoComplete="current-password"
                                     placeholder="Current password"
                                 />
+                            </FormField>
 
-                                <InputError message={errors.current_password} />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="password">New password</Label>
-
+                            <FormField
+                                label="New password"
+                                description="Long and random beats short and clever. A password manager handles both."
+                                error={errors.password}
+                            >
                                 <PasswordInput
                                     id="password"
                                     ref={passwordInput}
                                     name="password"
-                                    className="mt-1 block w-full"
                                     autoComplete="new-password"
                                     placeholder="New password"
                                     passwordrules={props.passwordRules}
                                 />
+                            </FormField>
 
-                                <InputError message={errors.password} />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="password_confirmation">
-                                    Confirm password
-                                </Label>
-
+                            <FormField
+                                label="Confirm password"
+                                error={errors.password_confirmation}
+                            >
                                 <PasswordInput
                                     id="password_confirmation"
                                     name="password_confirmation"
-                                    className="mt-1 block w-full"
                                     autoComplete="new-password"
                                     placeholder="Confirm password"
                                     passwordrules={props.passwordRules}
                                 />
+                            </FormField>
 
-                                <InputError
-                                    message={errors.password_confirmation}
-                                />
-                            </div>
-
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3">
                                 <Button
                                     disabled={processing}
                                     data-test="update-password-button"
@@ -120,18 +109,26 @@ export default function Security(props: Props) {
                         </>
                     )}
                 </Form>
-            </div>
+            </Panel>
 
-            <ManageTwoFactor
-                canManageTwoFactor={props.canManageTwoFactor}
-                requiresConfirmation={props.requiresConfirmation}
-                twoFactorEnabled={props.twoFactorEnabled}
-            />
+            {props.canManageTwoFactor ? (
+                <Panel title="Two-factor authentication">
+                    <ManageTwoFactor
+                        canManageTwoFactor={props.canManageTwoFactor}
+                        requiresConfirmation={props.requiresConfirmation}
+                        twoFactorEnabled={props.twoFactorEnabled}
+                    />
+                </Panel>
+            ) : null}
 
-            <ManagePasskeys
-                canManagePasskeys={props.canManagePasskeys}
-                passkeys={props.passkeys}
-            />
+            {props.canManagePasskeys ? (
+                <Panel title="Passkeys">
+                    <ManagePasskeys
+                        canManagePasskeys={props.canManagePasskeys}
+                        passkeys={props.passkeys}
+                    />
+                </Panel>
+            ) : null}
         </>
     );
 }

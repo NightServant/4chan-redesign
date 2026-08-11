@@ -13,6 +13,13 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             sidebarOpen: boolean;
+            /**
+             * Whether this anon opted into boards 4chan marks as not
+             * worksafe. Always a boolean, never undefined: `/communities` is
+             * public, and a page that has to special-case "nobody is signed
+             * in" to decide what it may show will eventually get it wrong.
+             */
+            showsMatureBoards: boolean;
             [key: string]: unknown;
         };
     }

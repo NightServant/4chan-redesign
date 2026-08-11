@@ -12,12 +12,7 @@ import { cn } from '@/lib/utils';
  * and auth pages inherited from the starter kit keep working.
  */
 
-/**
- * tailwind-merge (inside `cn`) does not know Clover's type scale, so it reads
- * `text-body-sm` as a text colour and drops it next to `text-primary-foreground`.
- * Applying the scale outside the merge keeps both. Remove the split once `cn`
- * is taught the Clover font sizes.
- */
+/** The button's own type scale. Merged, so a caller can override it. */
 const typeScale = 'text-body-sm font-medium';
 
 const primaryClasses =
@@ -93,7 +88,11 @@ function Button({
     return (
         <Comp
             data-slot="button"
-            className={`${typeScale} ${cn(buttonVariants({ variant, size, pill }), className)}`}
+            className={cn(
+                typeScale,
+                buttonVariants({ variant, size, pill }),
+                className,
+            )}
             {...props}
         />
     );

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\BoardPreferenceController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use Illuminate\Auth\Middleware\RequirePassword;
@@ -10,6 +11,13 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    /**
+     * Whether adult boards appear in the directory. Its own endpoint because
+     * it saves on flip rather than on a form submit.
+     */
+    Route::patch('settings/board-preference', [BoardPreferenceController::class, 'update'])
+        ->name('board-preference.update');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

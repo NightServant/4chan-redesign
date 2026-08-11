@@ -1,22 +1,26 @@
 import { Head } from '@inertiajs/react';
 import AppearanceTabs from '@/components/appearance-tabs';
-import Heading from '@/components/heading';
+import { Panel } from '@/components/clover/panel';
 
+/**
+ * The settings layout supplies this screen's h1, so nothing here renders a
+ * heading of its own.
+ */
 export default function Appearance() {
     return (
         <>
             <Head title="Appearance settings" />
 
-            <h1 className="sr-only">Appearance settings</h1>
+            <Panel title="Theme">
+                <div className="flex flex-col gap-4">
+                    <p className="text-body-sm text-muted-foreground">
+                        Clover is dark by default. System follows whatever your
+                        operating system is set to.
+                    </p>
 
-            <div className="space-y-6">
-                <Heading
-                    variant="small"
-                    title="Appearance settings"
-                    description="Update the appearance settings for your account"
-                />
-                <AppearanceTabs />
-            </div>
+                    <AppearanceTabs />
+                </div>
+            </Panel>
         </>
     );
 }
