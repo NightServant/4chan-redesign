@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Models\Board;
 use App\Support\RoutableBoards;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * The slugs `/{board}` accepts and the boards that can actually be drawn must
@@ -114,4 +116,32 @@ it('does not let a board slug shadow a named page', function (): void {
     $this->get('/rules')->assertOk()->assertInertia(
         fn ($page) => $page->component('information'),
     );
+});
+
+/**
+ * Routes are registered before the database necessarily exists at all.
+ *
+ * `composer install` runs `package:discover`, which boots the application — on
+ * a fresh clone that happens before `migrate` has created the SQLite file. CI
+ * caught this and local development could not: the guard covered the `boards`
+ * lookup but not the cache read, and with the `database` cache store reaching
+ * the cache is itself a query, so the fallback could never fire in the one
+ * situation it exists for.
+ *
+ * Asserted by making the cache read throw, which is what actually happens.
+ * Pointing the connection at a missing file would reproduce it more literally
+ * and would also destroy the in-memory database the rest of the suite shares,
+ * taking a hundred other tests with it.
+ */
+it('falls back rather than throwing when the cache cannot be reached', function (): void {
+    Cache::shouldReceive('rememberForever')
+        ->andThrow(new QueryException(
+            'sqlite',
+            'select * from "cache"',
+            [],
+            new PDOException('Database file at path [database.sqlite] does not exist.'),
+        ));
+
+    expect(RoutableBoards::slugs())->toBe(config('clover.fallback_boards'));
+    expect(RoutableBoards::pattern())->toContain('g');
 });

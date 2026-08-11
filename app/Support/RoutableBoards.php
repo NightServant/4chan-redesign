@@ -32,17 +32,27 @@ final class RoutableBoards
      */
     public static function slugs(): array
     {
-        /** @var array<int, string> $cached */
-        $cached = Cache::rememberForever(self::CACHE_KEY, static function (): array {
-            try {
-                /** @var array<int, string> $slugs */
-                $slugs = Board::query()->orderBy('slug')->pluck('slug')->all();
-            } catch (Throwable) {
-                return [];
-            }
-
-            return $slugs;
-        });
+        try {
+            /** @var array<int, string> $cached */
+            $cached = Cache::rememberForever(
+                self::CACHE_KEY,
+                static fn (): array => Board::query()->orderBy('slug')->pluck('slug')->all(),
+            );
+        } catch (Throwable) {
+            /**
+             * The cache store is the database too, so reaching it is itself a
+             * query. An earlier version guarded only the `boards` lookup and
+             * left `Cache::rememberForever` outside the guard, which meant the
+             * fallback could not fire in the one situation it exists for: a
+             * fresh clone with no SQLite file, where `package:discover` boots
+             * the app before `migrate` has run and the failure is the cache
+             * table, not `boards`.
+             *
+             * It looked correct and did nothing. Both the cache read and the
+             * query have to be inside the guard.
+             */
+            return self::fallback();
+        }
 
         return $cached === [] ? self::fallback() : $cached;
     }
