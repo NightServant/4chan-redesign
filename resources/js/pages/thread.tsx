@@ -77,9 +77,13 @@ export default function Thread({
                 <Head title="Thread not found" />
 
                 <div className="mx-auto max-w-[760px] px-6 py-8">
+                    {/* Naming the post number matters: an anon arriving from
+                        a stale `>>` reference wants to know which one missed,
+                        and it is the only thing distinguishing this screen
+                        from every other pruned thread. */}
                     <EmptyState
                         icon={<Archive />}
-                        title="That thread is not here"
+                        title={`Thread >>${no} is not here`}
                         body="It was pruned, deleted, or never existed. Board archives keep threads for 72 hours."
                         action={
                             <Button variant="outline" asChild>

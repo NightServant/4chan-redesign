@@ -2,7 +2,6 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { CommentTree } from '@/components/clover/comment-tree';
-import { COMMENTS } from '@/fixtures/clover';
 import type { Comment } from '@/types/clover';
 
 /** Finds the `<article>` for a comment by its own post number. Scoping
@@ -27,6 +26,90 @@ function rowFor(no: number): HTMLElement {
 
     return row;
 }
+
+/**
+ * The reply tree these tests assert against.
+ *
+ * It was a shared design fixture until the backend landed. Comments come from
+ * the server now, so it lives here instead — it is test data, and every
+ * assertion below is about this exact shape: the depth cap, the descendant
+ * counts and the collapse behaviour are all read off it.
+ */
+const COMMENTS: readonly Comment[] = [
+    {
+        no: 58210447,
+        quotes: [],
+        author: 'Anonymous',
+        time: '3 min ago',
+        body: 'Forty minutes for LLVM is not "fine", that is a full coffee break per build. What is the core count?',
+        blessings: 214,
+        op: false,
+        replies: [
+            {
+                no: 58210452,
+                quotes: [58210447],
+                author: 'Anonymous',
+                time: '2 min ago',
+                body: 'Eight cores, 16 GB. It is not fast, it is usable. Those are different claims.',
+                blessings: 388,
+                op: true,
+                replies: [
+                    {
+                        no: 58210461,
+                        quotes: [58210452],
+                        author: 'Anonymous',
+                        time: '1 min ago',
+                        body: 'Fair. What is battery like under sustained load?',
+                        blessings: 42,
+                        op: false,
+                        replies: [],
+                    },
+                ],
+            },
+            {
+                no: 58210455,
+                quotes: [58210447],
+                author: 'Anonymous',
+                time: '2 min ago',
+                body: 'Cross compile on an x86 box and rsync the artifacts. Nobody builds LLVM natively on these.',
+                blessings: 156,
+                op: false,
+                replies: [],
+            },
+        ],
+    },
+    {
+        no: 58210449,
+        quotes: [],
+        author: 'Anonymous',
+        time: '2 min ago',
+        body: 'Mainline kernel support or vendor tree? This is the only question that matters and every one of these threads dodges it.',
+        blessings: 512,
+        op: false,
+        replies: [
+            {
+                no: 58210458,
+                quotes: [58210449],
+                author: 'Anonymous',
+                time: '1 min ago',
+                body: 'Vendor tree, 6.6 based. Mainline boots but the GPU does nothing.',
+                blessings: 297,
+                op: true,
+                replies: [],
+            },
+        ],
+    },
+    {
+        no: 58210463,
+        quotes: [],
+        author: 'Anonymous',
+        time: 'just now',
+        body: 'Bought one in April and returned it in May. Your mileage will vary wildly by workload.',
+        blessings: 8,
+        op: false,
+        replies: [],
+    },
+];
 
 describe('CommentTree', () => {
     it('renders the whole fixture with its nesting intact', () => {

@@ -39,7 +39,7 @@ const baseThread: Thread = {
     excerpt: 'Compiling LLVM takes 40 minutes but everything else is fine.',
     blessings: 2412,
     replies: 318,
-    views: '48,201',
+    images: '48',
     media: null,
     pinned: false,
 };
@@ -203,7 +203,7 @@ describe('ThreadCard', () => {
         render(<ThreadCard thread={baseThread} />);
 
         expect(screen.getByText('318')).toHaveClass('tabular-nums');
-        expect(screen.getByText('48,201')).toHaveClass('tabular-nums');
+        expect(screen.getByText('48')).toHaveClass('tabular-nums');
     });
 
     it('gives the bookmark control an accessible name since it carries no visible text', () => {

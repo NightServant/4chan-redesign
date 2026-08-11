@@ -7,7 +7,6 @@ import type {
     Profile,
     ProfileComment,
     ProfileStat,
-    Thread,
 } from '@/types/clover';
 
 /**

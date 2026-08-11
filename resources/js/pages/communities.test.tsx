@@ -1,11 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { BOARD_DIRECTORY } from '@/fixtures/clover';
+import { makeDirectoryEntry } from '@/fixtures/factories';
 import Communities from '@/pages/communities';
 
 const { pageProps } = vi.hoisted(() => ({
-    pageProps: { showsMatureBoards: false },
+    pageProps: { showsMatureBoards: false, sidebarBoards: [] },
 }));
 
 vi.mock('@inertiajs/react', () => ({
@@ -33,7 +33,25 @@ function boardHrefs(): string[] {
         .filter((href) => /^\/[a-z]+$/.test(href));
 }
 
-const worksafe = BOARD_DIRECTORY.filter((entry) => entry.worksafe);
+/* What the server sends an anon who has not opted in: worksafe boards only.
+   The page no longer filters, so this is the whole prop rather than a subset
+   of a longer list the browser also received. */
+const WORKSAFE = [
+    makeDirectoryEntry({ slug: '/g/', name: 'Technology' }),
+    makeDirectoryEntry({ slug: '/wg/', name: 'Wallpapers', category: 'Creative' }),
+    makeDirectoryEntry({ slug: '/biz/', name: 'Business' }),
+];
+
+/* And what it sends once they have: the same list plus the hidden ones. */
+const WITH_MATURE = [
+    ...WORKSAFE,
+    makeDirectoryEntry({
+        slug: '/b/',
+        name: 'Random',
+        category: 'Misc',
+        worksafe: false,
+    }),
+];
 
 describe('Communities page', () => {
     beforeEach(() => {
@@ -41,7 +59,7 @@ describe('Communities page', () => {
     });
 
     it('renders the directory under a single page heading', () => {
-        render(<Communities />);
+        render(<Communities boards={WORKSAFE} hiddenCount={1} />);
 
         expect(
             screen.getByRole('heading', { level: 1, name: 'Communities' }),
@@ -52,37 +70,43 @@ describe('Communities page', () => {
     /**
      * The whole page is links, so a slug the router does not accept would be a
      * dead end on the one screen whose entire job is getting anons to boards.
-     * `config/clover.php` is the list; this mirrors it deliberately, so adding
-     * a board to the fixture without routing it fails here.
+     * Both lists come from the `boards` table now, so they cannot disagree
+     * about which boards exist; `BoardCatalogueTest` guards that end of it.
      */
-    it('links only slugs the router accepts', () => {
-        pageProps.showsMatureBoards = true;
-        render(<Communities />);
+    it('links every board it is given, and nothing else', () => {
+        render(<Communities boards={WITH_MATURE} hiddenCount={0} />);
 
-        const routable = ['/g', '/wg', '/biz', '/x', '/fit', '/co', '/b'];
         const hrefs = boardHrefs();
 
-        expect(hrefs).toHaveLength(BOARD_DIRECTORY.length);
-        expect(hrefs.every((href) => routable.includes(href))).toBe(true);
+        expect(hrefs).toHaveLength(WITH_MATURE.length);
+        expect(hrefs).toEqual(
+            expect.arrayContaining(['/g', '/wg', '/biz', '/b']),
+        );
     });
 
-    it('hides adult boards from an anon who has not opted in', () => {
-        render(<Communities />);
+    /**
+     * The page draws what it is sent. Hidden boards are filtered by the query,
+     * so the browser never receives one — which is the point: a board an anon
+     * has asked not to see is absent, not merely undrawn.
+     */
+    it('renders no board it was not given', () => {
+        render(<Communities boards={WORKSAFE} hiddenCount={1} />);
 
-        expect(boardHrefs()).toHaveLength(worksafe.length);
+        expect(boardHrefs()).toHaveLength(WORKSAFE.length);
         expect(boardHrefs()).not.toContain('/b');
+        expect(screen.queryByText('Random')).not.toBeInTheDocument();
     });
 
     /**
      * `/communities` is public, so the signed-out case is the common one, not
-     * an edge case. It resolves to the filtered view without the page having
-     * to ask whether anyone is signed in.
+     * an edge case. The notice keeps the setting discoverable, from a count
+     * the server supplies rather than from boards the client should not hold.
      */
-    it('defaults a signed-out visitor to the filtered view', () => {
-        render(<Communities />);
+    it('tells a filtered visitor how much is hidden', () => {
+        render(<Communities boards={WORKSAFE} hiddenCount={24} />);
 
         expect(
-            screen.getByText(/hidden by your content settings/i),
+            screen.getByText(/24 boards hidden by your content settings/i),
         ).toBeInTheDocument();
     });
 });

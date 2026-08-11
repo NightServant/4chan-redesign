@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { BoardCard } from '@/components/communities/board-card';
-import { BOARD_DIRECTORY } from '@/fixtures/clover';
+import { makeDirectoryEntry } from '@/fixtures/factories';
 
 vi.mock('@inertiajs/react', () => ({
     Link: ({
@@ -20,8 +20,16 @@ vi.mock('@inertiajs/react', () => ({
     ),
 }));
 
-const TECHNOLOGY = BOARD_DIRECTORY[0];
-const BUSINESS = BOARD_DIRECTORY[2];
+const TECHNOLOGY = makeDirectoryEntry({
+    slug: '/g/',
+    name: 'Technology',
+    subscribed: true,
+});
+const BUSINESS = makeDirectoryEntry({
+    slug: '/biz/',
+    name: 'Business',
+    description: 'Markets, ventures and the arguments between them.',
+});
 
 function renderCard(entry = BUSINESS, subscribed = entry.subscribed) {
     const onToggleSubscribe = vi.fn();
@@ -53,7 +61,7 @@ describe('BoardCard', () => {
         expect(screen.getByText('/biz/')).toBeInTheDocument();
         expect(screen.getByText(BUSINESS.description)).toBeInTheDocument();
         expect(
-            screen.getByText('12,860 online · 11,067 threads'),
+            screen.getByText(`${BUSINESS.threads} threads`),
         ).toBeInTheDocument();
     });
 

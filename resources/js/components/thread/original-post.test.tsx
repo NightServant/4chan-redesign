@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { OriginalPost } from '@/components/thread/original-post';
-import { THREADS } from '@/fixtures/clover';
+import { makeThread } from '@/fixtures/factories';
 import { board } from '@/routes';
 
 /**
@@ -30,9 +30,15 @@ vi.mock('@inertiajs/react', () => ({
     },
 }));
 
-const THREAD = THREADS[0]; // no: 58210441, /g/, no media, not pinned
-const PINNED_THREAD = THREADS.find((thread) => thread.pinned)!;
-const MEDIA_THREAD = THREADS.find((thread) => thread.media)!;
+/* Built rather than picked out of a shared list, so each constant states the
+   one property its tests are about instead of depending on which fixture row
+   happened to have it. */
+const THREAD = makeThread({
+    no: 58210441,
+    excerpt: 'Compiling LLVM takes 40 minutes but everything else is fine.',
+});
+const PINNED_THREAD = makeThread({ pinned: true });
+const MEDIA_THREAD = makeThread({ media: 'thinkpad-x230.png · 1440x900 · 412 KB' });
 
 function stubClipboard() {
     Object.defineProperty(navigator, 'clipboard', {
@@ -104,12 +110,12 @@ describe('OriginalPost', () => {
         expect(screen.queryByRole('img')).not.toBeInTheDocument();
     });
 
-    it('shows the blessing count, reply count and view count in the footer', () => {
+    it('shows the blessing count, reply count and image count in the footer', () => {
         render(<OriginalPost thread={THREAD} />);
 
         expect(screen.getByText(String(THREAD.blessings))).toBeInTheDocument();
         expect(screen.getByText(String(THREAD.replies))).toBeInTheDocument();
-        expect(screen.getByText(THREAD.views)).toBeInTheDocument();
+        expect(screen.getByText(THREAD.images)).toBeInTheDocument();
     });
 
     it('fires onBless and onCurse from the vote control', async () => {

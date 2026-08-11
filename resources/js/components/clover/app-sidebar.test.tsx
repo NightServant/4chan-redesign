@@ -3,8 +3,10 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppSidebar } from '@/components/clover/app-sidebar';
+import { makeBoard } from '@/fixtures/factories';
 import { FOOTER_LINKS, PRIMARY_NAV } from '@/lib/navigation';
 import type { User } from '@/types/auth';
+import type { Board } from '@/types/clover';
 
 /**
  * The real `Link`/`usePage` require an Inertia page context that only exists
@@ -14,11 +16,22 @@ import type { User } from '@/types/auth';
  * `beforeEach`, so each test controls auth state and the current URL without
  * a real Inertia runtime.
  */
+const BOARDS = [
+    makeBoard({ slug: '/g/', name: 'Technology' }),
+    makeBoard({ slug: '/biz/', name: 'Business' }),
+];
+
 const mockPage: {
-    props: { auth: { user: User | null }; sidebarOpen: boolean };
+    props: {
+        auth: { user: User | null };
+        sidebarOpen: boolean;
+        /* Shared from `HandleInertiaRequests`: the sidebar is app chrome and
+           renders on every screen, so its board list is not a page prop. */
+        sidebarBoards: Board[];
+    };
     url: string;
 } = {
-    props: { auth: { user: null }, sidebarOpen: true },
+    props: { auth: { user: null }, sidebarOpen: true, sidebarBoards: BOARDS },
     url: '/',
 };
 
@@ -59,7 +72,11 @@ const AUTH_ONLY_TITLES = PRIMARY_NAV.filter((item) => item.requiresAuth).map(
 );
 
 beforeEach(() => {
-    mockPage.props = { auth: { user: null }, sidebarOpen: true };
+    mockPage.props = {
+        auth: { user: null },
+        sidebarOpen: true,
+        sidebarBoards: BOARDS,
+    };
     mockPage.url = '/';
     document.cookie = 'sidebar_state=; path=/; max-age=0';
 });

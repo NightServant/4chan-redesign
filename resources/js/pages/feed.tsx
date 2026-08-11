@@ -7,6 +7,8 @@ import { PageHeader } from '@/components/clover/page-header';
 import { ThreadCard } from '@/components/clover/thread-card';
 import { AnonBanner } from '@/components/feed/anon-banner';
 import { Rail } from '@/components/feed/rail';
+import { Button } from '@/components/ui/button';
+import { communities } from '@/routes';
 import type { Board, Thread, TrendingTag } from '@/types/clover';
 
 /**
@@ -98,6 +100,26 @@ export default function Feed({ sort, threads, boards, trending }: FeedProps) {
                     />
 
                     {signedIn ? null : <AnonBanner />}
+
+                    {/* An empty feed is an ordinary state, not a failure: a
+                        clone that has not run `clover:sync` yet has no threads
+                        at all, and so does an anon whose content settings hide
+                        every board that does. Without this the page renders a
+                        heading over nothing and reads as broken. */}
+                    {threads.length === 0 ? (
+                        <EmptyState
+                            icon={<CompassIcon />}
+                            title="Nothing here yet"
+                            body="No threads have been synced. Once boards are pulled in they appear here in bump order."
+                            action={
+                                <Button variant="outline" asChild>
+                                    <Link href={communities()}>
+                                        Browse boards
+                                    </Link>
+                                </Button>
+                            }
+                        />
+                    ) : null}
 
                     <div className="flex flex-col gap-4">
                         {threads.map((thread) => (
