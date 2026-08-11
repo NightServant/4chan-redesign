@@ -54,6 +54,7 @@ final class ThreadResource extends JsonResource
         $originalPost = $thread->originalPost;
 
         return [
+            'id' => $thread->id,
             'no' => $thread->no,
             'board' => $thread->board->displaySlug(),
             'boardName' => $thread->board->title,
@@ -91,6 +92,15 @@ final class ThreadResource extends JsonResource
                 : AttachmentResource::for($originalPost, $request),
 
             'pinned' => $thread->sticky,
+
+            /**
+             * Per-viewer state, so the controls render pressed without a
+             * second round trip after the page loads. Both resolve to their
+             * empty value for a signed-out anon, which is correct rather than
+             * a fallback: they have voted on nothing and saved nothing.
+             */
+            'voteState' => $originalPost?->voteStateFor($request->user()),
+            'bookmarked' => $this->isBookmarked($request),
         ];
     }
 
@@ -116,6 +126,31 @@ final class ThreadResource extends JsonResource
             : trim(Str::after($body, "\n"));
 
         return $remainder === '' ? null : Str::limit($remainder, self::EXCERPT_LENGTH);
+    }
+
+    /**
+     * Whether this anon saved this thread.
+     *
+     * Reads a preloaded relation when the caller supplied one — a feed of
+     * thirty cards asking the database individually is thirty queries for one
+     * boolean each. Falls back to a query so a resource built from a bare
+     * model is slow rather than wrong.
+     */
+    private function isBookmarked(Request $request): bool
+    {
+        $user = $request->user();
+
+        if ($user === null) {
+            return false;
+        }
+
+        $thread = $this->thread();
+
+        if ($thread->relationLoaded('bookmarks')) {
+            return $thread->bookmarks->contains('user_id', $user->id);
+        }
+
+        return $thread->bookmarks()->where('user_id', $user->id)->exists();
     }
 
     private function thread(): Thread

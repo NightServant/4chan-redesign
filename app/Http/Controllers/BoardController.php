@@ -30,7 +30,7 @@ class BoardController extends Controller
         $model = $this->visibleBoard($request, $board);
 
         $threads = $model->threads()
-            ->with(['board', 'originalPost' => fn ($op) => $op->withSum('votes', 'value')])
+            ->with(['board', 'originalPost' => fn ($op) => $op->withSum('votes', 'value')->with('votes'), 'bookmarks'])
             ->orderByDesc('bumped_at')
             ->limit(self::THREADS)
             ->get();

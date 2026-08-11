@@ -47,6 +47,20 @@ class ThreadReadController extends Controller
     }
 
     /**
+     * Forgetting one thread.
+     *
+     * The screen offers removal per row as well as a clear-all, and an anon
+     * who removes a row means it: the entry is deleted rather than filtered
+     * out of a list that still holds it.
+     */
+    public function forget(Request $request, Thread $thread): RedirectResponse
+    {
+        $request->user()->reads()->where('thread_id', $thread->id)->delete();
+
+        return back();
+    }
+
+    /**
      * Clearing the history.
      *
      * The screen offers it, and an anon who asks for their reading history to

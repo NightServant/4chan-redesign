@@ -1,5 +1,5 @@
 import type { Auth } from '@/types/auth';
-import type { Board } from '@/types/clover';
+import type { ActivityEntry, Board } from '@/types/clover';
 
 declare module 'react' {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -21,6 +21,11 @@ declare module '@inertiajs/core' {
              * in" to decide what it may show will eventually get it wrong.
              */
             showsMatureBoards: boolean;
+            /**
+             * This anon's own recent activity. Empty when signed out, which
+             * is true rather than a fallback.
+             */
+            recentActivity: ActivityEntry[];
             /**
              * The sidebar's board list. Shared because the sidebar is app
              * chrome and renders on every screen; filtered by the same

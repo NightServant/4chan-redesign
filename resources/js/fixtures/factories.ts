@@ -46,6 +46,7 @@ export function makeBoard(overrides: Partial<Board> = {}): Board {
 
 export function makeThread(overrides: Partial<Thread> = {}): Thread {
     return {
+        id: nextPostNumber(),
         no: nextPostNumber(),
         board: '/g/',
         boardName: 'Technology',
@@ -56,12 +57,15 @@ export function makeThread(overrides: Partial<Thread> = {}): Thread {
         images: '3',
         media: null,
         pinned: false,
+        voteState: null,
+        bookmarked: false,
         ...overrides,
     };
 }
 
 export function makeComment(overrides: Partial<Comment> = {}): Comment {
     return {
+        id: nextPostNumber(),
         no: nextPostNumber(),
         quotes: [],
         author: 'Anonymous',

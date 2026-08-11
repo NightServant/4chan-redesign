@@ -169,6 +169,7 @@ final class CommentTree
             $post = $byNo[$no];
 
             $comments[] = [
+                'id' => $post->id,
                 'no' => $post->no,
                 'quotes' => array_values(array_map(intval(...), $post->quotes)),
                 'author' => $post->author,

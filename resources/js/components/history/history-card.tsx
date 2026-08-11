@@ -2,7 +2,7 @@ import { Link } from '@inertiajs/react';
 import { BookOpen, Trash2 } from 'lucide-react';
 import { BoardAvatar } from '@/components/clover/board-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
-import { MediaPlaceholder } from '@/components/clover/media-placeholder';
+import { PostAttachment } from '@/components/clover/post-image';
 import { Progress } from '@/components/clover/progress';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -42,10 +42,12 @@ function HistoryCard({ entry, onRemove }: HistoryCardProps) {
 
     return (
         <Card className="relative flex-row items-center gap-4 px-5 py-4">
-            <MediaPlaceholder
-                label={entry.media}
-                height={82}
-                className="hidden w-[132px] shrink-0 sm:flex"
+            {/* The thread's own attachment, or nothing when it opened
+                without one. It was a required label while history was a
+                fixture, which meant every row claimed an image. */}
+            <PostAttachment
+                media={entry.media}
+                className="hidden w-[132px] shrink-0 sm:block"
             />
 
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">

@@ -17,8 +17,8 @@ import { MachineValue } from '@/components/clover/machine-value';
 import { SectionLabel } from '@/components/clover/section-label';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ACHIEVEMENTS, ACTIVITY } from '@/fixtures/clover';
 import { cn } from '@/lib/utils';
+import type { ActivityEntry } from '@/types/clover';
 import { board, communities } from '@/routes';
 
 /**
@@ -77,7 +77,18 @@ function OverviewSection({
  * The account screen's default tab: what this anon has been doing, what they
  * have earned, their best thread and the boards they follow.
  */
-function AccountOverview() {
+type AccountOverviewProps = {
+    /**
+     * What this anon has been doing, derived from their own record.
+     *
+     * The fixture mixed things done *to* them with things they did — "Anonymous
+     * replied to your post", "Your report was actioned". Neither has a source:
+     * there is no reporting system, and a reply is not addressed to an account.
+     */
+    activity: readonly ActivityEntry[];
+};
+
+function AccountOverview({ activity }: AccountOverviewProps) {
     /* Boards come from the shared prop the sidebar also reads, so this list is
        real boards filtered by the anon's own content settings rather than a
        fixture. Which boards an anon actually follows is a subscription, and
@@ -89,7 +100,7 @@ function AccountOverview() {
             <div className="flex min-w-0 flex-col gap-5">
                 <OverviewSection title="Recent activity">
                     <Card className="gap-0 py-0">
-                        {ACTIVITY.map((entry, index) => {
+                        {activity.map((entry, index) => {
                             const Icon = iconFor(entry.icon);
 
                             return (
@@ -97,7 +108,7 @@ function AccountOverview() {
                                     key={entry.text}
                                     className={cn(
                                         'flex items-center gap-3 px-[18px] py-3.5',
-                                        index < ACTIVITY.length - 1 &&
+                                        index < activity.length - 1 &&
                                             'border-b border-border',
                                     )}
                                 >
@@ -132,36 +143,6 @@ function AccountOverview() {
             </div>
 
             <div className="flex min-w-0 flex-col gap-5">
-                <OverviewSection title="Achievements">
-                    <Card className="gap-3.5 py-4">
-                        {ACHIEVEMENTS.map((achievement) => {
-                            const Icon = iconFor(achievement.icon);
-
-                            return (
-                                <div
-                                    key={achievement.title}
-                                    className="flex items-center gap-3 px-5"
-                                >
-                                    <span
-                                        aria-hidden="true"
-                                        className="grid size-8 shrink-0 place-items-center rounded-lg border border-primary-line bg-primary-soft text-primary"
-                                    >
-                                        <Icon className="size-4" />
-                                    </span>
-                                    <div className="flex min-w-0 flex-col">
-                                        <span className="text-body-sm text-foreground">
-                                            {achievement.title}
-                                        </span>
-                                        <MachineValue>
-                                            {achievement.meta}
-                                        </MachineValue>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </Card>
-                </OverviewSection>
-
                 <OverviewSection
                     title="Boards"
                     action={

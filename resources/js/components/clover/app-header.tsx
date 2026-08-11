@@ -25,7 +25,6 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ACTIVITY } from '@/fixtures/clover';
 import { useAppearance } from '@/hooks/use-appearance';
 import { PRIMARY_NAV } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
@@ -43,7 +42,7 @@ import type { CloverNavItem } from '@/types/navigation';
 const NOTIFICATION_PREVIEW_COUNT = 3;
 
 /**
- * `ACTIVITY` carries Lucide icon names as plain strings so the fixture stays
+ * `ActivityEntry` carries Lucide icon names as plain strings so the payload stays
  * framework-agnostic. This is the one place that turns a name back into a
  * component; anything not in this fixture falls back to the bell, since a
  * notification row with no icon reads as broken.
@@ -70,7 +69,7 @@ type AppHeaderProps = Omit<ComponentProps<'header'>, 'children'> & {
 };
 
 function AppHeader({ className, onCompose, ...props }: AppHeaderProps) {
-    const { auth } = usePage().props;
+    const { auth, recentActivity } = usePage().props;
     const user = auth.user;
     const isSignedIn = Boolean(user);
     const { resolvedAppearance, updateAppearance } = useAppearance();
@@ -81,7 +80,7 @@ function AppHeader({ className, onCompose, ...props }: AppHeaderProps) {
     const settingsItem = findNavItem('Settings');
     const notificationsItem = findNavItem('Notifications');
 
-    const notificationPreview = ACTIVITY.slice(0, NOTIFICATION_PREVIEW_COUNT);
+    const notificationPreview = recentActivity.slice(0, NOTIFICATION_PREVIEW_COUNT);
     const unreadCount = notificationPreview.length;
 
     return (
