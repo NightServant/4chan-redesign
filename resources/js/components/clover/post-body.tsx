@@ -72,7 +72,11 @@ function PostBody({ body, className }: PostBodyProps) {
         >
             {lines.map((line, index) => {
                 if (line === '') {
-                    return <span key={index} aria-hidden="true">&nbsp;</span>;
+                    return (
+                        <span key={index} aria-hidden="true">
+                            &nbsp;
+                        </span>
+                    );
                 }
 
                 const reference = REFERENCE_LINE.exec(line);

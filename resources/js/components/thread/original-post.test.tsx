@@ -38,7 +38,9 @@ const THREAD = makeThread({
     excerpt: 'Compiling LLVM takes 40 minutes but everything else is fine.',
 });
 const PINNED_THREAD = makeThread({ pinned: true });
-const MEDIA_THREAD = makeThread({ media: 'thinkpad-x230.png · 1440x900 · 412 KB' });
+const MEDIA_THREAD = makeThread({
+    media: 'thinkpad-x230.png · 1440x900 · 412 KB',
+});
 
 function stubClipboard() {
     Object.defineProperty(navigator, 'clipboard', {

@@ -140,7 +140,9 @@ describe('ReplyComposer', () => {
 
         expect(screen.getByText('2500/5000')).toBeInTheDocument();
         expect(screen.queryByText('Over the limit')).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Post reply' })).toBeEnabled();
+        expect(
+            screen.getByRole('button', { name: 'Post reply' }),
+        ).toBeEnabled();
     });
 
     it('rejects a body past a stricter board limit than the fallback', async () => {

@@ -71,7 +71,9 @@ describe('BoardGrid', () => {
         render(<BoardGrid boards={BOARDS} />);
 
         const board = BOARDS[0];
-        const text = screen.getByText(`${board.slug} · ${board.threads} threads`);
+        const text = screen.getByText(
+            `${board.slug} · ${board.threads} threads`,
+        );
 
         expect(text.textContent).not.toMatch(/threads.*threads/);
     });

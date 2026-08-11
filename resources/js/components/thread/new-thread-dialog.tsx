@@ -130,7 +130,8 @@ function NewThreadDialogContent({
 
     const trimmedBody = body.trim();
     const overLimit = body.length > maxCommentChars;
-    const canSubmit = board !== undefined && trimmedBody.length > 0 && !overLimit;
+    const canSubmit =
+        board !== undefined && trimmedBody.length > 0 && !overLimit;
 
     function handleAttachmentChange(event: ChangeEvent<HTMLInputElement>) {
         setAttachment(event.target.files?.[0] ?? null);

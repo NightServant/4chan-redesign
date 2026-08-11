@@ -36,9 +36,7 @@ describe('PostBody', () => {
     it('does not treat a post reference as greentext', () => {
         render(<PostBody body=">>109522303" />);
 
-        expect(screen.getByText('>>109522303')).not.toHaveClass(
-            'text-primary',
-        );
+        expect(screen.getByText('>>109522303')).not.toHaveClass('text-primary');
     });
 
     /**
@@ -74,9 +72,7 @@ describe('PostBody', () => {
     it('renders nothing for a body with no content', () => {
         const { container } = render(<PostBody body="" />);
 
-        expect(
-            container.querySelector('[data-slot="post-body"]'),
-        ).toBeNull();
+        expect(container.querySelector('[data-slot="post-body"]')).toBeNull();
     });
 
     /**
@@ -86,9 +82,7 @@ describe('PostBody', () => {
     it('renders nothing for a whitespace-only body', () => {
         const { container } = render(<PostBody body={'   \n  \n'} />);
 
-        expect(
-            container.querySelector('[data-slot="post-body"]'),
-        ).toBeNull();
+        expect(container.querySelector('[data-slot="post-body"]')).toBeNull();
     });
 
     it('allows long unbroken URLs to wrap instead of forcing the card wide', () => {
@@ -96,8 +90,8 @@ describe('PostBody', () => {
             <PostBody body="https://example.com/an/extremely/long/path/that/never/breaks/anywhere" />,
         );
 
-        expect(
-            container.querySelector('[data-slot="post-body"]'),
-        ).toHaveClass('break-words');
+        expect(container.querySelector('[data-slot="post-body"]')).toHaveClass(
+            'break-words',
+        );
     });
 });

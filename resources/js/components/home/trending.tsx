@@ -58,7 +58,9 @@ function Trending({ threads, trending }: TrendingProps) {
                             <Link
                                 /* `tag` is a display slug like `/g/`; routes
                                    carry the bare token. */
-                                href={boardRoute.url(item.tag.replaceAll('/', ''))}
+                                href={boardRoute.url(
+                                    item.tag.replaceAll('/', ''),
+                                )}
                                 className={chipClasses}
                             >
                                 <span className="text-body-sm font-semibold text-foreground">

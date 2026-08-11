@@ -48,7 +48,9 @@ function BoardGrid({ boards }: BoardGridProps) {
                                carries its delimiters. Slugs are `[a-z0-9]+`
                                upstream, so `/3/` and `/s4s/` pass through
                                here unharmed. */
-                            href={boardRoute.url(board.slug.replaceAll('/', ''))}
+                            href={boardRoute.url(
+                                board.slug.replaceAll('/', ''),
+                            )}
                             aria-label={`${board.name}, ${board.slug}`}
                             className="rounded-xl"
                         >

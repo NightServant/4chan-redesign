@@ -38,7 +38,11 @@ function boardHrefs(): string[] {
    of a longer list the browser also received. */
 const WORKSAFE = [
     makeDirectoryEntry({ slug: '/g/', name: 'Technology' }),
-    makeDirectoryEntry({ slug: '/wg/', name: 'Wallpapers', category: 'Creative' }),
+    makeDirectoryEntry({
+        slug: '/wg/',
+        name: 'Wallpapers',
+        category: 'Creative',
+    }),
     makeDirectoryEntry({ slug: '/biz/', name: 'Business' }),
 ];
 

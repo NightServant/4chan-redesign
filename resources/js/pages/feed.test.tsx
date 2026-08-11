@@ -77,8 +77,14 @@ afterEach(() => {
 /* Exactly what the controller sends: threads already ordered for the sort,
    plus the two lists the rail renders. Nothing here is filtered client-side. */
 const THREADS = [
-    makeThread({ title: 'Anons are still arguing about init systems', blessings: 2412 }),
-    makeThread({ title: 'Mainline kernel support or vendor tree', blessings: 512 }),
+    makeThread({
+        title: 'Anons are still arguing about init systems',
+        blessings: 2412,
+    }),
+    makeThread({
+        title: 'Mainline kernel support or vendor tree',
+        blessings: 512,
+    }),
     makeThread({ title: 'Battery life under sustained load', blessings: 42 }),
 ];
 

@@ -239,8 +239,9 @@ describe('Rail', () => {
             name: 'Moderation notices',
         });
 
-        expect(within(region).getByText('No notices right now.'))
-            .toBeInTheDocument();
+        expect(
+            within(region).getByText('No notices right now.'),
+        ).toBeInTheDocument();
         expect(region).not.toHaveTextContent('/biz/');
     });
 

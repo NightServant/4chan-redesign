@@ -33,7 +33,9 @@ const BOARDS: readonly NewThreadBoardOption[] = [
 describe('NewThreadDialog', () => {
     it('lists every board as an option, showing both slug and name', async () => {
         const user = userEvent.setup();
-        render(<NewThreadDialog open boards={BOARDS} onOpenChange={() => {}} />);
+        render(
+            <NewThreadDialog open boards={BOARDS} onOpenChange={() => {}} />,
+        );
 
         await user.click(screen.getByRole('combobox', { name: 'Board' }));
 
@@ -66,7 +68,9 @@ describe('NewThreadDialog', () => {
 
     it('keeps Post thread disabled until the body has content, then enables it', async () => {
         const user = userEvent.setup();
-        render(<NewThreadDialog open boards={BOARDS} onOpenChange={() => {}} />);
+        render(
+            <NewThreadDialog open boards={BOARDS} onOpenChange={() => {}} />,
+        );
 
         const postButton = screen.getByRole('button', {
             name: 'Post thread',
@@ -82,7 +86,9 @@ describe('NewThreadDialog', () => {
     });
 
     it('marks the subject field optional in a way assistive tech can read', () => {
-        render(<NewThreadDialog open boards={BOARDS} onOpenChange={() => {}} />);
+        render(
+            <NewThreadDialog open boards={BOARDS} onOpenChange={() => {}} />,
+        );
 
         expect(
             screen.getByLabelText(/subject/i, { exact: false }),
@@ -90,7 +96,9 @@ describe('NewThreadDialog', () => {
     });
 
     it('marks the body field required so assistive tech announces it', () => {
-        render(<NewThreadDialog open boards={BOARDS} onOpenChange={() => {}} />);
+        render(
+            <NewThreadDialog open boards={BOARDS} onOpenChange={() => {}} />,
+        );
 
         expect(screen.getByLabelText('Body')).toBeRequired();
     });
@@ -118,7 +126,9 @@ describe('NewThreadDialog', () => {
 
     it('lets an anon remove a chosen attachment', async () => {
         const user = userEvent.setup();
-        render(<NewThreadDialog open boards={BOARDS} onOpenChange={() => {}} />);
+        render(
+            <NewThreadDialog open boards={BOARDS} onOpenChange={() => {}} />,
+        );
 
         const file = new File(['pixel-bytes'], 'ridge-4k.png', {
             type: 'image/png',
@@ -194,14 +204,22 @@ describe('NewThreadDialog', () => {
     });
 
     it('renders nothing when closed', () => {
-        render(<NewThreadDialog open={false} boards={BOARDS} onOpenChange={() => {}} />);
+        render(
+            <NewThreadDialog
+                open={false}
+                boards={BOARDS}
+                onOpenChange={() => {}}
+            />,
+        );
 
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
     it('disables Post thread past the character limit and signals the overage by more than colour, matching ReplyComposer discipline', async () => {
         const user = userEvent.setup();
-        render(<NewThreadDialog open boards={BOARDS} onOpenChange={() => {}} />);
+        render(
+            <NewThreadDialog open boards={BOARDS} onOpenChange={() => {}} />,
+        );
 
         const field = screen.getByLabelText('Body');
         const overLong = 'a'.repeat(2001);

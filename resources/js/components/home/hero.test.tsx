@@ -76,9 +76,7 @@ describe('Hero', () => {
         render(<Hero threads={PREVIEW} />);
 
         expect(
-            screen.getByText(
-                'Free · Reading needs no account · Posting does',
-            ),
+            screen.getByText('Free · Reading needs no account · Posting does'),
         ).toBeInTheDocument();
     });
 

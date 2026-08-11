@@ -195,9 +195,7 @@ describe('BoardDirectory hidden-board notice', () => {
         render(<BoardDirectory boards={BOARD_DIRECTORY} />);
 
         expect(
-            screen.getByText(
-                new RegExp(`^${BOARD_DIRECTORY.length} boards`),
-            ),
+            screen.getByText(new RegExp(`^${BOARD_DIRECTORY.length} boards`)),
         ).toBeInTheDocument();
     });
 
@@ -206,9 +204,7 @@ describe('BoardDirectory hidden-board notice', () => {
      * and leaves the setting undiscoverable for anyone who never goes looking.
      */
     it('says how many it is hiding, and where to change that', () => {
-        render(
-            <BoardDirectory boards={BOARD_DIRECTORY} hiddenCount={24} />,
-        );
+        render(<BoardDirectory boards={BOARD_DIRECTORY} hiddenCount={24} />);
 
         expect(
             screen.getByText(/24 boards hidden by your content settings/i),

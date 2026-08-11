@@ -22,10 +22,7 @@ type CommunitiesProps = {
     hiddenCount: number;
 };
 
-export default function Communities({
-    boards,
-    hiddenCount,
-}: CommunitiesProps) {
+export default function Communities({ boards, hiddenCount }: CommunitiesProps) {
     return (
         <>
             <Head title="Communities" />

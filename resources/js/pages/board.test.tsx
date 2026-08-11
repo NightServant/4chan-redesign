@@ -57,8 +57,14 @@ const COMICS = {
 };
 
 const G_THREADS = [
-    makeThread({ board: '/g/', title: 'Anons are still arguing about init systems' }),
-    makeThread({ board: '/g/', title: 'Mainline kernel support or vendor tree' }),
+    makeThread({
+        board: '/g/',
+        title: 'Anons are still arguing about init systems',
+    }),
+    makeThread({
+        board: '/g/',
+        title: 'Mainline kernel support or vendor tree',
+    }),
 ];
 
 beforeEach(() => {
@@ -79,9 +85,7 @@ describe('Board', () => {
         expect(
             screen.getByRole('heading', { level: 1, name: 'Technology' }),
         ).toBeInTheDocument();
-        expect(
-            screen.getByText('/g/ · 18,402 threads'),
-        ).toBeInTheDocument();
+        expect(screen.getByText('/g/ · 18,402 threads')).toBeInTheDocument();
     });
 
     /* The board's threads are chosen by the query now, so what this asserts is
@@ -102,14 +106,13 @@ describe('Board', () => {
             ).toBeInTheDocument();
         }
 
-        expect(screen.getAllByRole('link', { name: /arguing|mainline/i }))
-            .toHaveLength(G_THREADS.length);
+        expect(
+            screen.getAllByRole('link', { name: /arguing|mainline/i }),
+        ).toHaveLength(G_THREADS.length);
     });
 
     it('renders the empty state and no thread cards for a board with no threads', () => {
-        render(
-            <Board board={COMICS} threads={[]} maxCommentChars={2000} />,
-        );
+        render(<Board board={COMICS} threads={[]} maxCommentChars={2000} />);
 
         expect(
             screen.getByRole('heading', { name: 'No threads on /co/ yet' }),
@@ -128,9 +131,7 @@ describe('Board', () => {
     });
 
     it("links the empty state's action to popular()", () => {
-        render(
-            <Board board={COMICS} threads={[]} maxCommentChars={2000} />,
-        );
+        render(<Board board={COMICS} threads={[]} maxCommentChars={2000} />);
 
         const action = screen.getByRole('link', {
             name: 'Browse popular threads',
@@ -172,9 +173,7 @@ describe('Board', () => {
     });
 
     it('has exactly one first-level heading on an empty board too', () => {
-        render(
-            <Board board={COMICS} threads={[]} maxCommentChars={2000} />,
-        );
+        render(<Board board={COMICS} threads={[]} maxCommentChars={2000} />);
 
         expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     });
