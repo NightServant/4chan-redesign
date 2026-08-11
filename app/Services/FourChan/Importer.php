@@ -73,7 +73,7 @@ final class Importer
      * @param  array<array-key, mixed>  $payload
      * @return array<int, Thread> the threads written, most recently bumped first
      */
-    public function importThreads(Board $board, array $payload, int $limit): array
+    public function importThreads(Board $board, array $payload, ?int $limit = null): array
     {
         $stubs = [];
 
@@ -92,7 +92,16 @@ final class Importer
         $syncedAt = Carbon::now();
         $threads = [];
 
-        foreach (array_slice($stubs, 0, max($limit, 0)) as $stub) {
+        /**
+         * A null limit takes the catalog whole, which is the normal case.
+         * `catalog.json` is every thread on the board in one response, so
+         * truncating it drops threads for no saving — the request has already
+         * been made and paid for at the rate limit. The cap exists for
+         * development, where a short list is easier to work with.
+         */
+        $selected = $limit === null ? $stubs : array_slice($stubs, 0, max($limit, 0));
+
+        foreach ($selected as $stub) {
             $no = $this->int($stub, 'no');
 
             if ($no === 0) {
@@ -101,7 +110,7 @@ final class Importer
 
             $subject = $this->decode($this->string($stub, 'sub'));
 
-            $threads[] = Thread::query()->updateOrCreate(
+            $thread = Thread::query()->updateOrCreate(
                 ['board_id' => $board->id, 'no' => $no],
                 [
                     'subject' => $subject === '' ? null : $subject,
@@ -114,6 +123,24 @@ final class Importer
                     'synced_at' => $syncedAt,
                 ],
             );
+
+            /**
+             * The catalog stub *is* the opening post — it carries `com`,
+             * `sub` and the whole media group, not just thread statistics — so
+             * it is written as one.
+             *
+             * Without this a catalog sync produced threads with no post behind
+             * them: no title beyond the post number, no excerpt, no image.
+             * Only threads that had also had their full page fetched rendered
+             * as anything, which is why nearly every board looked empty.
+             *
+             * `posts_synced_at` stays unset. This is the OP and nothing else;
+             * the replies still need the thread endpoint, and that flag is
+             * what records the difference.
+             */
+            $this->upsertPost($thread, $stub);
+
+            $threads[] = $thread;
         }
 
         return $threads;
@@ -140,22 +167,7 @@ final class Importer
                 continue;
             }
 
-            $comment = $this->parser->parse($this->nullableString($row, 'com'));
-            $media = $this->media($row);
-
-            Post::query()->updateOrCreate(
-                ['thread_id' => $thread->id, 'no' => $no],
-                [
-                    'is_op' => $this->int($row, 'resto') === 0,
-                    'author' => $this->decode($this->string($row, 'name', 'Anonymous')),
-                    'tripcode' => $this->nullableString($row, 'trip'),
-                    'capcode' => $this->nullableString($row, 'capcode'),
-                    'body' => $comment['body'],
-                    'quotes' => $comment['quotes'],
-                    'posted_at' => Carbon::createFromTimestamp($this->int($row, 'time'), 'UTC'),
-                    ...$media,
-                ],
-            );
+            $this->upsertPost($thread, $row);
 
             $written++;
         }
@@ -163,6 +175,36 @@ final class Importer
         $thread->forceFill(['posts_synced_at' => Carbon::now()])->save();
 
         return $written;
+    }
+
+    /**
+     * Write one post, from either a thread page or a catalog stub.
+     *
+     * The two payloads carry the same field names for everything a post is
+     * made of — `no`, `com`, `name`, `trip`, `capcode`, `time` and the whole
+     * media group — so the same writer serves both. That is what lets a
+     * catalog sync produce readable threads without fetching a single thread
+     * page.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function upsertPost(Thread $thread, array $row): void
+    {
+        $comment = $this->parser->parse($this->nullableString($row, 'com'));
+
+        Post::query()->updateOrCreate(
+            ['thread_id' => $thread->id, 'no' => $this->int($row, 'no')],
+            [
+                'is_op' => $this->int($row, 'resto') === 0,
+                'author' => $this->decode($this->string($row, 'name', 'Anonymous')),
+                'tripcode' => $this->nullableString($row, 'trip'),
+                'capcode' => $this->nullableString($row, 'capcode'),
+                'body' => $comment['body'],
+                'quotes' => $comment['quotes'],
+                'posted_at' => Carbon::createFromTimestamp($this->int($row, 'time'), 'UTC'),
+                ...$this->media($row),
+            ],
+        );
     }
 
     /**

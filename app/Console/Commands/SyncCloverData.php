@@ -253,13 +253,22 @@ class SyncCloverData extends Command
         return $boards;
     }
 
-    private function threadLimit(): int
+    private function threadLimit(): ?int
     {
         $limit = $this->option('limit');
 
-        return is_numeric($limit)
-            ? (int) $limit
-            : (int) config('clover.sync.threads_per_board', 30);
+        if (is_numeric($limit)) {
+            return (int) $limit;
+        }
+
+        /**
+         * Null means the whole catalog, and that is the configured default.
+         * One request already returns every thread on the board, so a cap only
+         * throws away threads that have been fetched and paid for.
+         */
+        $configured = config('clover.sync.threads_per_board');
+
+        return is_numeric($configured) ? (int) $configured : null;
     }
 
     private function postLimit(): int
