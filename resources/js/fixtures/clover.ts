@@ -33,6 +33,11 @@ export const BOARDS: readonly Board[] = [
     { slug: '/x/', name: 'Paranormal', online: '7,442' },
     { slug: '/fit/', name: 'Fitness', online: '15,309' },
     { slug: '/co/', name: 'Comics', online: '6,027' },
+
+    /* Routable, so it must be here: `config/clover.php` accepts `/b/`, and a
+       slug the router serves but this list does not carry renders a blank
+       page rather than a 404. See `BoardCatalogueTest`. */
+    { slug: '/b/', name: 'Random', online: '58,730' },
 ] as const;
 
 export const THREADS: readonly Thread[] = [
