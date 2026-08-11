@@ -23,6 +23,29 @@ final class ThreadResource extends JsonResource
     private const EXCERPT_LENGTH = 240;
 
     /**
+     * Whether this thread's attachment is withheld.
+     *
+     * The homepage sets it. That page is the first thing a visitor sees and it
+     * is marketing copy, not a board — putting whatever anons uploaded in the
+     * last hour behind the product's own pitch is a poor introduction and an
+     * unpredictable one.
+     *
+     * Withheld here rather than hidden in the browser, because those are not
+     * the same thing. If the URL reaches the page, the file can be requested;
+     * suppressing it server-side means the homepage cannot make a request to
+     * 4chan's CDN at all, whatever the markup does.
+     */
+    private bool $withholdsMedia = false;
+
+    /** Send this thread without its attachment. */
+    public function withoutMedia(): static
+    {
+        $this->withholdsMedia = true;
+
+        return $this;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
@@ -63,7 +86,9 @@ final class ThreadResource extends JsonResource
              * Only ever what 4chan reported: this application stores the id of
              * a file, never the file.
              */
-            'media' => AttachmentResource::for($originalPost, $request),
+            'media' => $this->withholdsMedia
+                ? null
+                : AttachmentResource::for($originalPost, $request),
 
             'pinned' => $thread->sticky,
         ];

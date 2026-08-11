@@ -61,7 +61,24 @@ class HomeController extends Controller
 
         return Inertia::render('welcome', [
             'boards' => BoardResource::collection($boards),
-            'threads' => ThreadResource::collection($threads),
+
+            /**
+             * Without their attachments, deliberately.
+             *
+             * The hero and the trending strip preview real threads, which is
+             * the point — they are what the product actually contains. Their
+             * images are a different matter: this is the first screen a
+             * visitor sees, and whatever anons uploaded in the last hour is
+             * not something to put behind the pitch.
+             *
+             * Suppressed here rather than in the components, so the homepage
+             * never receives a CDN URL and cannot request one however it is
+             * later rewritten.
+             */
+            'threads' => $threads->map(
+                fn (Thread $thread) => (new ThreadResource($thread))->withoutMedia(),
+            ),
+
             'trending' => TrendingTagResource::collection($trending),
         ]);
     }

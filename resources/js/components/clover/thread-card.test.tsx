@@ -176,22 +176,22 @@ describe('ThreadCard', () => {
      * `<img>` — because media was metadata and there was no file to point at.
      * There is one now, so the rule it was protecting moved rather than went
      * away: attachments are still never invented, and the card still shows
-     * only what 4chan reported. What changed is that the report includes an id
-     * the file can be fetched by.
+     * only what 4chan reported.
      *
-     * The card loads the thumbnail and never the original: a feed of thirty
-     * cards pulling four-megabyte images is the difference between a page that
-     * loads and one that does not.
+     * The card keeps the image's own shape rather than cropping it into a
+     * fixed band. Thread lists are a single vertical column, so cards of
+     * differing heights sit together fine and there is no row to line up.
      */
-    it('loads the thumbnail and never the full image', () => {
+    it('shows the attachment filling the card, with no margin down one side', () => {
         const media = makeAttachment();
 
         render(<ThreadCard thread={{ ...baseThread, media }} />);
 
         const image = screen.getByRole('img', { name: media.filename });
 
-        expect(image).toHaveAttribute('src', media.thumbnailUrl);
-        expect(image).not.toHaveAttribute('src', media.fullUrl);
+        expect(image).toHaveAttribute('src', media.fullUrl);
+        expect(image).toHaveClass('w-full');
+        expect(image).not.toHaveClass('w-auto');
     });
 
     it('renders the excerpt when present and omits it otherwise', () => {

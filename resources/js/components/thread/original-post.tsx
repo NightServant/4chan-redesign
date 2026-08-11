@@ -124,7 +124,9 @@ function OriginalPost({
                 />
             ) : null}
 
-            <PostAttachment media={thread.media} />
+            {/* The thread being read, so the file itself rather than a
+                250px thumbnail of it. */}
+            <PostAttachment media={thread.media} variant="post" />
 
             <footer className="flex flex-wrap items-center gap-5">
                 <VoteControl
