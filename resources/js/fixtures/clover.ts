@@ -2,7 +2,6 @@ import type {
     Achievement,
     ActivityEntry,
     Bookmark,
-    Conversation,
     HistoryEntry,
     Profile,
     ProfileComment,
@@ -19,7 +18,7 @@ import type {
  * data the server now owns.
  *
  * What remains is the half 4chan cannot supply, because it is not 4chan's:
- * this anon's profile, their history, their bookmarks, their messages and
+ * this anon's profile, their history, their bookmarks and
  * their notifications. None of it has a backend yet. It is still lifted from
  * the Clover design prototype, and the copy is part of the design — it carries
  * the product's voice (blessings, anons, dry specifics) and should not be
@@ -273,84 +272,5 @@ export const BOOKMARKS: readonly Bookmark[] = [
         },
         savedAt: 'Saved last week',
         note: '',
-    },
-] as const;
-
-/**
- * Direct messages.
- *
- * Messaging is an account feature, so correspondents are handles rather than
- * post numbers: nothing here ties back to anything either anon posted. The
- * copy stays in register — terse, specific, and about the boards themselves.
- *
- * The first conversation is unread and the last is a one-sided message with
- * no reply, so the list has both states to render.
- */
-export const CONVERSATIONS: readonly Conversation[] = [
-    {
-        id: 1,
-        handle: 'anon_7781',
-        time: '2 min ago',
-        unread: 2,
-        messages: [
-            {
-                id: 1,
-                outgoing: false,
-                body: 'You janitor /g/, right? There is a bot dumping the same three links across every homelab thread.',
-                time: '11 min ago',
-            },
-            {
-                id: 2,
-                outgoing: true,
-                body: 'Seen it. Same host each time, so the filter catches it about a minute after it posts.',
-                time: '8 min ago',
-            },
-            {
-                id: 3,
-                outgoing: false,
-                body: 'A minute is long enough for it to get bumped to the top.',
-                time: '3 min ago',
-            },
-            {
-                id: 4,
-                outgoing: false,
-                body: 'Can the filter run before the bump instead of after?',
-                time: '2 min ago',
-            },
-        ],
-    },
-    {
-        id: 2,
-        handle: 'anon_0294',
-        time: '1 hr ago',
-        unread: 0,
-        messages: [
-            {
-                id: 1,
-                outgoing: false,
-                body: 'That RISC-V thread is the first honest one I have read. Everyone else is benchmarking a fan curve.',
-                time: '2 hr ago',
-            },
-            {
-                id: 2,
-                outgoing: true,
-                body: 'It is a slow machine that does what I need. That is the whole review.',
-                time: '1 hr ago',
-            },
-        ],
-    },
-    {
-        id: 3,
-        handle: 'anon_5530',
-        time: 'Yesterday',
-        unread: 0,
-        messages: [
-            {
-                id: 1,
-                outgoing: true,
-                body: 'Your wallpaper dump had one at 5120x2880 mislabelled as 4K. Worth reposting the correct size.',
-                time: 'Yesterday',
-            },
-        ],
     },
 ] as const;

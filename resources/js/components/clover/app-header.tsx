@@ -4,7 +4,6 @@ import {
     BellIcon,
     BookmarkIcon,
     LogOutIcon,
-    MailIcon,
     MessageSquareIcon,
     MoonIcon,
     PlusIcon,
@@ -77,7 +76,6 @@ function AppHeader({ className, onCompose, ...props }: AppHeaderProps) {
     const { resolvedAppearance, updateAppearance } = useAppearance();
     const isDark = resolvedAppearance === 'dark';
 
-    const messagesItem = findNavItem('Messages');
     const bookmarksItem = findNavItem('Bookmarks');
     const historyItem = findNavItem('History');
     const settingsItem = findNavItem('Settings');
@@ -118,14 +116,6 @@ function AppHeader({ className, onCompose, ...props }: AppHeaderProps) {
                         <Link href={login()}>
                             <PlusIcon aria-hidden="true" />
                             New thread
-                        </Link>
-                    </Button>
-                )}
-
-                {isSignedIn && messagesItem && (
-                    <Button variant="ghost" size="icon" asChild>
-                        <Link href={messagesItem.href} aria-label="Messages">
-                            <MailIcon aria-hidden="true" />
                         </Link>
                     </Button>
                 )}

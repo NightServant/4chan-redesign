@@ -31,7 +31,6 @@ Route::middleware('auth')->group(function () {
     Route::inertia('account', 'account')->name('account');
     Route::inertia('bookmarks', 'bookmarks')->name('bookmarks');
     Route::inertia('history', 'history')->name('history');
-    Route::inertia('messages', 'messages')->name('messages');
 
     /**
      * The last destination still without a screen. It keeps the shared
