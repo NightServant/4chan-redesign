@@ -13,7 +13,7 @@ import { toUrl } from '@/lib/utils';
  * copies of the same list is how a nav starts disagreeing with itself.
  */
 describe('PRIMARY_NAV', () => {
-    it('lists the nine Clover destinations in the designed order', () => {
+    it('lists the eight Clover destinations in the designed order', () => {
         expect(PRIMARY_NAV.map((item) => item.title)).toEqual([
             'Home',
             'Popular',
@@ -21,7 +21,6 @@ describe('PRIMARY_NAV', () => {
             'Communities',
             'Bookmarks',
             'History',
-            'Messages',
             'Notifications',
             'Settings',
         ]);
@@ -42,7 +41,6 @@ describe('PRIMARY_NAV', () => {
         expect(gated).toEqual([
             'Bookmarks',
             'History',
-            'Messages',
             'Notifications',
             'Settings',
         ]);

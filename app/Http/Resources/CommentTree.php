@@ -175,8 +175,8 @@ final class CommentTree
                 'time' => RelativeTime::since($post->posted_at),
                 'body' => $post->body,
 
-                /** Clover's own votes. Task 11b, so nothing has any yet. */
-                'blessings' => 0,
+                /** Clover's own votes, net of curses. */
+                'blessings' => $post->blessings(),
 
                 'op' => self::isOriginalAnon($post, $originalTripcode),
 

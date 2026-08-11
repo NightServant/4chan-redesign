@@ -30,7 +30,6 @@ it('redirects signed-out visitors away from personal destinations', function (st
     '/account',
     '/bookmarks',
     '/history',
-    '/messages',
     '/notifications',
 ]);
 
@@ -40,6 +39,5 @@ it('serves personal destinations to a signed-in anon', function (string $uri): v
     '/account',
     '/bookmarks',
     '/history',
-    '/messages',
     '/notifications',
 ]);

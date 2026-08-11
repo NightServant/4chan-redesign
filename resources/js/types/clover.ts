@@ -248,29 +248,25 @@ export interface BoardDirectoryEntry extends Board {
     worksafe: boolean;
 }
 
-/** One message in a conversation. */
-export interface Message {
-    id: number;
-    /** True when this anon wrote it, false when the other did. */
-    outgoing: boolean;
-    body: string;
-    /** Relative and pre-formatted, e.g. `2 min ago`. */
-    time: string;
-}
-
 /**
- * A conversation with one other anon.
+ * A board as listed in the directory.
  *
- * Correspondents are identified by handle, not by post: messaging is an
- * account feature and carries no thread identity with it.
+ * Extends `Board` with the copy and state the directory needs. `slug` must
+ * be a routable board: the directory links every row, so a slug the router
+ * does not know would ship a dead link on a page whose entire job is links.
  */
-export interface Conversation {
-    id: number;
-    /** The other anon's handle. */
-    handle: string;
-    /** Pre-formatted, e.g. `2 min ago`. */
-    time: string;
-    /** Unread count. Zero when nothing is unread. */
-    unread: number;
-    messages: Message[];
+export interface BoardDirectoryEntry extends Board {
+    description: string;
+    /**
+     * Clover's own grouping, not 4chan's: `boards.json` carries no category.
+     * Describes subject matter only and says nothing about whether a board is
+     * worksafe — `worksafe` is the field that decides what an anon is shown.
+     */
+    category: string;
+    subscribed: boolean;
+    /**
+     * 4chan's own `ws_board` flag. Boards where this is false are hidden
+     * unless an anon has opted into seeing them.
+     */
+    worksafe: boolean;
 }

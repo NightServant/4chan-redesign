@@ -6,7 +6,6 @@ import {
     HistoryIcon,
     HouseIcon,
     LayoutGridIcon,
-    MailIcon,
     SettingsIcon,
     UserIcon,
 } from 'lucide-react';
@@ -17,7 +16,6 @@ import {
     history,
     home,
     latest,
-    messages,
     notifications,
     popular,
 } from '@/routes';
@@ -49,7 +47,6 @@ const PRIMARY_NAV: readonly CloverNavItem[] = [
         icon: HistoryIcon,
         requiresAuth: true,
     },
-    { title: 'Messages', href: messages(), icon: MailIcon, requiresAuth: true },
     {
         title: 'Notifications',
         href: notifications(),
@@ -79,12 +76,6 @@ const MOBILE_NAV: readonly CloverNavItem[] = [
         title: 'History',
         href: history(),
         icon: HistoryIcon,
-        requiresAuth: true,
-    },
-    {
-        title: 'Messages',
-        href: messages(),
-        icon: MailIcon,
         requiresAuth: true,
     },
     {

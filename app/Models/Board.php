@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
@@ -68,6 +69,13 @@ class Board extends Model
     public function threads(): HasMany
     {
         return $this->hasMany(Thread::class);
+    }
+
+    /** @return BelongsToMany<User, $this> */
+    public function subscribers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'board_subscriptions')
+            ->withTimestamps();
     }
 
     /**

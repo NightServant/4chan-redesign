@@ -66,16 +66,16 @@ describe('MobileNav', () => {
         ).not.toBeInTheDocument();
     });
 
-    it('renders all five destinations when signed in', () => {
+    it('renders all four destinations when signed in', () => {
         mockPage({ signedIn: true });
 
         render(<MobileNav />);
 
         expect(
             screen.getAllByRole('link', {
-                name: /Home|Popular|History|Messages|You/,
+                name: /Home|Popular|History|You/,
             }),
-        ).toHaveLength(5);
+        ).toHaveLength(4);
     });
 
     /**
@@ -127,7 +127,7 @@ describe('MobileNav', () => {
         expect(screen.getByRole('navigation')).toBeInTheDocument();
     });
 
-    it('lays out two items and five items without a fixed five-column assumption', () => {
+    it('lays out two items and four items without a fixed column-count assumption', () => {
         mockPage({ signedIn: false });
 
         const { container: signedOutContainer } = render(<MobileNav />);
@@ -140,6 +140,6 @@ describe('MobileNav', () => {
         const { container: signedInContainer } = render(<MobileNav />);
         const signedInLinks = signedInContainer.querySelectorAll('a');
 
-        expect(signedInLinks).toHaveLength(5);
+        expect(signedInLinks).toHaveLength(4);
     });
 });
