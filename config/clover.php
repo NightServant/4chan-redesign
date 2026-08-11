@@ -6,20 +6,107 @@ return [
 
     /*
     |---------------------------------------------------------------------------
-    | Board slugs
+    | Upstream API
     |---------------------------------------------------------------------------
     |
-    | Board URLs keep the imageboard's own shape, so `/g/` is a board and
-    | `/g/58210441` is a thread on it. That shape matches every other
-    | single-segment route on the site, which means the router would happily
-    | resolve `/rules` as a board named "rules" and shadow the real page.
+    | 4chan's read-only JSON API. Its documentation asks for no more than one
+    | request a second and for `If-Modified-Since` on every request, so the
+    | client honours both rather than treating them as advisory.
     |
-    | Constraining the route parameter to this list is what prevents that. It
-    | mirrors the slugs in `resources/js/fixtures/clover.ts` and is replaced by
-    | a database lookup when the backend lands.
+    | Nothing is ever written upstream: the API accepts GET, HEAD and OPTIONS
+    | only. Anything an anon does here stays in this application's database.
     |
     */
 
-    'boards' => ['g', 'wg', 'biz', 'x', 'fit', 'co', 'b'],
+    'api' => [
+        'base_url' => env('CLOVER_API_BASE_URL', 'https://a.4cdn.org'),
+
+        /** Seconds between requests. Upstream asks for one; this is the floor. */
+        'rate_limit_seconds' => 1,
+
+        'timeout' => 10,
+    ],
+
+    /*
+    |---------------------------------------------------------------------------
+    | Board categories
+    |---------------------------------------------------------------------------
+    |
+    | Ours, not upstream's. 4chan groups boards on its index page but does not
+    | expose the grouping in `boards.json`, so the directory would have nothing
+    | to group by without this map. Anything unlisted falls to the default,
+    | which keeps a board created after this list was written visible rather
+    | than dropping it off the directory entirely.
+    |
+    | Category describes subject matter and nothing else. It is deliberately
+    | orthogonal to `ws_board`: /wg/, /t/ and /pol/ are all marked not-worksafe
+    | upstream without being adult boards, so folding safety into the grouping
+    | would file them under a heading that misdescribes them. What an anon is
+    | shown is decided by `worksafe`; what it sits under is decided here.
+    |
+    | A slug must appear at most once. `BoardCategoryTest` fails if one appears
+    | twice, because a duplicate makes the lookup order-dependent and the board
+    | would land in whichever heading happened to be declared first.
+    |
+    */
+
+    'categories' => [
+
+        'default' => 'Other',
+
+        'map' => [
+            'Japanese Culture' => ['a', 'c', 'w', 'm', 'cgl', 'cm', 'f', 'n', 'jp', 'vt'],
+            'Video Games' => ['v', 'vg', 'vm', 'vmg', 'vp', 'vr', 'vrpg', 'vst', 'tg', 'qst', 'vip'],
+            'Interests' => ['g', 'co', 'diy', 'sci', 'his', 'int', 'k', 'o', 'ck', 'lit', 'sp', 'tv', 'news', 'out', 'toy', 'trv', 'an', 'fa', 'biz', 'fit', 'pw', 'xs', 'x', 'adv'],
+            'Creative' => ['3', 'i', 'ic', 'gd', 'mu', 'po', 'p', 'wg', 'wsg', 'wsr', 'hr', 't'],
+            'Adult' => ['aco', 'd', 'e', 'gif', 'h', 'hc', 'hm', 'r', 's', 'u', 'y', 'soc'],
+            'Misc' => ['b', 'bant', 'pol', 'r9k', 's4s', 'trash', 'mlp', 'lgbt'],
+        ],
+
+    ],
+
+    /*
+    |---------------------------------------------------------------------------
+    | Sync
+    |---------------------------------------------------------------------------
+    |
+    | What `clover:sync` pulls on an unqualified run. Threads are capped per
+    | board because a catalog is eleven pages deep and the feed only ever shows
+    | the most recently bumped few; pulling all of them would spend the rate
+    | limit on rows nothing reads.
+    |
+    */
+
+    'sync' => [
+        'threads_per_board' => 30,
+
+        /**
+         * Boards synced when none are named. Empty means every board the API
+         * returns, which is the intended steady state; a short list is useful
+         * while developing so a full sync is not 77 requests.
+         *
+         * @var array<int, string>
+         */
+        'boards' => [],
+    ],
+
+    /*
+    |---------------------------------------------------------------------------
+    | Routing fallback
+    |---------------------------------------------------------------------------
+    |
+    | `/{board}` has the same shape as every named page on the site, so without
+    | a constraint the router resolves `/rules` as a board and shadows the real
+    | page. The constraint is built from the synced board slugs.
+    |
+    | Routes are registered before the database is necessarily reachable —
+    | during `migrate` on a fresh clone, for instance — so the slug list needs
+    | a value that does not depend on a query having succeeded. These are it.
+    | They are a floor, not the real list: once a sync has run the constraint
+    | comes from the `boards` table.
+    |
+    */
+
+    'fallback_boards' => ['g', 'wg', 'biz', 'x', 'fit', 'co', 'b'],
 
 ];

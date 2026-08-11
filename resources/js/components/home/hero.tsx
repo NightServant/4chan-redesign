@@ -3,28 +3,35 @@ import type { ComponentProps } from 'react';
 import { MachineValue } from '@/components/clover/machine-value';
 import { ThreadCard } from '@/components/clover/thread-card';
 import { Button } from '@/components/ui/button';
-import { THREADS } from '@/fixtures/clover';
-import { cn, toUrl } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { popular } from '@/routes';
+import type { Thread } from '@/types/clover';
 
 /**
  * The homepage's opening band: a split composition rather than a centred
  * headline, since a centred hero over a dark field is the single most
  * recognisable AI-generated layout.
  *
- * The right column previews two real `ThreadCard`s rather than inventing a
- * screenshot or illustration. Thread routes do not exist yet, so both are
- * pointed at `popular()` instead of their own thread. That also means both
- * would otherwise expose identical title links, plus a full set of vote and
- * bookmark controls, to assistive technology in the middle of a marketing
- * page. Since the CTA already states the real destination in words, the
- * whole preview stack is marked `aria-hidden` and `inert`: taken out of the
- * accessibility tree and the tab order together, rather than picking one
- * card to expose and hiding the other. `aria-hidden` alone would leave its
- * buttons focusable but silent to a screen reader, which is worse than not
- * exposing the stack at all.
+ * The right column previews real `ThreadCard`s rather than inventing a
+ * screenshot or illustration, and the threads are whatever the page handed
+ * down: ingested rows, not a fixture, so the preview is a sample of the site
+ * rather than a mock of it.
+ *
+ * The stack stays out of the accessibility tree. Each card carries a title
+ * link plus a full set of vote and bookmark controls, and a marketing hero is
+ * the wrong place to hand a screen reader six controls that duplicate the CTA
+ * beside them. So the whole stack is `aria-hidden` and `inert` together:
+ * `aria-hidden` alone would leave its buttons focusable but silent, which is
+ * worse than not exposing the stack at all.
  */
-type HeroProps = Omit<ComponentProps<'section'>, 'children'>;
+type HeroProps = Omit<ComponentProps<'section'>, 'children'> & {
+    /**
+     * The threads to preview, already sliced by the page. Empty is an
+     * ordinary state, not a failure: before the first sync there is nothing
+     * to show, and the hero's argument is made in the left column anyway.
+     */
+    threads: readonly Thread[];
+};
 
 const HEADLINE =
     'The same boards, threads and greentext. Without the 2003 interface.';
@@ -43,9 +50,7 @@ const GRID_BACKGROUND = {
         'radial-gradient(100% 80% at 30% 20%, #000 20%, transparent 75%)',
 };
 
-function Hero({ className, ...props }: HeroProps) {
-    const previewThreads = [THREADS[0], THREADS[3]];
-
+function Hero({ threads, className, ...props }: HeroProps) {
     return (
         <section
             data-slot="hero"
@@ -80,9 +85,14 @@ function Hero({ className, ...props }: HeroProps) {
                         </Button>
                     </div>
 
+                    {/* This line used to end "· 74 boards". Nothing produced
+                        that 74: 4chan publishes 77 boards and shows a
+                        visitor only the ones their settings permit, so the
+                        figure was wrong for every reader of it. The board
+                        count is stated once, by the grid below, where it is
+                        counted from what is actually on the page. */}
                     <MachineValue>
-                        Free · Reading needs no account · Posting does · 74
-                        boards
+                        Free · Reading needs no account · Posting does
                     </MachineValue>
                 </div>
 
@@ -97,12 +107,11 @@ function Hero({ className, ...props }: HeroProps) {
                     inert
                     className="flex flex-col gap-3"
                 >
-                    {previewThreads.map((thread, index) => (
+                    {threads.map((thread, index) => (
                         <ThreadCard
                             key={thread.no}
                             thread={thread}
-                            href={toUrl(popular())}
-                            className={cn(index === 1 && 'opacity-60')}
+                            className={cn(index > 0 && 'opacity-60')}
                         />
                     ))}
                 </div>

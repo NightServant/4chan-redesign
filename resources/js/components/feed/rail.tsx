@@ -6,30 +6,46 @@ import {
     CircleIcon,
     MessageSquareIcon,
     ShieldIcon,
-    TriangleAlertIcon,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useState } from 'react';
-import { AnonAvatar } from '@/components/clover/anon-avatar';
 import { BoardAvatar } from '@/components/clover/board-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
 import { Panel } from '@/components/clover/panel';
 import { Button } from '@/components/ui/button';
-import { ACTIVITY, BOARDS, TRENDING } from '@/fixtures/clover';
+import { ACTIVITY } from '@/fixtures/clover';
 import { cn } from '@/lib/utils';
 import { communities, search } from '@/routes';
-import type { BoardSlug } from '@/types/clover';
+import type { Board, BoardSlug, TrendingTag } from '@/types/clover';
 
 /**
- * The feed's sticky sidebar: trending tags, a handful of boards, the rules,
- * a moderation notice, who is online, and recent activity. Six panels, one
- * `aside`, no props: every other page composing the feed reaches into the
- * same fixtures rather than this component taking them as input.
+ * The feed's sticky sidebar: trending boards, a handful of boards to join, the
+ * rules, moderation notices, and recent activity.
+ *
+ * It used to take no props and read the fixtures directly, which was
+ * deliberate while there was no server to ask. There is one now, and the feed
+ * page passes down boards and trending figures the database actually counted.
+ *
+ * Two panels did not survive contact with the real data source.
+ *
+ * "Who is online" is gone. Its entire content was `228,025 anons online` and a
+ * row of decorative avatars, and 4chan's JSON API publishes no presence figure
+ * at any scope — not per board, not site-wide. There is no honest version of
+ * that panel, not even an empty one, because the panel *was* the number.
+ *
+ * "Moderation notices" kept its place but lost its content. It claimed /biz/
+ * was under slow mode until 18:00 UTC, which is a specific false statement
+ * about a live board now that /biz/ is a real board. Nothing upstream reports
+ * moderation state, so it renders an honest empty state instead — the same
+ * choice the footer's unwritten pages got, for the same reason: removing the
+ * affordance hides it from screen-reader navigation and makes the rail read as
+ * broken, while leaving the copy in place would simply be a lie.
+ *
+ * `ACTIVITY` is still a fixture. Activity is account-shaped and belongs to
+ * task 11b along with bookmarks, history and votes.
  */
 
 const POPULAR_BOARDS_COUNT = 4;
-const ONLINE_AVATAR_COUNT = 5;
-const ONLINE_COUNT = '228,025 anons online';
 
 const COMMUNITY_RULES = [
     'Post on topic for the board you are on.',
@@ -68,11 +84,20 @@ const actionLinkClasses = cn(
     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
 );
 
-function TrendingPanel() {
+/**
+ * Titled "Trending boards", not "Trending topics".
+ *
+ * The rows are boards now. 4chan has no topic field, no tags and nothing to
+ * aggregate into one, so the fixture's `risc-v` and `homelab` could only have
+ * been reproduced by inventing them on every render. Busiest boards is the
+ * real quantity nearest to what the panel was showing, and calling it what it
+ * is costs nothing.
+ */
+function TrendingPanel({ trending }: { trending: TrendingTag[] }) {
     return (
-        <Panel title="Trending topics">
+        <Panel title="Trending boards">
             <ul role="list" className="flex flex-col gap-1">
-                {TRENDING.map((item, index) => (
+                {trending.map((item, index) => (
                     <li key={item.tag}>
                         <Link
                             href={search({ query: { tag: item.tag } }).url}
@@ -96,7 +121,7 @@ function TrendingPanel() {
     );
 }
 
-function PopularBoardsPanel() {
+function PopularBoardsPanel({ boards }: { boards: Board[] }) {
     const [joined, setJoined] = useState<Partial<Record<BoardSlug, boolean>>>(
         {},
     );
@@ -115,7 +140,7 @@ function PopularBoardsPanel() {
             }
         >
             <ul role="list" className="flex flex-col gap-3">
-                {BOARDS.slice(0, POPULAR_BOARDS_COUNT).map((board) => {
+                {boards.slice(0, POPULAR_BOARDS_COUNT).map((board) => {
                     const isJoined = joined[board.slug] ?? false;
 
                     return (
@@ -133,7 +158,7 @@ function PopularBoardsPanel() {
                                     {board.name}
                                 </p>
                                 <MachineValue>
-                                    {`${board.slug} · ${board.online} online`}
+                                    {`${board.slug} · ${board.threads} threads`}
                                 </MachineValue>
                             </div>
                             <Button
@@ -186,45 +211,9 @@ function CommunityRulesPanel() {
 function ModerationNoticesPanel() {
     return (
         <Panel title="Moderation notices">
-            <div
-                role="note"
-                className="flex items-start gap-2.5 rounded-md border border-warning-line bg-warning-soft p-3"
-            >
-                <TriangleAlertIcon
-                    aria-hidden="true"
-                    className="mt-0.5 size-4 shrink-0 text-warning"
-                />
-                <p className="text-body-sm text-foreground">
-                    /biz/ is under slow mode until 18:00 UTC. One post per anon
-                    every 5 minutes.
-                </p>
-            </div>
-        </Panel>
-    );
-}
-
-/**
- * The avatars are one decorative unit standing in for the count already
- * spelled out in the `MachineValue` beside them. `AnonAvatar` without a
- * `label` renders `aria-hidden` on its own, so the stack never reaches
- * assistive technology as five separate images.
- */
-function WhoIsOnlinePanel() {
-    return (
-        <Panel title="Who is online">
-            <div className="flex items-center gap-3">
-                <div className="flex -space-x-2">
-                    {Array.from({ length: ONLINE_AVATAR_COUNT }, (_, index) => (
-                        <AnonAvatar
-                            key={index}
-                            seed={`rail-online-${index}`}
-                            size={26}
-                            className="border-2 border-surface"
-                        />
-                    ))}
-                </div>
-                <MachineValue>{ONLINE_COUNT}</MachineValue>
-            </div>
+            <p className="text-body-sm text-muted-foreground">
+                No notices right now.
+            </p>
         </Panel>
     );
 }
@@ -259,18 +248,24 @@ function RecentActivityPanel() {
     );
 }
 
-function Rail() {
+type RailProps = {
+    /** The busiest boards, chosen and counted server-side. */
+    boards: Board[];
+    /** Busiest boards by post total, in the shape the strip already rendered. */
+    trending: TrendingTag[];
+};
+
+function Rail({ boards, trending }: RailProps) {
     return (
         <aside
             aria-label="Community sidebar"
             data-slot="feed-rail"
             className="sticky top-22 hidden w-[330px] shrink-0 flex-col gap-3.5 self-start lg:flex"
         >
-            <TrendingPanel />
-            <PopularBoardsPanel />
+            <TrendingPanel trending={trending} />
+            <PopularBoardsPanel boards={boards} />
             <CommunityRulesPanel />
             <ModerationNoticesPanel />
-            <WhoIsOnlinePanel />
             <RecentActivityPanel />
         </aside>
     );

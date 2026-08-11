@@ -18,7 +18,7 @@ The design lives in a Claude Design project and is treated as a blueprint, not a
 
 Some of it is not a port at all. The prototype has no command palette, no thread page and no composer: it stubs the last two with copy claiming the design system ships them, and it does not. Those are net-new work built to sit inside the system rather than beside it.
 
-Boards, threads and replies currently render from typed fixtures. The contracts in `resources/js/types/clover.ts` are shaped so components do not change when Eloquent replaces them.
+Boards, threads and posts are ingested from 4chan's read-only JSON API into Eloquent and reach the screens as Inertia props. Everything account-shaped — profiles, settings, two-factor, passkeys — is this application's own, so Clover is two data sources behind one set of typed contracts rather than a mirror.
 
 ## Features
 
@@ -29,8 +29,11 @@ Boards, threads and replies currently render from typed fixtures. The contracts 
 - **App chrome** &mdash; collapsible sidebar with persisted state, sticky header with account and notification menus, and a mobile bottom bar that respects the home-indicator inset
 - **Community layer** &mdash; thread cards with a stretched-link target so vote buttons stay independently focusable, a recursive comment tree with real list semantics, collapse and a depth cap, and blessings and curses rather than upvotes
 - **Feed, boards and threads** &mdash; three feed sorts, a board page per slug with a real empty state, and a thread view that handles a post number matching nothing as an ordinary case rather than an error
-- **Imageboard URLs** &mdash; `/g/` is a board and `/g/58210441` a thread, constrained to known slugs so they cannot shadow the site's own pages
-- **Composers that do not lie** &mdash; a reply form inline where replying belongs and a dialog for starting a thread, both refusing empty input, both stating in the source that nothing is submitted yet
+- **Real data, read-only upstream** &mdash; 77 boards, their catalogs and their posts ingested from 4chan's JSON API by `clover:sync`, rate limited to one request a second and conditional on `If-Modified-Since`; nothing is ever written back
+- **Greentext that works** &mdash; post bodies are parsed from 4chan's HTML to plain text on ingest, then rendered line by line with quote lines styled and `>>` references picked out, without `dangerouslySetInnerHTML` anywhere
+- **Adult boards behind an opt-in** &mdash; `ws_board` drives it, the preference is account-level and off by default, and a board you have not opted into answers 404 rather than 403 so its existence is not confirmed
+- **Imageboard URLs** &mdash; `/g/` is a board and `/g/109522303` a thread, constrained to the synced slug list so they cannot shadow the site's own pages
+- **Composers that do not lie** &mdash; a reply form inline where replying belongs and a dialog for starting a thread, both refusing empty input, both enforcing the board's own `max_comment_chars` rather than one global guess, and both stating in the source that nothing is submitted yet
 - **Marketing homepage** &mdash; hero, board grid, trending strip, features, and a footer whose every destination resolves to a real page
 - **Accessibility as a build constraint** &mdash; focus rings never removed, state never carried by colour alone, tests asserting accessible names and keyboard paths instead of class strings
 - **Motion that means something** &mdash; four duration tokens, exits at roughly 65% of their enter, layout properties never animated, and a reduced-motion rule asserted against the compiled stylesheet
@@ -47,6 +50,7 @@ Boards, threads and replies currently render from typed fixtures. The contracts 
 | Auth | [Laravel Fortify](https://laravel.com/docs/fortify) · two-factor · passkeys |
 | Routing | [Wayfinder](https://github.com/laravel/wayfinder) typed route helpers |
 | Database | SQLite · Eloquent |
+| Upstream data | [4chan read-only JSON API](https://github.com/4chan/4chan-API) · scheduled ingest |
 | Testing | [Pest 4](https://pestphp.com) · [Vitest 4](https://vitest.dev) · Testing Library |
 | Quality | Larastan (level 7) · Pint · ESLint 9 · Prettier 3 |
 
@@ -99,9 +103,16 @@ cd 4chan-redesign
 # 2. Install both dependency trees, copy .env, generate a key, migrate, build
 composer setup
 
-# 3. Run the dev server
+# 3. Pull real boards and threads from 4chan (one request a second)
+php artisan clover:sync --with-posts
+
+# 4. Run the dev server
 composer dev
 ```
+
+Without step 3 the site runs and every route resolves, but there are no boards
+and the feed says so. `clover:sync --board=g --limit=5` is enough to see it
+working without spending several minutes on a full sync.
 
 Open [http://localhost:8000](http://localhost:8000). Served by [Laravel Herd](https://herd.laravel.com) at `https://4chan-redesign.test` if you use it.
 
@@ -123,7 +134,7 @@ vendor/bin/pint          # PHP formatting
 
 ## Progress
 
-Work is sequenced into gated tasks. Each is built, reviewed, merged to `main` as one squashed commit, and verified on `main` before the next begins. **Current suite: 519 frontend tests, 101 backend tests.**
+Work is sequenced into gated tasks. Each is built, reviewed, merged to `main` as one squashed commit, and verified on `main` before the next begins. **Current suite: 835 frontend tests, 212 backend tests.**
 
 | Task | Scope | Status |
 |---|---|---|
@@ -137,21 +148,32 @@ Work is sequenced into gated tasks. Each is built, reviewed, merged to `main` as
 | 7 | Feed and board pages; board and thread routing | [Merged](https://github.com/NightServant/4chan-redesign/pull/15) |
 | 8 | Thread view, reply composer, new-thread dialog, auth gate | [Merged](https://github.com/NightServant/4chan-redesign/pull/16) |
 | 8.1 | Review fixes: Home resolves by auth state, feed sort tabs removed | [Merged](https://github.com/NightServant/4chan-redesign/pull/17) |
-| 9 | Account, history, auth screens, error pages | Planned |
-| 10 | The six screens the prototype never covered: settings, messages, bookmarks, communities, two-factor, passkeys | Planned |
-| 11 | Backend data layer, replacing fixtures with Eloquent | Planned |
+| 9 | Account, history, auth screens, error pages | [Merged](https://github.com/NightServant/4chan-redesign/pull/19) |
+| 10 | The six screens the prototype never covered: settings, messages, bookmarks, communities, two-factor, passkeys | [Merged](https://github.com/NightServant/4chan-redesign/pull/19) |
+| 11a | Read layer: ingest from 4chan's API, board and thread models, per-board limits, mature-board gating | In review |
+| 11b | Account layer: bookmarks, history, messages, blessings and curses, local posting | Planned |
 
 The app is navigable end to end: homepage, feed, board, thread, reply. Every link resolves.
 
 ### Known gaps
 
-- **No backend yet.** Boards, threads and replies render from fixtures in `resources/js/fixtures/`. Nothing submits: composers hold local state and say so in comments rather than faking a post that vanishes on reload.
-- **Auth screens bypass the token layer.** The split auth layout still uses raw greys instead of Clover tokens. Task 9.
-- **Six screens are placeholders.** Settings, messages, bookmarks, communities and the anon's own profile resolve to a page that states what will be there, rather than 404ing. Task 10.
+- **Nothing submits yet.** The API upstream is read-only, so posting is Clover's own and lands in task 11b along with blessings, bookmarks, history and messages. Composers hold local state and say so rather than faking a post that vanishes on reload.
+- **The feed does not page.** It is one query with a limit. The previous "Load more" was removed rather than kept, because it showed two skeletons and put itself back — paging a server-backed feed needs a cursor on the prop.
+- **Account-shaped fixtures remain** in `resources/js/fixtures/clover.ts`: profile, history, bookmarks, conversations and activity. Task 11b replaces them.
+- **Nothing has been checked in a browser by eye.** Every route is asserted to render, but the visual review of task 11a has not happened.
+- **`php artisan route:cache` freezes the board list.** The `/{board}` constraint is built from the synced table, so a deployment that caches routes must re-cache them after a sync adds boards.
 
 ## Data notes
 
-Board, thread and reply content is fixture data written for this project, in the product's voice. It is not scraped from 4chan and no real posts are reproduced. Attachments are never invented: media renders as a labelled placeholder carrying filename, dimensions and size rather than a stock photograph.
+Board, thread and post content is **real, and comes from 4chan**, via its [read-only JSON API](https://github.com/4chan/4chan-API). It is fetched server-side, at most one request a second with `If-Modified-Since` as the API's documentation asks, and nothing is ever sent upstream — the API accepts `GET`, `HEAD` and `OPTIONS` only. Everything an anon does here stays in this application's database.
+
+Post bodies are parsed to plain text on the way in. The API returns `com` as HTML written by anonymous strangers, so it is converted once during ingest rather than trusted into the DOM at render time; there is no `dangerouslySetInnerHTML` anywhere in the app.
+
+**Attachments are metadata only.** The API reports a real filename, extension, dimensions and byte size, and those are what the placeholder renders. No image is fetched, hotlinked or displayed.
+
+Boards 4chan marks `ws_board: 0` are hidden unless an anon opts in, and a signed-out visitor always gets the filtered view. Requesting one you have not opted into returns 404 rather than 403, so the board's existence is not confirmed to someone who asked not to see boards like it.
+
+Two figures the design carried were removed rather than estimated, because the API publishes neither at any scope: a per-board "anons online" count, and per-thread views. Where a number has no source it is not shown. The same rule governs copy: the rail's moderation panel no longer claims a board is under slow mode, because nothing upstream reports moderation state.
 
 Fonts are Inter and Space Grotesk, both under the SIL Open Font License, vendored and subset to WOFF2. Icons are Lucide, ISC licensed.
 

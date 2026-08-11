@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { THREADS } from '@/fixtures/clover';
+import { makeBoard, makeThread } from '@/fixtures/factories';
 import Board from '@/pages/board';
 import type { User } from '@/types/auth';
 
@@ -43,42 +43,76 @@ vi.mock('@inertiajs/react', () => ({
     },
 }));
 
+/* The server sends this page one board and that board's threads, already
+   filtered and in bump order. There is no longer a client-side filter to
+   test, so the props are simply what the controller would have produced. */
+const TECHNOLOGY = {
+    ...makeBoard({ slug: '/g/', name: 'Technology', threads: '18,402' }),
+    description: 'Hardware, software and the arguments between them.',
+};
+
+const COMICS = {
+    ...makeBoard({ slug: '/co/', name: 'Comics', threads: '0' }),
+    description: 'Cartoons, comics and storyboards.',
+};
+
+const G_THREADS = [
+    makeThread({
+        board: '/g/',
+        title: 'Anons are still arguing about init systems',
+    }),
+    makeThread({
+        board: '/g/',
+        title: 'Mainline kernel support or vendor tree',
+    }),
+];
+
 beforeEach(() => {
     mockPage.props = { auth: { user: null }, sidebarOpen: true };
     mockPage.url = '/g/';
 });
 
 describe('Board', () => {
-    it("renders the board's name, slug and online count in the header", () => {
-        render(<Board slug="/g/" />);
+    it("renders the board's name, slug and thread count in the header", () => {
+        render(
+            <Board
+                board={TECHNOLOGY}
+                threads={G_THREADS}
+                maxCommentChars={2000}
+            />,
+        );
 
         expect(
             screen.getByRole('heading', { level: 1, name: 'Technology' }),
         ).toBeInTheDocument();
-        expect(screen.getByText('/g/ · 41,208 online')).toBeInTheDocument();
+        expect(screen.getByText('/g/ · 18,402 threads')).toBeInTheDocument();
     });
 
-    it('lists exactly the threads belonging to this board and none of the others', () => {
-        render(<Board slug="/g/" />);
+    /* The board's threads are chosen by the query now, so what this asserts is
+       that the page renders every thread it is handed — not that it filters a
+       longer list correctly, which is no longer its job. */
+    it('lists every thread it is given', () => {
+        render(
+            <Board
+                board={TECHNOLOGY}
+                threads={G_THREADS}
+                maxCommentChars={2000}
+            />,
+        );
 
-        const gThreads = THREADS.filter((thread) => thread.board === '/g/');
-        const otherThreads = THREADS.filter((thread) => thread.board !== '/g/');
-
-        for (const thread of gThreads) {
+        for (const thread of G_THREADS) {
             expect(
                 screen.getByRole('link', { name: thread.title }),
             ).toBeInTheDocument();
         }
 
-        for (const thread of otherThreads) {
-            expect(
-                screen.queryByRole('link', { name: thread.title }),
-            ).not.toBeInTheDocument();
-        }
+        expect(
+            screen.getAllByRole('link', { name: /arguing|mainline/i }),
+        ).toHaveLength(G_THREADS.length);
     });
 
-    it('renders the empty state and no thread cards for a board with no fixture threads', () => {
-        render(<Board slug="/co/" />);
+    it('renders the empty state and no thread cards for a board with no threads', () => {
+        render(<Board board={COMICS} threads={[]} maxCommentChars={2000} />);
 
         expect(
             screen.getByRole('heading', { name: 'No threads on /co/ yet' }),
@@ -89,7 +123,7 @@ describe('Board', () => {
             ),
         ).toBeInTheDocument();
 
-        for (const thread of THREADS) {
+        for (const thread of G_THREADS) {
             expect(
                 screen.queryByRole('link', { name: thread.title }),
             ).not.toBeInTheDocument();
@@ -97,7 +131,7 @@ describe('Board', () => {
     });
 
     it("links the empty state's action to popular()", () => {
-        render(<Board slug="/co/" />);
+        render(<Board board={COMICS} threads={[]} maxCommentChars={2000} />);
 
         const action = screen.getByRole('link', {
             name: 'Browse popular threads',
@@ -108,7 +142,13 @@ describe('Board', () => {
 
     it('toggles the subscribe control and exposes its pressed state to assistive technology', async () => {
         const user = userEvent.setup();
-        render(<Board slug="/g/" />);
+        render(
+            <Board
+                board={TECHNOLOGY}
+                threads={G_THREADS}
+                maxCommentChars={2000}
+            />,
+        );
 
         const toggle = screen.getByRole('button', { name: 'Subscribe' });
         expect(toggle).toHaveAttribute('aria-pressed', 'false');
@@ -121,19 +161,31 @@ describe('Board', () => {
     });
 
     it('has exactly one first-level heading', () => {
-        render(<Board slug="/g/" />);
+        render(
+            <Board
+                board={TECHNOLOGY}
+                threads={G_THREADS}
+                maxCommentChars={2000}
+            />,
+        );
 
         expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     });
 
     it('has exactly one first-level heading on an empty board too', () => {
-        render(<Board slug="/co/" />);
+        render(<Board board={COMICS} threads={[]} maxCommentChars={2000} />);
 
         expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     });
 
     it('renders the sort filter row with all three options', () => {
-        render(<Board slug="/g/" />);
+        render(
+            <Board
+                board={TECHNOLOGY}
+                threads={G_THREADS}
+                maxCommentChars={2000}
+            />,
+        );
 
         const tablist = screen.getByRole('tablist');
 

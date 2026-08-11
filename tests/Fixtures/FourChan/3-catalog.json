@@ -1,0 +1,129 @@
+[
+  {
+    "page": 1,
+    "threads": [
+      {
+        "no": 1011039,
+        "sticky": 1,
+        "closed": 1,
+        "now": "04/25/25(Fri)16:25:06",
+        "name": "Anonymous",
+        "com": "Welcome to /3/ - 3DCG, 4chan&#039;s board dedicated to 3D imagery and modeling.<br><br>If you&#039;re reading this, you probably got this linked to you because you posted a question that has already been asked many many times. Read ahead, and find your answer.<br><br>Scroll down for a useful FAQ and resource links",
+        "filename": "0",
+        "ext": ".png",
+        "w": 1080,
+        "h": 1920,
+        "tn_w": 140,
+        "tn_h": 250,
+        "tim": 1745612706357551,
+        "time": 1745612706,
+        "md5": "Mm95mdcrIUbB7FOMs8gH9w==",
+        "fsize": 2402874,
+        "resto": 0,
+        "capcode": "mod",
+        "semantic_url": "welcome-to-3-3dcg-4chans-board-dedicated-to-3d",
+        "replies": 60,
+        "images": 58,
+        "omitted_posts": 59,
+        "omitted_images": 57,
+        "last_replies": [
+          {
+            "no": 1011108,
+            "now": "04/25/25(Fri)17:11:17",
+            "name": "Anonymous",
+            "filename": "1493151700087",
+            "ext": ".jpg",
+            "w": 1167,
+            "h": 663,
+            "tn_w": 125,
+            "tn_h": 71,
+            "tim": 1745615477359802,
+            "time": 1745615477,
+            "md5": "9+Krc1fWtyJgpVsWZHenQg==",
+            "fsize": 59371,
+            "resto": 1011039,
+            "capcode": "mod"
+          }
+        ],
+        "last_modified": 1745615636
+      },
+      {
+        "no": 1030378,
+        "now": "07/16/26(Thu)09:18:40",
+        "name": "Anonymous",
+        "sub": "Blender General",
+        "com": "Previous <a href=\"/3/thread/1025688#p1025688\" rel=\"nofollow ugc\" class=\"quotelink\">&gt;&gt;1025688</a><br>Big Cat edition<br><span class=\"quote\">&gt;NEWS: 5.2 is out</span>",
+        "filename": "Blender_5.2_splash",
+        "ext": ".jpg",
+        "w": 1000,
+        "h": 500,
+        "tn_w": 250,
+        "tn_h": 125,
+        "tim": 1784207920321568,
+        "time": 1784207920,
+        "md5": "fMZKtfTppd4s+LCucf16Ug==",
+        "fsize": 175211,
+        "resto": 0,
+        "bumplimit": 0,
+        "imagelimit": 0,
+        "semantic_url": "blender-general",
+        "replies": 206,
+        "images": 45,
+        "omitted_posts": 201,
+        "omitted_images": 44,
+        "last_replies": [
+          {
+            "no": 1031265,
+            "now": "08/09/26(Sun)14:52:13",
+            "name": "Anonymous",
+            "com": "<a href=\"#p1031263\" class=\"quotelink\">&gt;&gt;1031263</a><br>nice, thanks for mentioning it. yeah i really should but it&#039;s hard to find the time. i work at a game studio but all the rigging and animation i just pass off to another person after i model characters. hopefully when things get calmer i can sit down to learn it",
+            "time": 1786301533,
+            "resto": 1030378
+          },
+          {
+            "no": 1031266,
+            "now": "08/09/26(Sun)15:06:25",
+            "name": "Anonymous",
+            "com": "<a href=\"#p1031265\" class=\"quotelink\">&gt;&gt;1031265</a><br>2/3 of these are completely free, and the 3rd is just extra tips/tools for the weightpainting process. Definitely enough info to get you going if you ever get a weekend to learn the workflow... Best of luck to you and worth noting I&#039;ve never paid for blender studio&#039;s subscription so I can&#039;t vouch for the paid content as worth it or not especially if you&#039;re working on video games and not solely in blender<br><br>https://studio.blender.org/tools/pi<wbr>peline-overview/asset-creation/rigg<wbr>ing",
+            "time": 1786302385,
+            "resto": 1030378
+          },
+          {
+            "no": 1031284,
+            "now": "08/10/26(Mon)15:16:29",
+            "name": "Anonymous",
+            "com": "<span class=\"quote\">&gt;need a part for a project</span><br><span class=\"quote\">&gt;&#039;hmm... I&#039;m going to need like four different variants of this part, and I don&#039;t want to spend an hour re-building it each time&#039;</span><br><span class=\"quote\">&gt;use geometry nodes</span><br><span class=\"quote\">&gt;takes 12 hours to make</span><br>why do I do this to myself?",
+            "time": 1786389389,
+            "resto": 1030378
+          },
+          {
+            "no": 1031289,
+            "now": "08/10/26(Mon)17:41:24",
+            "name": "Anonymous",
+            "com": "<a href=\"#p1031284\" class=\"quotelink\">&gt;&gt;1031284</a><br> if you only made it to specifically make those 4 variations then I&#039;m sorry for your loss but at least you had fun making it right? <br><span class=\"quote\">&gt;built geonodes asset that excels at a very specific niche purpose </span><br><span class=\"quote\">&gt;never have to rebuild it again as long as you don&#039;t have multiple storage drive failures</span>",
+            "time": 1786398084,
+            "resto": 1030378
+          },
+          {
+            "no": 1031290,
+            "now": "08/10/26(Mon)18:22:09",
+            "name": "Anonymous",
+            "com": "What are some good methods of making things look like cloth without actually using the cloth physics system? Ideally compute-lite.<br>Squashed Voronoi with smooth F1, distance fed through a float curve, used for displacement and bump gives a vaguely cloth-like wrinkle effect, but only looks at all good if the mesh density is fairly high (typical face size smaller than each Voronoi cell) and the object is tube-shaped.",
+            "filename": "Wrinkles 01",
+            "ext": ".png",
+            "w": 1920,
+            "h": 1080,
+            "tn_w": 125,
+            "tn_h": 70,
+            "tim": 1786400529706220,
+            "time": 1786400529,
+            "md5": "hEgnCWuX3WMUiri0QsJPBQ==",
+            "fsize": 1314755,
+            "resto": 1030378
+          }
+        ],
+        "last_modified": 1786400529
+      }
+    ]
+  }
+]

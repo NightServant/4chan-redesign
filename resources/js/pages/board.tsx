@@ -6,9 +6,8 @@ import { ThreadCard } from '@/components/clover/thread-card';
 import { BoardHeader } from '@/components/feed/board-header';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BOARDS, THREADS } from '@/fixtures/clover';
 import { popular } from '@/routes';
-import type { BoardSlug, Thread } from '@/types/clover';
+import type { Board as BoardType, Thread } from '@/types/clover';
 
 type SortOption = 'bumped' | 'new' | 'blessed';
 
@@ -21,10 +20,16 @@ const SORT_TABS: ReadonlyArray<{ value: SortOption; label: string }> = [
 /**
  * Orders a board's threads for a sort tab.
  *
- * `bumped` keeps fixture order, which already runs most-recently-active
- * first. `new` falls back to post number, since higher numbers are strictly
- * newer posts. `blessed` orders by blessing count. There is no per-sort
- * board URL, so this is local state on the page rather than a route param.
+ * `bumped` is the order the server sent, which is bump order — it is returned
+ * untouched rather than re-derived, because the client has no field that
+ * reproduces `bumped_at` and a second sort here could only disagree with the
+ * query. `new` falls back to post number, since higher numbers are strictly
+ * newer posts. `blessed` orders by blessing count, which is every thread's
+ * zero until task 11b builds voting, so that tab currently returns bump order
+ * too — a stable sort leaves equal keys alone.
+ *
+ * There is no per-sort board URL, so this stays local state on the page rather
+ * than a route param.
  */
 function sortThreads(threads: readonly Thread[], sort: SortOption): Thread[] {
     const sorted = [...threads];
@@ -39,23 +44,24 @@ function sortThreads(threads: readonly Thread[], sort: SortOption): Thread[] {
 }
 
 type BoardProps = {
-    slug: BoardSlug;
+    /** Carries the board's description, which only this page renders. */
+    board: BoardType & { description: string };
+    /** The board's threads, already in bump order from the server. */
+    threads: Thread[];
+    /** This board's own `max_comment_chars`, not a global constant. */
+    maxCommentChars: number;
 };
 
-export default function Board({ slug }: BoardProps) {
+/**
+ * The board resolves server-side now, so there is no longer a "slug matched
+ * nothing" branch to guard: a slug with no board behind it 404s in the
+ * controller rather than reaching a component that returns null. That branch
+ * was how a routable slug with no data rendered a blank page.
+ */
+export default function Board({ board, threads }: BoardProps) {
     const [sort, setSort] = useState<SortOption>('bumped');
 
-    const board = BOARDS.find((candidate) => candidate.slug === slug);
-    const threads = THREADS.filter((thread) => thread.board === slug);
-
-    /**
-     * The route constrains `slug` to a known board, so this never renders
-     * for a real request. It only guards the type of `board.find`, which is
-     * `Board | undefined`, without a non-null assertion.
-     */
-    if (!board) {
-        return null;
-    }
+    const slug = board.slug;
 
     return (
         <>

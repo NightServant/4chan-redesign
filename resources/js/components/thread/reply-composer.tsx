@@ -12,6 +12,13 @@ import { cn } from '@/lib/utils';
 export interface ReplyComposerProps {
     /** The thread being replied to. Seeds the composer's own anon mark. */
     threadNo: number;
+    /**
+     * The board's own `max_comment_chars`, which is 2000, 3000 or 5000
+     * depending on the board. Passed down by the thread page, which is the
+     * only layer that knows which board this thread lives on. Defaults to the
+     * shared fallback for callers with no board in hand.
+     */
+    maxCommentChars?: number;
     /** Fires with the typed body when a reply is posted. */
     onReply?: (body: string) => void;
     className?: string;
@@ -27,6 +34,7 @@ export interface ReplyComposerProps {
  */
 export function ReplyComposer({
     threadNo,
+    maxCommentChars = POST_MAX_LENGTH,
     onReply,
     className,
 }: ReplyComposerProps) {
@@ -36,7 +44,7 @@ export function ReplyComposer({
     const counterId = `${baseId}-counter`;
 
     const trimmed = body.trim();
-    const overLimit = body.length > POST_MAX_LENGTH;
+    const overLimit = body.length > maxCommentChars;
     const canSubmit = trimmed.length > 0 && !overLimit;
 
     function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -88,7 +96,7 @@ export function ReplyComposer({
                     <MachineValue
                         className={overLimit ? 'text-danger' : undefined}
                     >
-                        {body.length}/{POST_MAX_LENGTH}
+                        {body.length}/{maxCommentChars}
                     </MachineValue>
                     {overLimit ? (
                         <span className="text-caption font-medium">

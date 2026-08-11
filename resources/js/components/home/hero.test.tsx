@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { Hero } from '@/components/home/hero';
-import { THREADS } from '@/fixtures/clover';
+import { makeThread } from '@/fixtures/factories';
 
 /**
  * `Link` needs an Inertia page context that only exists inside
@@ -28,9 +28,20 @@ vi.mock('@inertiajs/react', () => ({
     },
 }));
 
+/* The hero previews whatever the page hands it. Four threads is enough to
+   prove it shows the two it is given and not the rest. */
+const THREADS = [
+    makeThread({ title: 'Anons are still arguing about init systems' }),
+    makeThread({ title: 'Mainline kernel support or vendor tree' }),
+    makeThread({ title: 'Battery life under sustained load' }),
+    makeThread({ title: 'A thread the hero was not given' }),
+];
+
+const PREVIEW = THREADS.slice(0, 2);
+
 describe('Hero', () => {
     it("renders the hero heading as the page's only h1, with the exact copy", () => {
-        render(<Hero />);
+        render(<Hero threads={PREVIEW} />);
 
         const headings = screen.getAllByRole('heading', { level: 1 });
 
@@ -41,7 +52,7 @@ describe('Hero', () => {
     });
 
     it('renders the intro paragraph verbatim', () => {
-        render(<Hero />);
+        render(<Hero threads={PREVIEW} />);
 
         expect(
             screen.getByText(
@@ -51,7 +62,7 @@ describe('Hero', () => {
     });
 
     it('makes the CTA a primary button linking to /popular, with the given label', () => {
-        render(<Hero />);
+        render(<Hero threads={PREVIEW} />);
 
         const cta = screen.getByRole('link', {
             name: 'Browse without an account',
@@ -62,17 +73,15 @@ describe('Hero', () => {
     });
 
     it('renders the machine-value line verbatim', () => {
-        render(<Hero />);
+        render(<Hero threads={PREVIEW} />);
 
         expect(
-            screen.getByText(
-                'Free · Reading needs no account · Posting does · 74 boards',
-            ),
+            screen.getByText('Free · Reading needs no account · Posting does'),
         ).toBeInTheDocument();
     });
 
     it('hides the gridline background from assistive technology', () => {
-        render(<Hero />);
+        render(<Hero threads={PREVIEW} />);
 
         const grid = document.querySelector('[data-slot="hero-grid"]');
 
@@ -81,7 +90,7 @@ describe('Hero', () => {
     });
 
     it('is a hairline-bordered band, not centred over a filled backdrop', () => {
-        render(<Hero />);
+        render(<Hero threads={PREVIEW} />);
 
         const hero = document.querySelector('[data-slot="hero"]');
 
@@ -93,16 +102,21 @@ describe('Hero', () => {
      * /popular rather than their own thread, or a first-time visitor lands
      * in a 404 straight out of the hero.
      */
-    it('renders two thread-card previews, both pointing at /popular rather than a thread route', () => {
-        const { container } = render(<Hero />);
+    it('renders a thread-card preview for each thread it is given', () => {
+        const { container } = render(<Hero threads={PREVIEW} />);
 
         const previewLinks = container.querySelectorAll(
             '[data-slot="thread-card"] a',
         );
 
         expect(previewLinks).toHaveLength(2);
-        previewLinks.forEach((link) => {
-            expect(link).toHaveAttribute('href', '/popular');
+        previewLinks.forEach((link, index) => {
+            const thread = PREVIEW[index];
+
+            expect(link).toHaveAttribute(
+                'href',
+                `/${thread.board.replaceAll('/', '')}/${thread.no}`,
+            );
         });
     });
 
@@ -115,7 +129,7 @@ describe('Hero', () => {
      * exposing either card's controls.
      */
     it('removes the preview stack from the accessibility tree and the tab order', () => {
-        render(<Hero />);
+        render(<Hero threads={PREVIEW} />);
 
         const preview = document.querySelector(
             '[data-slot="hero-thread-preview"]',
@@ -141,7 +155,7 @@ describe('Hero', () => {
      * them is what made the pair unreadable in the first place.
      */
     it('fades the trailing card so the pair reads as a stack', () => {
-        const { container } = render(<Hero />);
+        const { container } = render(<Hero threads={PREVIEW} />);
 
         const cards = container.querySelectorAll('[data-slot="thread-card"]');
 
@@ -160,7 +174,7 @@ describe('Hero', () => {
      * which cannot collide with anything.
      */
     it('never lifts a preview card out of flow on top of the other', () => {
-        const { container } = render(<Hero />);
+        const { container } = render(<Hero threads={PREVIEW} />);
 
         const preview = container.querySelector(
             '[data-slot="hero-thread-preview"]',
@@ -175,7 +189,7 @@ describe('Hero', () => {
     });
 
     it('stacks the previews in a spaced column', () => {
-        const { container } = render(<Hero />);
+        const { container } = render(<Hero threads={PREVIEW} />);
 
         const preview = container.querySelector(
             '[data-slot="hero-thread-preview"]',

@@ -7,7 +7,7 @@ import type { Board } from '@/types/clover';
 const TECH_BOARD: Board = {
     slug: '/g/',
     name: 'Technology',
-    online: '41,208',
+    threads: '41,208',
 };
 
 describe('BoardHeader', () => {
@@ -19,10 +19,27 @@ describe('BoardHeader', () => {
         ).toBeInTheDocument();
     });
 
-    it('renders the slug and online count through one MachineValue', () => {
+    it('renders the slug and thread count through one MachineValue', () => {
         render(<BoardHeader board={TECH_BOARD} />);
 
-        expect(screen.getByText('/g/ · 41,208 online')).toBeInTheDocument();
+        expect(screen.getByText('/g/ · 41,208 threads')).toBeInTheDocument();
+    });
+
+    /**
+     * The guard that keeps the deleted `online` field from coming back under a
+     * new name. 4chan publishes no online count at any scope, so any copy here
+     * reading "online" is describing a number nothing produced.
+     */
+    it('never claims to report anons online, since nothing upstream counts them', () => {
+        const { container } = render(<BoardHeader board={TECH_BOARD} />);
+
+        expect(container.textContent).not.toMatch(/online/i);
+    });
+
+    it('says "thread", not "threads", for a board carrying exactly one', () => {
+        render(<BoardHeader board={{ ...TECH_BOARD, threads: '1' }} />);
+
+        expect(screen.getByText('/g/ · 1 thread')).toBeInTheDocument();
     });
 
     it("labels the board avatar with the board's token", () => {
@@ -61,24 +78,65 @@ describe('BoardHeader', () => {
     });
 
     /**
-     * The fixtures carry no per-board description, so a per-board line would
-     * be invented copy. This checks the one line shown is genuinely
-     * board-agnostic by rendering two different boards and asserting the
-     * body text is identical.
+     * The board page now receives 4chan's own `meta_description`, so the line
+     * under the slug can finally be about this board rather than about the
+     * product. Two different boards must therefore read differently.
      */
-    it('shows the same description line for every board rather than inventing per-board copy', () => {
+    it("shows the board's own description when it has one", () => {
+        const { unmount } = render(
+            <BoardHeader
+                board={{
+                    ...TECH_BOARD,
+                    description:
+                        'Technology - Computers, phones, and everything with a chip in it.',
+                }}
+            />,
+        );
+        expect(
+            screen.getByText(/Computers, phones, and everything/),
+        ).toBeInTheDocument();
+        unmount();
+
+        render(
+            <BoardHeader
+                board={{
+                    slug: '/x/',
+                    name: 'Paranormal',
+                    threads: '7,442',
+                    description: 'Paranormal - Ghosts, cryptids, and dreams.',
+                }}
+            />,
+        );
+        expect(
+            screen.getByText(/Ghosts, cryptids, and dreams/),
+        ).toBeInTheDocument();
+    });
+
+    /**
+     * Boards reached without a description fall back to a line that is true of
+     * every board rather than to a plausible-sounding summary of this one.
+     * Rendering two different boards and comparing the text is what proves the
+     * fallback is genuinely board-agnostic.
+     */
+    it('falls back to one board-agnostic line rather than inventing per-board copy', () => {
         const { unmount } = render(<BoardHeader board={TECH_BOARD} />);
         const techDescription = screen.getByText(/^Anonymous/).textContent;
         unmount();
 
         render(
             <BoardHeader
-                board={{ slug: '/x/', name: 'Paranormal', online: '7,442' }}
+                board={{ slug: '/x/', name: 'Paranormal', threads: '7,442' }}
             />,
         );
         const paranormalDescription =
             screen.getByText(/^Anonymous/).textContent;
 
         expect(paranormalDescription).toBe(techDescription);
+    });
+
+    it('falls back rather than rendering an empty line for a board whose description is blank', () => {
+        render(<BoardHeader board={{ ...TECH_BOARD, description: '' }} />);
+
+        expect(screen.getByText(/^Anonymous/)).toBeInTheDocument();
     });
 });

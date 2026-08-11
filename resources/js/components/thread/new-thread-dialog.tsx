@@ -22,7 +22,6 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { BOARDS } from '@/fixtures/clover';
 import { POST_MAX_LENGTH } from '@/lib/posting';
 import { cn } from '@/lib/utils';
 import type { BoardSlug } from '@/types/clover';
@@ -52,6 +51,26 @@ function formatFileSize(bytes: number): string {
     return `${value.toFixed(1)} ${units[unitIndex]}`;
 }
 
+/**
+ * One board an anon can start a thread on.
+ *
+ * Carries its own `maxCommentChars` rather than the dialog taking a single
+ * limit prop, because this dialog is the one composer where the board is
+ * chosen *inside* it. 4chan's limit is per board — 2000, 3000 or 5000 — so a
+ * single number handed down at mount is wrong the moment the picker changes,
+ * which is precisely the bug that deleting the global constant was meant to
+ * end rather than relocate.
+ *
+ * Deliberately not `Board`: this control needs a slug, a name and a limit, and
+ * has no use for a thread count it would then have to be given.
+ */
+export interface NewThreadBoardOption {
+    slug: BoardSlug;
+    name: string;
+    /** The board's own `max_comment_chars`, from `boards.json`. */
+    maxCommentChars: number;
+}
+
 export interface NewThreadPost {
     board: BoardSlug;
     subject: string;
@@ -62,6 +81,13 @@ export interface NewThreadPost {
 export interface NewThreadDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    /**
+     * The boards an anon may post to, in the order they should be offered.
+     * Supplied by the page: this component used to read the design fixtures
+     * directly, which meant it offered seven hardcoded boards no matter what
+     * the router or the database actually knew about.
+     */
+    boards: readonly NewThreadBoardOption[];
     /** Preselects a board, e.g. when opened from that board's own page. */
     defaultBoard?: BoardSlug;
     /** Fires with the composed thread when Post thread is activated. */
@@ -79,21 +105,33 @@ type NewThreadDialogContentProps = Omit<NewThreadDialogProps, 'open'>;
  * docs steer away from in favour of remounting.
  */
 function NewThreadDialogContent({
+    boards,
     onOpenChange,
     defaultBoard,
     onPost,
 }: NewThreadDialogContentProps) {
-    const [board, setBoard] = useState<BoardSlug>(
-        defaultBoard ?? BOARDS[0].slug,
+    const [board, setBoard] = useState<BoardSlug | undefined>(
+        defaultBoard ?? boards[0]?.slug,
     );
     const [subject, setSubject] = useState('');
     const [body, setBody] = useState('');
     const [attachment, setAttachment] = useState<File | null>(null);
     const [fileInputKey, setFileInputKey] = useState(0);
 
+    /**
+     * The limit follows the picker. A `defaultBoard` the caller passed that is
+     * not in `boards` leaves nothing to read a limit from, so the shared
+     * fallback covers it: the lowest of the three real values, which errs
+     * towards warning an anon early rather than late.
+     */
+    const maxCommentChars =
+        boards.find((option) => option.slug === board)?.maxCommentChars ??
+        POST_MAX_LENGTH;
+
     const trimmedBody = body.trim();
-    const overLimit = body.length > POST_MAX_LENGTH;
-    const canSubmit = trimmedBody.length > 0 && !overLimit;
+    const overLimit = body.length > maxCommentChars;
+    const canSubmit =
+        board !== undefined && trimmedBody.length > 0 && !overLimit;
 
     function handleAttachmentChange(event: ChangeEvent<HTMLInputElement>) {
         setAttachment(event.target.files?.[0] ?? null);
@@ -107,7 +145,7 @@ function NewThreadDialogContent({
     }
 
     function handlePost() {
-        if (!canSubmit) {
+        if (!canSubmit || board === undefined) {
             return;
         }
 
@@ -143,7 +181,7 @@ function NewThreadDialogContent({
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                {BOARDS.map((option) => (
+                                {boards.map((option) => (
                                     <SelectItem
                                         key={option.slug}
                                         value={option.slug}
@@ -201,7 +239,7 @@ function NewThreadDialogContent({
                                     overLimit ? 'text-danger' : undefined
                                 }
                             >
-                                {body.length}/{POST_MAX_LENGTH}
+                                {body.length}/{maxCommentChars}
                             </MachineValue>
                         </span>
                     }
@@ -287,6 +325,7 @@ function NewThreadDialogContent({
 function NewThreadDialog({
     open,
     onOpenChange,
+    boards,
     defaultBoard,
     onPost,
 }: NewThreadDialogProps) {
@@ -294,6 +333,7 @@ function NewThreadDialog({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <NewThreadDialogContent
                 key={open ? 'open' : 'closed'}
+                boards={boards}
                 onOpenChange={onOpenChange}
                 defaultBoard={defaultBoard}
                 onPost={onPost}

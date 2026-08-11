@@ -2,9 +2,21 @@ import { render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { AccountOverview } from '@/components/account/account-overview';
-import { ACHIEVEMENTS, ACTIVITY, BOARDS, THREADS } from '@/fixtures/clover';
+import { ACHIEVEMENTS, ACTIVITY } from '@/fixtures/clover';
+import { makeBoard } from '@/fixtures/factories';
+
+/**
+ * The board list comes from the shared prop the sidebar also reads, so the
+ * double has to supply it. Two boards is enough to prove one button per board
+ * without the assertion depending on how many the server chose to send.
+ */
+const BOARDS = [
+    makeBoard({ slug: '/g/', name: 'Technology' }),
+    makeBoard({ slug: '/biz/', name: 'Business' }),
+];
 
 vi.mock('@inertiajs/react', () => ({
+    usePage: () => ({ props: { sidebarBoards: BOARDS } }),
     Link: ({
         href,
         children,
@@ -50,14 +62,18 @@ describe('AccountOverview', () => {
         }
     });
 
-    it('shows the top thread', () => {
+    /**
+     * It used to render a fixture thread as this anon's best. Nothing
+     * attributes a post to an anon yet — authorship arrives with posting in
+     * task 11b — so the card claimed they had written something they had not.
+     */
+    it('says there is no top thread rather than showing one nobody wrote', () => {
         render(<AccountOverview />);
 
         const region = screen.getByRole('region', { name: 'Top thread' });
 
-        expect(
-            within(region).getByRole('link', { name: THREADS[4].title }),
-        ).toBeInTheDocument();
+        expect(within(region).getByText('No threads yet')).toBeInTheDocument();
+        expect(within(region).queryByRole('link')).not.toBeInTheDocument();
     });
 
     it('links one button per board at that board', () => {

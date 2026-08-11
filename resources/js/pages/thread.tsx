@@ -9,9 +9,8 @@ import { SectionLabel } from '@/components/clover/section-label';
 import { OriginalPost } from '@/components/thread/original-post';
 import { ReplyComposer } from '@/components/thread/reply-composer';
 import { Button } from '@/components/ui/button';
-import { COMMENTS, THREADS } from '@/fixtures/clover';
 import { board } from '@/routes';
-import type { BoardSlug } from '@/types/clover';
+import type { BoardSlug, Comment, Thread as ThreadType } from '@/types/clover';
 
 /**
  * A single thread, e.g. `/g/58210441`.
@@ -28,6 +27,12 @@ import type { BoardSlug } from '@/types/clover';
 type ThreadPageProps = {
     slug: BoardSlug;
     no: number;
+    /** Null when the post number matches nothing, which is the ordinary case. */
+    thread: ThreadType | null;
+    /** Nested server-side from the flat post list 4chan returns. */
+    comments: Comment[];
+    /** This board's own `max_comment_chars`, not a global constant. */
+    maxCommentChars: number;
 };
 
 /** `/g/` becomes `g`, the bare form the `board` route expects. */
@@ -35,11 +40,15 @@ function boardToken(slug: string): string {
     return slug.replace(/\//g, '');
 }
 
-export default function Thread({ slug, no }: ThreadPageProps) {
+export default function Thread({
+    slug,
+    no,
+    thread,
+    comments,
+    maxCommentChars,
+}: ThreadPageProps) {
     const { auth } = usePage().props;
     const signedIn = Boolean(auth.user);
-
-    const thread = THREADS.find((candidate) => candidate.no === no);
 
     const [authGateAction, setAuthGateAction] = useState<string | null>(null);
 
@@ -68,9 +77,13 @@ export default function Thread({ slug, no }: ThreadPageProps) {
                 <Head title="Thread not found" />
 
                 <div className="mx-auto max-w-[760px] px-6 py-8">
+                    {/* Naming the post number matters: an anon arriving from
+                        a stale `>>` reference wants to know which one missed,
+                        and it is the only thing distinguishing this screen
+                        from every other pruned thread. */}
                     <EmptyState
                         icon={<Archive />}
-                        title="That thread is not here"
+                        title={`Thread >>${no} is not here`}
                         body="It was pruned, deleted, or never existed. Board archives keep threads for 72 hours."
                         action={
                             <Button variant="outline" asChild>
@@ -115,7 +128,11 @@ export default function Thread({ slug, no }: ThreadPageProps) {
                 </SectionLabel>
 
                 {signedIn ? (
-                    <ReplyComposer threadNo={thread.no} onReply={handleReply} />
+                    <ReplyComposer
+                        threadNo={thread.no}
+                        maxCommentChars={maxCommentChars}
+                        onReply={handleReply}
+                    />
                 ) : (
                     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-b border-border py-5">
                         <p className="text-body-sm text-muted-foreground">
@@ -132,7 +149,7 @@ export default function Thread({ slug, no }: ThreadPageProps) {
                     </div>
                 )}
 
-                <CommentTree comments={COMMENTS} />
+                <CommentTree comments={comments} />
             </div>
 
             <AuthGate

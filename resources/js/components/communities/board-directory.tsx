@@ -36,14 +36,21 @@ function categoriesOf(boards: readonly BoardDirectoryEntry[]): string[] {
 }
 
 export interface BoardDirectoryProps {
+    /**
+     * Already filtered server-side. This component shows what it is given and
+     * makes no access decision of its own.
+     */
     boards: readonly BoardDirectoryEntry[];
     /**
-     * Whether this anon has opted into boards 4chan marks as not worksafe.
-     * Defaults to false, so a caller that forgets to pass it hides them
-     * rather than showing them: the safe way round is the one that survives
-     * a mistake.
+     * How many boards this anon's content settings are holding back.
+     *
+     * A count rather than the boards themselves, which is the whole point:
+     * the notice below stays honest about the directory being incomplete
+     * without the browser ever receiving a board the anon asked not to see.
+     * Defaults to zero, so a caller that forgets it under-claims rather than
+     * inventing a number.
      */
-    showsMature?: boolean;
+    hiddenCount?: number;
 }
 
 /**
@@ -51,12 +58,16 @@ export interface BoardDirectoryProps {
  *
  * Every slug listed is one the router accepts, because the entire page is
  * links: a directory that offers a board the router 404s is worse than a
- * short directory. The list therefore tracks `config/clover.php` through the
- * fixture and is never padded out with plausible board names.
+ * short directory. Both lists now come from the `boards` table, so they cannot
+ * disagree about which boards exist.
+ *
+ * The filtering used to happen here, on a list that already held every board.
+ * That is not a boundary — data the browser holds is data the anon has — so it
+ * moved into the query and this component lost its `showsMature` prop.
  */
 export function BoardDirectory({
     boards,
-    showsMature = false,
+    hiddenCount = 0,
 }: BoardDirectoryProps) {
     const [query, setQuery] = useState('');
     const [subscriptions, setSubscriptions] = useState<Subscriptions>(() =>
@@ -65,10 +76,11 @@ export function BoardDirectory({
         ),
     );
 
-    /* Every count, the search and the grid all read from this rather than
-       from `boards`, so a hidden board cannot leak back through a total. */
-    const permitted = boards.filter((entry) => showsMature || entry.worksafe);
-    const hiddenCount = boards.length - permitted.length;
+    /* Nothing to filter: the server sent exactly the boards this anon may
+       see. `permitted` stays as the name every count and the grid read from,
+       so the guarantee it carried is unchanged — it is now upheld a layer
+       down instead of here. */
+    const permitted = boards;
 
     const subscribedCount = permitted.filter(
         (entry) => subscriptions[entry.slug],

@@ -1,10 +1,16 @@
 /**
  * Domain types for Clover.
  *
- * These mirror the shapes the design prototype renders. They are consumed by
- * the fixtures in `@/fixtures/clover` today and will be satisfied by Inertia
- * props from Eloquent models later — the components in between should not
- * need to change when that swap happens.
+ * These mirror the shapes the design prototype renders and are satisfied by
+ * Inertia props from Eloquent models. Board, thread and post rows are ingested
+ * from 4chan's read-only JSON API by `clover:sync`; everything account-shaped
+ * is this application's own.
+ *
+ * Two fields changed when the real API replaced the fixtures, both because the
+ * fixture carried a number nothing upstream publishes: `Board.online` became
+ * `Board.threads`, and `Thread.views` became `Thread.images`. The rule that
+ * forced it is the same one that governs attachments — a figure with no source
+ * is not displayed, and it is certainly not invented.
  */
 
 /** Board slugs carry their delimiters, e.g. `/g/`. */
@@ -13,8 +19,16 @@ export type BoardSlug = `/${string}/`;
 export interface Board {
     slug: BoardSlug;
     name: string;
-    /** Pre-formatted for display, e.g. `41,208`. */
-    online: string;
+    /**
+     * Live thread count on the board. Pre-formatted, e.g. `18,402`.
+     *
+     * This was an "anons online" figure while the screens ran on fixtures.
+     * 4chan's JSON API publishes no online count — not per board and not
+     * site-wide — so keeping the field would have meant inventing the number
+     * on every render. Thread count is the closest thing the API does report,
+     * and it is counted rather than estimated.
+     */
+    threads: string;
 }
 
 export interface Thread {
@@ -26,10 +40,22 @@ export interface Thread {
     time: string;
     title: string;
     excerpt?: string;
+    /**
+     * Blessings are Clover's own, not 4chan's: the board has no votes to
+     * import, so this counts what anons here have given. Zero on an ingested
+     * thread nobody has blessed yet, which is a true zero rather than a
+     * missing value.
+     */
     blessings: number;
     replies: number;
-    /** Pre-formatted for display, e.g. `48,201`. */
-    views: string;
+    /**
+     * Attached images on the thread. Pre-formatted, e.g. `48`.
+     *
+     * Was a view count under fixtures. Nothing upstream counts views and
+     * nothing here counted them either, so the card reports something the
+     * API actually returns instead of a number with no source.
+     */
+    images: string;
     /**
      * Media is never invented in mocks. When present this is the filename,
      * dimensions and size — rendered over the placeholder weave, not an image.
@@ -156,8 +182,11 @@ export interface Bookmark {
  */
 export interface BoardDirectoryEntry extends Board {
     description: string;
-    /** Pre-formatted, e.g. `18,402`. */
-    threads: string;
+    /**
+     * Clover's own grouping, not 4chan's: `boards.json` carries no category.
+     * Describes subject matter only and says nothing about whether a board is
+     * worksafe — `worksafe` is the field that decides what an anon is shown.
+     */
     category: string;
     subscribed: boolean;
     /**

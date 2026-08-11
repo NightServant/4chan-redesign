@@ -1,8 +1,9 @@
 import { Link } from '@inertiajs/react';
-import { Bookmark, Eye, MessageSquare, Share2 } from 'lucide-react';
+import { Bookmark, ImageIcon, MessageSquare, Share2 } from 'lucide-react';
 import { BoardAvatar } from '@/components/clover/board-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
 import { MediaPlaceholder } from '@/components/clover/media-placeholder';
+import { PostBody } from '@/components/clover/post-body';
 import { VoteControl } from '@/components/clover/vote-control';
 import type { VoteState } from '@/components/clover/vote-control';
 import { Badge } from '@/components/ui/badge';
@@ -110,10 +111,17 @@ function OriginalPost({
                 {thread.title}
             </h1>
 
+            {/* The opening post's body, not a summary of it: a real 4chan OP
+                runs to several lines, quotes other posts and uses greentext.
+                Rendered as `{thread.excerpt}` inside one `<p>` it collapsed into
+                a single run-on paragraph with the `>` lines reading as literal
+                punctuation. `PostBody` is what makes the greentext the README
+                promises actually appear. */}
             {thread.excerpt ? (
-                <p className="max-w-prose text-body text-pretty text-foreground">
-                    {thread.excerpt}
-                </p>
+                <PostBody
+                    body={thread.excerpt}
+                    className="max-w-prose text-body text-pretty text-foreground"
+                />
             ) : null}
 
             {thread.media ? (
@@ -127,13 +135,29 @@ function OriginalPost({
                     onBless={onBless}
                     onCurse={onCurse}
                 />
-                <span className="flex items-center gap-1.5 text-caption text-faint">
+                {/* `thread.views` used to sit here. Nothing upstream counts
+                    views and nothing here counted them either, so the footer now
+                    reports attached images, which the catalogue genuinely
+                    returns. Each stat names its own unit for the same reason the
+                    card does: an icon plus a bare number is a figure with no
+                    subject to anyone not looking at the icon. */}
+                <span
+                    aria-label={`${thread.replies} replies`}
+                    className="flex items-center gap-1.5 text-caption text-faint"
+                >
                     <MessageSquare aria-hidden="true" className="size-4" />
-                    <MachineValue>{thread.replies}</MachineValue>
+                    <MachineValue aria-hidden="true">
+                        {thread.replies}
+                    </MachineValue>
                 </span>
-                <span className="flex items-center gap-1.5 text-caption text-faint">
-                    <Eye aria-hidden="true" className="size-4" />
-                    <MachineValue>{thread.views}</MachineValue>
+                <span
+                    aria-label={`${thread.images} images`}
+                    className="flex items-center gap-1.5 text-caption text-faint"
+                >
+                    <ImageIcon aria-hidden="true" className="size-4" />
+                    <MachineValue aria-hidden="true">
+                        {thread.images}
+                    </MachineValue>
                 </span>
                 <button
                     type="button"

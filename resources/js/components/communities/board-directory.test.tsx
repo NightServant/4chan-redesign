@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { BoardDirectory } from '@/components/communities/board-directory';
-import { BOARD_DIRECTORY } from '@/fixtures/clover';
+import { makeDirectoryEntry } from '@/fixtures/factories';
 
 vi.mock('@inertiajs/react', () => ({
     Link: ({
@@ -19,6 +19,48 @@ vi.mock('@inertiajs/react', () => ({
         </a>
     ),
 }));
+
+/* The list the server would have sent: every board here is one this anon may
+   see. Filtering moved into the query, so a not-worksafe board never reaches
+   the component at all — which is why there is no /b/ in this list, and why
+   the counts below are of visible boards rather than of a filtered subset. */
+const BOARD_DIRECTORY = [
+    makeDirectoryEntry({
+        slug: '/g/',
+        name: 'Technology',
+        category: 'Interests',
+        subscribed: true,
+    }),
+    makeDirectoryEntry({
+        slug: '/wg/',
+        name: 'Wallpapers',
+        category: 'Creative',
+        subscribed: true,
+        description: 'Wallpaper dumps at native resolution.',
+    }),
+    makeDirectoryEntry({
+        slug: '/biz/',
+        name: 'Business',
+        category: 'Work',
+    }),
+    makeDirectoryEntry({
+        slug: '/x/',
+        name: 'Paranormal',
+        category: 'Interests',
+        subscribed: true,
+    }),
+    makeDirectoryEntry({
+        slug: '/fit/',
+        name: 'Fitness',
+        category: 'Life',
+    }),
+    makeDirectoryEntry({
+        slug: '/co/',
+        name: 'Comics',
+        category: 'Creative',
+        description: 'Cartoons, comics and storyboards.',
+    }),
+];
 
 function renderDirectory(boards = BOARD_DIRECTORY) {
     render(<BoardDirectory boards={boards} />);
@@ -129,40 +171,31 @@ describe('BoardDirectory', () => {
 });
 
 /**
- * Adult boards are hidden unless an anon opts in. The filter is only worth
- * having if something can fail it, so the fixture carries one board 4chan
- * marks `ws_board: 0`; these tests are what stop that from silently becoming
- * a control with nothing to act on.
+ * Adult boards are hidden unless an anon opts in.
+ *
+ * The filtering used to happen in this component, against a list that already
+ * held every board. That is not a boundary — data the browser holds is data
+ * the anon has, whatever the interface draws — so it moved into the query and
+ * this component lost its `showsMature` prop entirely.
+ *
+ * What is left here is the part that is still the component's job: saying that
+ * the directory is incomplete, from a count the server supplies, without ever
+ * receiving a hidden board. `BoardVisibilityTest` covers the filtering itself.
  */
-describe('BoardDirectory mature filter', () => {
-    const mature = BOARD_DIRECTORY.filter((entry) => !entry.worksafe);
+describe('BoardDirectory hidden-board notice', () => {
+    it('renders only what it is given, making no filtering decision', () => {
+        render(<BoardDirectory boards={BOARD_DIRECTORY} />);
 
-    it('has something to filter', () => {
-        expect(mature.length).toBeGreaterThan(0);
-    });
-
-    it('hides adult boards by default', () => {
-        render(<BoardDirectory boards={BOARD_DIRECTORY} showsMature={false} />);
-
-        for (const entry of mature) {
-            expect(screen.queryByText(entry.name)).not.toBeInTheDocument();
-        }
-    });
-
-    it('shows them once the anon has opted in', () => {
-        render(<BoardDirectory boards={BOARD_DIRECTORY} showsMature />);
-
-        for (const entry of mature) {
+        for (const entry of BOARD_DIRECTORY) {
             expect(screen.getByText(entry.name)).toBeInTheDocument();
         }
     });
 
-    it('counts only what it is showing', () => {
-        render(<BoardDirectory boards={BOARD_DIRECTORY} showsMature={false} />);
+    it('counts what it is showing', () => {
+        render(<BoardDirectory boards={BOARD_DIRECTORY} />);
 
-        const shown = BOARD_DIRECTORY.length - mature.length;
         expect(
-            screen.getByText(new RegExp(`^${shown} boards`)),
+            screen.getByText(new RegExp(`^${BOARD_DIRECTORY.length} boards`)),
         ).toBeInTheDocument();
     });
 
@@ -171,15 +204,28 @@ describe('BoardDirectory mature filter', () => {
      * and leaves the setting undiscoverable for anyone who never goes looking.
      */
     it('says how many it is hiding, and where to change that', () => {
-        render(<BoardDirectory boards={BOARD_DIRECTORY} showsMature={false} />);
+        render(<BoardDirectory boards={BOARD_DIRECTORY} hiddenCount={24} />);
 
         expect(
-            screen.getByText(/1 board hidden by your content settings/i),
+            screen.getByText(/24 boards hidden by your content settings/i),
         ).toBeInTheDocument();
     });
 
     it('says nothing about hidden boards when none are hidden', () => {
-        render(<BoardDirectory boards={BOARD_DIRECTORY} showsMature />);
+        render(<BoardDirectory boards={BOARD_DIRECTORY} hiddenCount={0} />);
+
+        expect(
+            screen.queryByText(/hidden by your content settings/i),
+        ).toBeNull();
+    });
+
+    /**
+     * The count has to come from the server. Deriving it from `boards` would
+     * mean the browser holding the hidden boards in order to count them, which
+     * is the arrangement this change exists to undo.
+     */
+    it('under-claims rather than inventing a count when none is given', () => {
+        render(<BoardDirectory boards={BOARD_DIRECTORY} />);
 
         expect(
             screen.queryByText(/hidden by your content settings/i),
@@ -188,7 +234,7 @@ describe('BoardDirectory mature filter', () => {
 
     it('does not claim a fixed board count in the no-match copy', async () => {
         const user = userEvent.setup();
-        render(<BoardDirectory boards={BOARD_DIRECTORY} showsMature={false} />);
+        render(<BoardDirectory boards={BOARD_DIRECTORY} />);
 
         await user.type(screen.getByLabelText('Search boards'), 'zzzznope');
 

@@ -1,24 +1,31 @@
 <?php
 
 use App\Http\Controllers\BoardController;
+use App\Http\Controllers\CommunityController;
+use App\Http\Controllers\FeedController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ThreadController;
+use App\Support\RoutableBoards;
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'welcome')->name('home');
+Route::get('/', HomeController::class)->name('home');
 
 /**
  * The feed, in three sorts. All three are public: reading needs no account,
  * which is the product's central claim and should not be contradicted by the
  * routing.
+ *
+ * The sort is a route default rather than a segment, so the controller is
+ * handed it directly and the page never has to read it back out of the URL.
  */
-Route::inertia('popular', 'feed', ['sort' => 'popular'])->name('popular');
-Route::inertia('latest', 'feed', ['sort' => 'latest'])->name('latest');
+Route::get('popular', FeedController::class)->defaults('sort', 'popular')->name('popular');
+Route::get('latest', FeedController::class)->defaults('sort', 'latest')->name('latest');
 
 /**
  * The board directory. Public, like the boards it lists: an anon deciding
  * whether the site is worth an account has to be able to see what is on it.
  */
-Route::inertia('communities', 'communities')->name('communities');
+Route::get('communities', CommunityController::class)->name('communities');
 
 Route::middleware('auth')->group(function () {
     Route::inertia('account', 'account')->name('account');
@@ -35,7 +42,7 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'feed', ['sort' => 'bumped'])->name('dashboard');
+    Route::get('dashboard', FeedController::class)->defaults('sort', 'bumped')->name('dashboard');
 });
 
 /**
@@ -71,10 +78,10 @@ collect([
  * page. Registering these last is belt and braces: the constraint is what
  * actually does the work, and `BoardRoutingTest` proves both halves.
  *
- * The slug list lives in `config/clover.php` and becomes a database lookup
- * once the backend lands.
+ * The slug list comes from the synced `boards` table, cached, falling back to
+ * `config('clover.fallback_boards')` when the table cannot be read.
  */
-$boardPattern = implode('|', config('clover.boards'));
+$boardPattern = RoutableBoards::pattern();
 
 Route::get('{board}', BoardController::class)
     ->where('board', $boardPattern)

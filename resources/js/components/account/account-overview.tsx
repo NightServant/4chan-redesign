@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
     ArrowBigUp,
     Bookmark,
@@ -7,16 +7,17 @@ import {
     History,
     MessageSquare,
     Shield,
+    Sparkles as SparklesIcon,
     Star,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { EmptyState } from '@/components/clover/empty-state';
 import { MachineValue } from '@/components/clover/machine-value';
 import { SectionLabel } from '@/components/clover/section-label';
-import { ThreadCard } from '@/components/clover/thread-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ACHIEVEMENTS, ACTIVITY, BOARDS, THREADS } from '@/fixtures/clover';
+import { ACHIEVEMENTS, ACTIVITY } from '@/fixtures/clover';
 import { cn } from '@/lib/utils';
 import { board, communities } from '@/routes';
 
@@ -77,7 +78,11 @@ function OverviewSection({
  * have earned, their best thread and the boards they follow.
  */
 function AccountOverview() {
-    const topThread = THREADS[4];
+    /* Boards come from the shared prop the sidebar also reads, so this list is
+       real boards filtered by the anon's own content settings rather than a
+       fixture. Which boards an anon actually follows is a subscription, and
+       subscriptions are task 11b. */
+    const { sidebarBoards } = usePage().props;
 
     return (
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_330px]">
@@ -113,7 +118,16 @@ function AccountOverview() {
                 </OverviewSection>
 
                 <OverviewSection title="Top thread">
-                    <ThreadCard thread={topThread} />
+                    {/* The anon's best thread needs posts attributed to an
+                        anon, and nothing attributes them yet — authorship
+                        arrives with posting in task 11b. It used to render a
+                        fixture thread, which claimed this anon wrote something
+                        they did not. An empty state says the true thing. */}
+                    <EmptyState
+                        icon={<SparklesIcon />}
+                        title="No threads yet"
+                        body="Threads you start appear here, with the blessings they collect."
+                    />
                 </OverviewSection>
             </div>
 
@@ -161,7 +175,7 @@ function AccountOverview() {
                 >
                     <Card className="py-4">
                         <div className="grid grid-cols-3 gap-2 px-5">
-                            {BOARDS.map((entry) => (
+                            {sidebarBoards.map((entry) => (
                                 <Button
                                     key={entry.slug}
                                     variant="outline"

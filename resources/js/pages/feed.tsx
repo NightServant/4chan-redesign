@@ -1,20 +1,25 @@
-import { Head, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { CompassIcon } from 'lucide-react';
 import { useState } from 'react';
 import { AuthGate } from '@/components/clover/auth-gate';
-import { MachineValue } from '@/components/clover/machine-value';
-import { Pagination } from '@/components/clover/pagination';
+import { EmptyState } from '@/components/clover/empty-state';
+import { PageHeader } from '@/components/clover/page-header';
 import { ThreadCard } from '@/components/clover/thread-card';
-import { ThreadSkeleton } from '@/components/clover/thread-skeleton';
 import { AnonBanner } from '@/components/feed/anon-banner';
 import { Rail } from '@/components/feed/rail';
 import { Button } from '@/components/ui/button';
-import { THREADS } from '@/fixtures/clover';
+import { communities } from '@/routes';
+import type { Board, Thread, TrendingTag } from '@/types/clover';
 
 /**
  * The feed, in three sorts. The server decides which by the route it renders
  * (`dashboard`, `popular` or `latest`) and passes the result as `sort` rather
  * than the page reading it back out of the URL, so there is exactly one
  * source of truth for which sort is active.
+ *
+ * The threads themselves now arrive as a prop, already ordered by the server.
+ * The page does not reorder them: `sort` names an ordering the database
+ * applied, and a second sort here could only disagree with it.
  */
 type Sort = 'bumped' | 'popular' | 'latest';
 
@@ -25,10 +30,13 @@ const HEADINGS: Record<Sort, string> = {
 };
 
 /**
- * The prototype's copy names the bump-order case explicitly; the other two
- * sorts carry the same "anons online" stat with a description of their own
- * ordering, since the online count is a site-wide figure rather than
- * something that changes with the sort.
+ * The description under each heading.
+ *
+ * These used to end with "· 228,025 anons online". That figure came from the
+ * design prototype and nothing replaced it, because nothing could: 4chan's
+ * JSON API publishes no online count, per board or site-wide. A number with no
+ * source is not shown, so the line now says only what the sort is, which is
+ * something the route genuinely knows.
  */
 const SORT_DESCRIPTIONS: Record<Sort, string> = {
     bumped: 'Sorted by bump order',
@@ -36,15 +44,6 @@ const SORT_DESCRIPTIONS: Record<Sort, string> = {
     popular: 'Sorted by most blessed',
 };
 
-const ONLINE_COUNT = '228,025';
-
-/**
- * The three sort tabs, in the order the prototype lists them. Each is a link
- * to a real route rather than a local toggle: the prototype let its tabs and
- * the URL's sort disagree, which is a bug, not a feature, so here the tab a
- * screen reader or the browser's back button reports is always the one that
- * is actually showing.
- */
 /**
  * A blessing the anon has added optimistically, held here because there is no
  * backend to hold it. The page feeds `ThreadCard` both an adjusted
@@ -53,7 +52,17 @@ const ONLINE_COUNT = '228,025';
  */
 type BlessDelta = 0 | 1;
 
-export default function Feed({ sort }: { sort: Sort }) {
+type FeedProps = {
+    sort: Sort;
+    /** Already ordered for `sort`. Rendered in the order given. */
+    threads: Thread[];
+    /** The rail's board panel: the busiest boards, chosen server-side. */
+    boards: Board[];
+    /** The rail's trending panel, derived from real reply totals. */
+    trending: TrendingTag[];
+};
+
+export default function Feed({ sort, threads, boards, trending }: FeedProps) {
     const { auth } = usePage().props;
     const signedIn = Boolean(auth.user);
 
@@ -62,8 +71,6 @@ export default function Feed({ sort }: { sort: Sort }) {
        /login throws away their place in the feed to answer a question they may
        not want to answer yet. Matches the thread page. */
     const [gatedAction, setGatedAction] = useState<string | null>(null);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const [page, setPage] = useState(1);
 
     function toggleBless(threadNo: number) {
         if (!signedIn) {
@@ -78,19 +85,6 @@ export default function Feed({ sort }: { sort: Sort }) {
         }));
     }
 
-    /**
-     * There is no backend yet, so "loading more" is simulated with a timeout
-     * rather than a real request. The skeletons disappear and the button
-     * re-enables once it resolves.
-     */
-    function handleLoadMore() {
-        setLoadingMore(true);
-
-        setTimeout(() => {
-            setLoadingMore(false);
-        }, 1000);
-    }
-
     return (
         <>
             <Head title={HEADINGS[sort]} />
@@ -100,20 +94,35 @@ export default function Feed({ sort }: { sort: Sort }) {
                     data-slot="feed-column"
                     className="flex max-w-[760px] min-w-0 flex-1 flex-col gap-5"
                 >
-                    <div className="flex flex-col gap-1">
-                        <h1 className="font-display text-h1 font-semibold text-foreground">
-                            {HEADINGS[sort]}
-                        </h1>
-                        <MachineValue>
-                            {SORT_DESCRIPTIONS[sort]} &middot; {ONLINE_COUNT}{' '}
-                            anons online
-                        </MachineValue>
-                    </div>
+                    <PageHeader
+                        title={HEADINGS[sort]}
+                        description={SORT_DESCRIPTIONS[sort]}
+                    />
 
                     {signedIn ? null : <AnonBanner />}
 
+                    {/* An empty feed is an ordinary state, not a failure: a
+                        clone that has not run `clover:sync` yet has no threads
+                        at all, and so does an anon whose content settings hide
+                        every board that does. Without this the page renders a
+                        heading over nothing and reads as broken. */}
+                    {threads.length === 0 ? (
+                        <EmptyState
+                            icon={<CompassIcon />}
+                            title="Nothing here yet"
+                            body="No threads have been synced. Once boards are pulled in they appear here in bump order."
+                            action={
+                                <Button variant="outline" asChild>
+                                    <Link href={communities()}>
+                                        Browse boards
+                                    </Link>
+                                </Button>
+                            }
+                        />
+                    ) : null}
+
                     <div className="flex flex-col gap-4">
-                        {THREADS.map((thread) => (
+                        {threads.map((thread) => (
                             <ThreadCard
                                 key={thread.no}
                                 thread={{
@@ -128,34 +137,11 @@ export default function Feed({ sort }: { sort: Sort }) {
                                 onBless={() => toggleBless(thread.no)}
                             />
                         ))}
-
-                        {loadingMore ? (
-                            <>
-                                <ThreadSkeleton />
-                                <ThreadSkeleton />
-                            </>
-                        ) : null}
                     </div>
-
-                    <Button
-                        variant="outline"
-                        disabled={loadingMore}
-                        onClick={handleLoadMore}
-                        className="self-center"
-                    >
-                        {loadingMore ? 'Loading' : 'Load more threads'}
-                    </Button>
-
-                    <Pagination
-                        page={page}
-                        pageCount={5}
-                        onChange={setPage}
-                        className="justify-center self-center"
-                    />
                 </div>
 
                 <div className="hidden w-[330px] shrink-0 lg:block">
-                    <Rail />
+                    <Rail boards={boards} trending={trending} />
                 </div>
             </div>
 

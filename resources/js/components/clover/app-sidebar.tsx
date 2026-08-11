@@ -10,7 +10,6 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { BOARDS } from '@/fixtures/clover';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { FOOTER_LINKS, navHref, PRIMARY_NAV } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
@@ -47,7 +46,7 @@ const toggleClasses =
 type AppSidebarProps = Omit<ComponentProps<'aside'>, 'children'>;
 
 function AppSidebar({ className, ...props }: AppSidebarProps) {
-    const { auth, sidebarOpen } = usePage().props;
+    const { auth, sidebarOpen, sidebarBoards } = usePage().props;
     const { isCurrentUrl } = useCurrentUrl();
     const [open, setOpen] = useState(sidebarOpen);
 
@@ -60,7 +59,10 @@ function AppSidebar({ className, ...props }: AppSidebarProps) {
     const visibleNav = PRIMARY_NAV.filter(
         (item) => !item.requiresAuth || Boolean(auth.user),
     );
-    const boards = BOARDS.slice(0, MAX_BOARD_ROWS);
+    /* Shared from `HandleInertiaRequests`, already filtered by the anon's
+       content settings and already capped server-side. Sliced again here only
+       so the row count stays this component's decision. */
+    const boards = sidebarBoards.slice(0, MAX_BOARD_ROWS);
 
     function renderRow(item: CloverNavItem) {
         const href = navHref(item, Boolean(auth.user));

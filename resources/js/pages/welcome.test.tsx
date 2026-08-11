@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { THREADS } from '@/fixtures/clover';
+import { makeBoard, makeThread, makeTrendingTag } from '@/fixtures/factories';
 import Welcome from '@/pages/welcome';
 import type { User } from '@/types/auth';
 
@@ -33,9 +33,29 @@ vi.mock('@inertiajs/react', () => ({
     ),
 }));
 
+/* What HomeController sends: boards for the grid, threads for the hero and
+   the trending strip, and the busiest boards for the strip's chips. */
+const BOARDS = [
+    makeBoard({ slug: '/g/', name: 'Technology' }),
+    makeBoard({ slug: '/biz/', name: 'Business' }),
+];
+
+const THREADS = [
+    makeThread({ title: 'Anons are still arguing about init systems' }),
+    makeThread({
+        title: 'A thread title with an em dash — because anons write them',
+        excerpt: 'Body copy an anon wrote, dashes and all.',
+    }),
+    makeThread({ title: 'Battery life under sustained load' }),
+];
+
+const TRENDING = [makeTrendingTag({ tag: '/g/', posts: '4,182 posts' })];
+
 describe('Welcome', () => {
     it('has exactly one first-level heading', () => {
-        render(<Welcome />);
+        render(
+            <Welcome boards={BOARDS} threads={THREADS} trending={TRENDING} />,
+        );
 
         expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     });
@@ -45,7 +65,9 @@ describe('Welcome', () => {
      * tell whether they missed a section.
      */
     it('steps heading levels without skipping one', () => {
-        render(<Welcome />);
+        render(
+            <Welcome boards={BOARDS} threads={THREADS} trending={TRENDING} />,
+        );
 
         const levels = screen
             .getAllByRole('heading')
@@ -59,7 +81,9 @@ describe('Welcome', () => {
     });
 
     it('lays out the page as banner, main and contentinfo landmarks', () => {
-        render(<Welcome />);
+        render(
+            <Welcome boards={BOARDS} threads={THREADS} trending={TRENDING} />,
+        );
 
         expect(screen.getByRole('banner')).toBeInTheDocument();
         expect(screen.getByRole('main')).toBeInTheDocument();
@@ -71,7 +95,9 @@ describe('Welcome', () => {
      * here is worse than a missing feature: it reads as a broken product.
      */
     it('points every link at a real path', () => {
-        render(<Welcome />);
+        render(
+            <Welcome boards={BOARDS} threads={THREADS} trending={TRENDING} />,
+        );
 
         const links = screen.getAllByRole('link');
 
@@ -92,26 +118,40 @@ describe('Welcome', () => {
     });
 
     /**
-     * Thread routes do not exist yet, so any card shown here must be pointed
-     * at a page that does. Guards the whole page rather than each band.
+     * Thread routes exist now, so the guard inverts: a card must point at its
+     * own thread rather than at the feed. What it is really protecting is that
+     * every link resolves, which is why it checks the shape against the boards
+     * the page was given rather than merely that the href is non-empty.
      */
-    it('never links into a thread route that has not been built', () => {
-        render(<Welcome />);
+    it('links thread cards at real thread routes', () => {
+        render(
+            <Welcome boards={BOARDS} threads={THREADS} trending={TRENDING} />,
+        );
 
-        for (const link of screen.getAllByRole('link')) {
-            expect(link.getAttribute('href')).not.toMatch(/^\/[a-z]+\/\d+$/);
+        const threadLinks = screen
+            .getAllByRole('link')
+            .map((link) => link.getAttribute('href') ?? '')
+            .filter((href) => /^\/[a-z0-9]+\/\d+$/.test(href));
+
+        expect(threadLinks.length).toBeGreaterThan(0);
+
+        for (const href of threadLinks) {
+            expect(href).toMatch(/^\/(g|biz)\/\d+$/);
         }
     });
 
     /**
      * The no-em-dash rule governs copy Clover writes, not content it is
-     * pretending an anon typed. `THREADS[1].title` carries one and is correct
-     * to: thread titles are user text, and real people use em dashes. So the
-     * fixture strings are removed before asserting, which keeps the guard on
-     * the marketing copy where the rule actually applies.
+     * pretending an anon typed — and now, copy anons actually did type. One of
+     * the threads above carries an em dash deliberately, because ingested
+     * titles are real user text and real people use them. Thread strings are
+     * removed before asserting, which keeps the guard on the marketing copy
+     * where the rule applies.
      */
     it('contains no em dashes in copy Clover wrote', () => {
-        const { container } = render(<Welcome />);
+        const { container } = render(
+            <Welcome boards={BOARDS} threads={THREADS} trending={TRENDING} />,
+        );
 
         const authored = THREADS.reduce(
             (text, thread) =>

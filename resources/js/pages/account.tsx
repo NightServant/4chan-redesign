@@ -1,11 +1,10 @@
 import { Head, Link } from '@inertiajs/react';
-import { Bookmark } from 'lucide-react';
+import { Bookmark, PencilLine } from 'lucide-react';
 import { AccountOverview } from '@/components/account/account-overview';
 import { ProfileCommentList } from '@/components/account/profile-comment-list';
 import { ProfileHeader } from '@/components/account/profile-header';
 import { EmptyState } from '@/components/clover/empty-state';
 import { MediaPlaceholder } from '@/components/clover/media-placeholder';
-import { ThreadCard } from '@/components/clover/thread-card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -13,7 +12,6 @@ import {
     PROFILE_COMMENTS,
     PROFILE_MEDIA,
     PROFILE_STATS,
-    THREADS,
 } from '@/fixtures/clover';
 import { bookmarks } from '@/routes';
 
@@ -56,12 +54,17 @@ export default function Account() {
                         <AccountOverview />
                     </TabsContent>
 
+                    {/* Posts need authorship, and nothing attributes a post
+                        to an anon yet: posting arrives in task 11b. This tab
+                        used to list ingested threads as though this anon had
+                        written them, which was not true of any of them. Same
+                        treatment as the saved tab below. */}
                     <TabsContent value="posts">
-                        <div className="grid grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-3.5">
-                            {THREADS.slice(0, 3).map((entry) => (
-                                <ThreadCard key={entry.no} thread={entry} />
-                            ))}
-                        </div>
+                        <EmptyState
+                            icon={<PencilLine />}
+                            title="No posts yet"
+                            body="Threads you start appear here in bump order."
+                        />
                     </TabsContent>
 
                     <TabsContent value="comments">

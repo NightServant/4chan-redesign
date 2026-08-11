@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { activityIconFor, Rail } from '@/components/feed/rail';
-import { ACTIVITY, BOARDS, TRENDING } from '@/fixtures/clover';
+import { ACTIVITY } from '@/fixtures/clover';
+import { makeBoard, makeTrendingTag } from '@/fixtures/factories';
 
 /**
  * The real `Link` requires an Inertia page context that only exists inside
@@ -30,9 +31,24 @@ vi.mock('@inertiajs/react', () => ({
     },
 }));
 
+/* Five boards so the "does not render beyond the first four" case has a fifth
+   to leave out, and the rail is handed exactly what the feed page sends it. */
+const BOARDS = [
+    makeBoard({ slug: '/g/', name: 'Technology', threads: '18,402' }),
+    makeBoard({ slug: '/biz/', name: 'Business', threads: '11,067' }),
+    makeBoard({ slug: '/x/', name: 'Paranormal', threads: '6,204' }),
+    makeBoard({ slug: '/fit/', name: 'Fitness', threads: '5,118' }),
+    makeBoard({ slug: '/co/', name: 'Comics', threads: '4,002' }),
+];
+
+const TRENDING = [
+    makeTrendingTag({ tag: '/g/', posts: '4,182 posts' }),
+    makeTrendingTag({ tag: '/biz/', posts: '2,904 posts' }),
+];
+
 describe('Rail', () => {
     it('is a complementary landmark with its own accessible name, not a second nav', () => {
-        render(<Rail />);
+        render(<Rail boards={BOARDS} trending={TRENDING} />);
 
         const rail = screen.getByRole('complementary');
 
@@ -40,11 +56,11 @@ describe('Rail', () => {
         expect(rail.tagName).toBe('ASIDE');
     });
 
-    it('renders all six panels as named regions', () => {
-        render(<Rail />);
+    it('renders all five panels as named regions', () => {
+        render(<Rail boards={BOARDS} trending={TRENDING} />);
 
         expect(
-            screen.getByRole('region', { name: 'Trending topics' }),
+            screen.getByRole('region', { name: 'Trending boards' }),
         ).toBeInTheDocument();
         expect(
             screen.getByRole('region', { name: 'Popular boards' }),
@@ -54,9 +70,6 @@ describe('Rail', () => {
         ).toBeInTheDocument();
         expect(
             screen.getByRole('region', { name: 'Moderation notices' }),
-        ).toBeInTheDocument();
-        expect(
-            screen.getByRole('region', { name: 'Who is online' }),
         ).toBeInTheDocument();
         expect(
             screen.getByRole('region', { name: 'Recent activity' }),
@@ -69,10 +82,10 @@ describe('Rail', () => {
      * per the brief, so the accessible name must resolve to exactly the tag.
      */
     it('names every trending row after its tag alone, not the rank number', () => {
-        render(<Rail />);
+        render(<Rail boards={BOARDS} trending={TRENDING} />);
 
         const trendingRegion = screen.getByRole('region', {
-            name: 'Trending topics',
+            name: 'Trending boards',
         });
 
         for (const item of TRENDING) {
@@ -88,7 +101,7 @@ describe('Rail', () => {
     });
 
     it('links trending rows to search', () => {
-        render(<Rail />);
+        render(<Rail boards={BOARDS} trending={TRENDING} />);
 
         const link = screen.getByRole('link', { name: TRENDING[0].tag });
 
@@ -96,7 +109,7 @@ describe('Rail', () => {
     });
 
     it('renders the popular-boards action link to communities', () => {
-        render(<Rail />);
+        render(<Rail boards={BOARDS} trending={TRENDING} />);
 
         expect(screen.getByRole('link', { name: 'All' })).toHaveAttribute(
             'href',
@@ -104,8 +117,8 @@ describe('Rail', () => {
         );
     });
 
-    it('renders every popular board row with its slug and online count', () => {
-        render(<Rail />);
+    it('renders every popular board row with its slug and thread count', () => {
+        render(<Rail boards={BOARDS} trending={TRENDING} />);
 
         const boardsRegion = screen.getByRole('region', {
             name: 'Popular boards',
@@ -114,14 +127,14 @@ describe('Rail', () => {
         for (const board of BOARDS.slice(0, 4)) {
             expect(
                 within(boardsRegion).getByText(
-                    `${board.slug} · ${board.online} online`,
+                    `${board.slug} · ${board.threads} threads`,
                 ),
             ).toBeInTheDocument();
         }
     });
 
     it('does not render boards beyond the first four', () => {
-        render(<Rail />);
+        render(<Rail boards={BOARDS} trending={TRENDING} />);
 
         const fifthBoard = BOARDS[4];
 
@@ -130,7 +143,7 @@ describe('Rail', () => {
 
     it('toggles Join per row and exposes the pressed state non-visually', async () => {
         const user = userEvent.setup();
-        render(<Rail />);
+        render(<Rail boards={BOARDS} trending={TRENDING} />);
 
         const firstBoard = BOARDS[0];
         const boardsRegion = screen.getByRole('region', {
@@ -158,7 +171,7 @@ describe('Rail', () => {
 
     it('only toggles the board row that was clicked', async () => {
         const user = userEvent.setup();
-        render(<Rail />);
+        render(<Rail boards={BOARDS} trending={TRENDING} />);
 
         const [firstBoard, secondBoard] = BOARDS;
         const boardsRegion = screen.getByRole('region', {
@@ -184,7 +197,7 @@ describe('Rail', () => {
     });
 
     it('renders the community rules verbatim as an ordered list', () => {
-        render(<Rail />);
+        render(<Rail boards={BOARDS} trending={TRENDING} />);
 
         const rulesRegion = screen.getByRole('region', {
             name: 'Community rules',
@@ -213,40 +226,42 @@ describe('Rail', () => {
     });
 
     /**
-     * A coloured box is colour-carrying state on its own. The notice must
-     * reach assistive technology as a notice, not merely as a differently
-     * tinted paragraph.
+     * The panel claimed /biz/ was under slow mode until 18:00 UTC. Harmless
+     * copy against a fixture, a specific false statement about a live board
+     * once /biz/ is a real one. Nothing upstream reports moderation state, so
+     * the panel keeps its place and says nothing rather than saying something
+     * untrue.
      */
-    it('exposes the moderation notice to assistive technology as a note, not decoration', () => {
-        render(<Rail />);
+    it('keeps the moderation panel but makes no claim about any board', () => {
+        render(<Rail boards={BOARDS} trending={TRENDING} />);
 
-        const note = screen.getByRole('note');
+        const region = screen.getByRole('region', {
+            name: 'Moderation notices',
+        });
 
-        expect(note).toHaveTextContent(
-            '/biz/ is under slow mode until 18:00 UTC. One post per anon every 5 minutes.',
-        );
+        expect(
+            within(region).getByText('No notices right now.'),
+        ).toBeInTheDocument();
+        expect(region).not.toHaveTextContent('/biz/');
     });
 
     /**
-     * Five overlapping avatars are one visual unit standing in for a count
-     * that is already spelled out in text. Announcing five separate images
-     * would be noise, not information.
+     * "Who is online" was `228,025 anons online` and a row of decorative
+     * avatars. 4chan's JSON API publishes no presence figure at any scope, so
+     * there is no honest version of the panel — not even an empty one, because
+     * the panel was the number.
      */
-    it('does not announce the online avatar stack as five separate images', () => {
-        render(<Rail />);
+    it('has no online panel, since nothing publishes an online count', () => {
+        render(<Rail boards={BOARDS} trending={TRENDING} />);
 
-        const onlineRegion = screen.getByRole('region', {
-            name: 'Who is online',
-        });
-
-        expect(within(onlineRegion).queryAllByRole('img')).toHaveLength(0);
         expect(
-            within(onlineRegion).getByText('228,025 anons online'),
-        ).toBeInTheDocument();
+            screen.queryByRole('region', { name: 'Who is online' }),
+        ).not.toBeInTheDocument();
+        expect(screen.queryByText(/anons online/)).not.toBeInTheDocument();
     });
 
     it('renders every recent-activity entry with its text and time', () => {
-        render(<Rail />);
+        render(<Rail boards={BOARDS} trending={TRENDING} />);
 
         const activityRegion = screen.getByRole('region', {
             name: 'Recent activity',
@@ -268,7 +283,7 @@ describe('Rail', () => {
     });
 
     it('is hidden below lg and only appears as a flex column at lg and up', () => {
-        render(<Rail />);
+        render(<Rail boards={BOARDS} trending={TRENDING} />);
 
         const rail = screen.getByRole('complementary');
 

@@ -57,9 +57,11 @@ export function BoardCard({
             </p>
 
             <div className="relative mt-auto flex flex-wrap items-center justify-between gap-3 px-6">
-                <MachineValue>
-                    {entry.online} online &middot; {entry.threads} threads
-                </MachineValue>
+                {/* An "anons online" figure used to lead this row. 4chan's
+                    JSON API publishes no online count at any scope, so it was
+                    dropped rather than estimated, and the row reports what the
+                    board can actually be counted for. */}
+                <MachineValue>{entry.threads} threads</MachineValue>
 
                 <Button
                     variant={subscribed ? 'outline' : 'primary'}

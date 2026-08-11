@@ -110,6 +110,56 @@ describe('ReplyComposer', () => {
         expect(screen.getByText('Over the limit')).toBeInTheDocument();
     });
 
+    /**
+     * `max_comment_chars` is per board upstream (2000, 3000 or 5000), so the
+     * composer takes it as a prop. These are the negative control for the
+     * single global constant it replaced: pass a limit that is not 2000 and the
+     * counter has to follow it.
+     */
+    it("counts against the board's own limit when one is passed", async () => {
+        const user = userEvent.setup();
+        render(<ReplyComposer threadNo={58210441} maxCommentChars={5000} />);
+
+        expect(screen.getByText('0/5000')).toBeInTheDocument();
+
+        await user.type(
+            screen.getByLabelText('Reply to this thread'),
+            'twelve chars',
+        );
+
+        expect(screen.getByText('12/5000')).toBeInTheDocument();
+    });
+
+    it('accepts a body the fallback limit would reject when the board allows it', async () => {
+        const user = userEvent.setup();
+        render(<ReplyComposer threadNo={58210441} maxCommentChars={5000} />);
+
+        const field = screen.getByLabelText('Reply to this thread');
+        await user.click(field);
+        await user.paste('a'.repeat(2500));
+
+        expect(screen.getByText('2500/5000')).toBeInTheDocument();
+        expect(screen.queryByText('Over the limit')).not.toBeInTheDocument();
+        expect(
+            screen.getByRole('button', { name: 'Post reply' }),
+        ).toBeEnabled();
+    });
+
+    it('rejects a body past a stricter board limit than the fallback', async () => {
+        const user = userEvent.setup();
+        render(<ReplyComposer threadNo={58210441} maxCommentChars={500} />);
+
+        const field = screen.getByLabelText('Reply to this thread');
+        await user.click(field);
+        await user.paste('a'.repeat(501));
+
+        expect(screen.getByText('501/500')).toBeInTheDocument();
+        expect(screen.getByText('Over the limit')).toBeInTheDocument();
+        expect(
+            screen.getByRole('button', { name: 'Post reply' }),
+        ).toBeDisabled();
+    });
+
     it('names the two formatting rules in one hint line', () => {
         render(<ReplyComposer threadNo={58210441} />);
 

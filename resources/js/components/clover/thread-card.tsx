@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Bookmark, Eye, MessageSquare } from 'lucide-react';
+import { Bookmark, ImageIcon, MessageSquare } from 'lucide-react';
 import type { ComponentProps } from 'react';
 import { BoardAvatar } from '@/components/clover/board-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
@@ -116,13 +116,27 @@ function ThreadCard({
                     onCurse={onCurse}
                     size="sm"
                 />
-                <span className="flex items-center gap-1.5 text-caption text-faint">
+                {/* Both stats name their own unit. An icon plus a bare number
+                    reads as "318" to a screen reader, which is a figure with no
+                    subject; the icon carries the meaning for sighted anons only.
+                    Matches how `CommentTree` labels its blessing count. */}
+                <span
+                    aria-label={`${thread.replies} replies`}
+                    className="flex items-center gap-1.5 text-caption text-faint"
+                >
                     <MessageSquare aria-hidden="true" className="size-4" />
-                    <MachineValue>{thread.replies}</MachineValue>
+                    <MachineValue aria-hidden="true">
+                        {thread.replies}
+                    </MachineValue>
                 </span>
-                <span className="flex items-center gap-1.5 text-caption text-faint">
-                    <Eye aria-hidden="true" className="size-4" />
-                    <MachineValue>{thread.views}</MachineValue>
+                <span
+                    aria-label={`${thread.images} images`}
+                    className="flex items-center gap-1.5 text-caption text-faint"
+                >
+                    <ImageIcon aria-hidden="true" className="size-4" />
+                    <MachineValue aria-hidden="true">
+                        {thread.images}
+                    </MachineValue>
                 </span>
                 <button
                     type="button"

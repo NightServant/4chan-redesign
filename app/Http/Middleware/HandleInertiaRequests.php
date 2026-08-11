@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Resources\BoardResource;
+use App\Models\Board;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -15,6 +17,9 @@ class HandleInertiaRequests extends Middleware
      * @var string
      */
     protected $rootView = 'app';
+
+    /** How many boards the sidebar's "Boards you use" list shows. */
+    private const SIDEBAR_BOARDS = 6;
 
     /**
      * Determines the current asset version.
@@ -50,6 +55,26 @@ class HandleInertiaRequests extends Middleware
              * "nobody is signed in" to decide what it may show.
              */
             'showsMatureBoards' => (bool) $request->user()?->shows_mature_boards,
+
+            /**
+             * The sidebar's board list.
+             *
+             * Shared rather than passed per page because the sidebar is app
+             * chrome: it renders on every screen, and threading the same prop
+             * through nine controllers to feed one nav list would mean any
+             * future page that forgot it silently loses part of the navigation.
+             *
+             * Filtered by the same visibility rule as everything else. A board
+             * an anon has asked not to see must not reappear in the furniture.
+             */
+            'sidebarBoards' => BoardResource::collection(
+                Board::query()
+                    ->visible((bool) $request->user()?->shows_mature_boards)
+                    ->withCount('threads')
+                    ->orderByDesc('threads_count')
+                    ->limit(self::SIDEBAR_BOARDS)
+                    ->get(),
+            ),
         ];
     }
 }

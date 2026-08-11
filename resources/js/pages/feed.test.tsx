@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { THREADS } from '@/fixtures/clover';
+import { makeBoard, makeThread, makeTrendingTag } from '@/fixtures/factories';
 import Feed from '@/pages/feed';
 import type { User } from '@/types/auth';
 
@@ -74,9 +74,37 @@ afterEach(() => {
     vi.useRealTimers();
 });
 
+/* Exactly what the controller sends: threads already ordered for the sort,
+   plus the two lists the rail renders. Nothing here is filtered client-side. */
+const THREADS = [
+    makeThread({
+        title: 'Anons are still arguing about init systems',
+        blessings: 2412,
+    }),
+    makeThread({
+        title: 'Mainline kernel support or vendor tree',
+        blessings: 512,
+    }),
+    makeThread({ title: 'Battery life under sustained load', blessings: 42 }),
+];
+
+const BOARDS = [
+    makeBoard({ slug: '/g/', name: 'Technology' }),
+    makeBoard({ slug: '/biz/', name: 'Business' }),
+];
+
+const TRENDING = [makeTrendingTag({ tag: '/g/', posts: '4,182 posts' })];
+
 describe('Feed', () => {
     it('renders "Home" for the bumped sort', () => {
-        render(<Feed sort="bumped" />);
+        render(
+            <Feed
+                sort="bumped"
+                threads={THREADS}
+                boards={BOARDS}
+                trending={TRENDING}
+            />,
+        );
 
         expect(
             screen.getByRole('heading', { level: 1, name: 'Home' }),
@@ -84,7 +112,14 @@ describe('Feed', () => {
     });
 
     it('renders "Popular" for the popular sort', () => {
-        render(<Feed sort="popular" />);
+        render(
+            <Feed
+                sort="popular"
+                threads={THREADS}
+                boards={BOARDS}
+                trending={TRENDING}
+            />,
+        );
 
         expect(
             screen.getByRole('heading', { level: 1, name: 'Popular' }),
@@ -92,7 +127,14 @@ describe('Feed', () => {
     });
 
     it('renders "Latest" for the latest sort', () => {
-        render(<Feed sort="latest" />);
+        render(
+            <Feed
+                sort="latest"
+                threads={THREADS}
+                boards={BOARDS}
+                trending={TRENDING}
+            />,
+        );
 
         expect(
             screen.getByRole('heading', { level: 1, name: 'Latest' }),
@@ -100,7 +142,14 @@ describe('Feed', () => {
     });
 
     it("does not render a second <main>: that is AppLayout's job", () => {
-        render(<Feed sort="bumped" />);
+        render(
+            <Feed
+                sort="bumped"
+                threads={THREADS}
+                boards={BOARDS}
+                trending={TRENDING}
+            />,
+        );
 
         expect(screen.queryByRole('main')).not.toBeInTheDocument();
     });
@@ -108,7 +157,14 @@ describe('Feed', () => {
     it('shows the anon banner when signed out', () => {
         mockPage({ signedIn: false });
 
-        render(<Feed sort="bumped" />);
+        render(
+            <Feed
+                sort="bumped"
+                threads={THREADS}
+                boards={BOARDS}
+                trending={TRENDING}
+            />,
+        );
 
         expect(screen.getByText(/browsing anonymously/i)).toBeInTheDocument();
     });
@@ -116,7 +172,14 @@ describe('Feed', () => {
     it('hides the anon banner when signed in', () => {
         mockPage({ signedIn: true });
 
-        render(<Feed sort="bumped" />);
+        render(
+            <Feed
+                sort="bumped"
+                threads={THREADS}
+                boards={BOARDS}
+                trending={TRENDING}
+            />,
+        );
 
         expect(
             screen.queryByText(/browsing anonymously/i),
@@ -124,7 +187,14 @@ describe('Feed', () => {
     });
 
     it('renders every fixture thread', () => {
-        render(<Feed sort="bumped" />);
+        render(
+            <Feed
+                sort="bumped"
+                threads={THREADS}
+                boards={BOARDS}
+                trending={TRENDING}
+            />,
+        );
 
         for (const thread of THREADS) {
             expect(
@@ -134,7 +204,14 @@ describe('Feed', () => {
     });
 
     it('does not override the thread link: it resolves to the board and post number', () => {
-        render(<Feed sort="bumped" />);
+        render(
+            <Feed
+                sort="bumped"
+                threads={THREADS}
+                boards={BOARDS}
+                trending={TRENDING}
+            />,
+        );
 
         const first = THREADS[0];
         expect(screen.getByRole('link', { name: first.title })).toHaveAttribute(
@@ -148,7 +225,14 @@ describe('Feed', () => {
         mockPage({ signedIn: true });
         const thread = THREADS[0];
 
-        render(<Feed sort="bumped" />);
+        render(
+            <Feed
+                sort="bumped"
+                threads={THREADS}
+                boards={BOARDS}
+                trending={TRENDING}
+            />,
+        );
 
         const card = screen
             .getByRole('heading', { level: 3, name: thread.title })
@@ -186,7 +270,14 @@ describe('Feed', () => {
         mockPage({ signedIn: false });
         const thread = THREADS[0];
 
-        render(<Feed sort="bumped" />);
+        render(
+            <Feed
+                sort="bumped"
+                threads={THREADS}
+                boards={BOARDS}
+                trending={TRENDING}
+            />,
+        );
 
         const card = screen
             .getByRole('heading', { level: 3, name: thread.title })
@@ -208,46 +299,47 @@ describe('Feed', () => {
         ).toBeInTheDocument();
     });
 
-    it('shows two thread skeletons and a disabled "Loading" button while loading more, then stops', async () => {
-        const user = userEvent.setup();
-
-        render(<Feed sort="bumped" />);
-
-        expect(
-            document.querySelectorAll('[data-slot="thread-skeleton"]'),
-        ).toHaveLength(0);
-
-        const loadMore = screen.getByRole('button', {
-            name: 'Load more threads',
-        });
-        await user.click(loadMore);
-
-        expect(screen.getByRole('button', { name: 'Loading' })).toBeDisabled();
-        expect(
-            document.querySelectorAll('[data-slot="thread-skeleton"]'),
-        ).toHaveLength(2);
-
-        await screen.findByRole(
-            'button',
-            { name: 'Load more threads' },
-            { timeout: 2000 },
+    /**
+     * The feed's "Load more" and its pagination landmark are both gone.
+     *
+     * Neither did anything. "Load more" showed two skeletons, waited, and put
+     * itself back — there was no second page to fetch, because every thread
+     * the page had was already in the fixture it imported. The pagination
+     * landmark navigated between pages that did not exist.
+     *
+     * With a real server the feed is one query with a limit, and paging it is
+     * a server concern: it needs a cursor on the prop, not a control that
+     * animates. Rather than keep two affordances that lie about what pressing
+     * them does, they are removed until the thing they describe exists. This
+     * comment is here so the next person knows it was deliberate.
+     */
+    it('offers no paging control it cannot honour', () => {
+        render(
+            <Feed
+                sort="bumped"
+                threads={THREADS}
+                boards={BOARDS}
+                trending={TRENDING}
+            />,
         );
 
         expect(
-            document.querySelectorAll('[data-slot="thread-skeleton"]'),
-        ).toHaveLength(0);
-    });
-
-    it('renders pagination as a landmark', () => {
-        render(<Feed sort="bumped" />);
-
+            screen.queryByRole('button', { name: 'Load more threads' }),
+        ).not.toBeInTheDocument();
         expect(
-            screen.getByRole('navigation', { name: 'Pagination' }),
-        ).toBeInTheDocument();
+            screen.queryByRole('navigation', { name: 'Pagination' }),
+        ).not.toBeInTheDocument();
     });
 
     it('hides the rail below lg and never squeezes the centre column', () => {
-        const { container } = render(<Feed sort="bumped" />);
+        const { container } = render(
+            <Feed
+                sort="bumped"
+                threads={THREADS}
+                boards={BOARDS}
+                trending={TRENDING}
+            />,
+        );
 
         const railWrapper = screen.getByTestId('rail-stub').parentElement;
         expect(railWrapper?.className).toMatch(/hidden/);
@@ -266,7 +358,14 @@ describe('Feed', () => {
     it('marks a blessed thread as pressed, not only as one count higher', async () => {
         const user = userEvent.setup();
         mockPage({ signedIn: true });
-        render(<Feed sort="bumped" />);
+        render(
+            <Feed
+                sort="bumped"
+                threads={THREADS}
+                boards={BOARDS}
+                trending={TRENDING}
+            />,
+        );
 
         const bless = screen.getAllByRole('button', { name: /bless/i })[0];
 
@@ -285,7 +384,14 @@ describe('Feed', () => {
      * second control for navigation the chrome already provides.
      */
     it('does not repeat the sidebar destinations as a tab row', () => {
-        render(<Feed sort="bumped" />);
+        render(
+            <Feed
+                sort="bumped"
+                threads={THREADS}
+                boards={BOARDS}
+                trending={TRENDING}
+            />,
+        );
 
         expect(
             screen.queryByRole('navigation', { name: /sort threads/i }),

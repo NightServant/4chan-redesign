@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { COMMENTS, THREADS } from '@/fixtures/clover';
+import { makeComment, makeThread } from '@/fixtures/factories';
 import Thread from '@/pages/thread';
 import type { User } from '@/types/auth';
 
@@ -69,7 +69,28 @@ const SIGNED_IN_USER: User = {
     updated_at: '2026-01-01T00:00:00Z',
 };
 
-const KNOWN_THREAD = THREADS[0]; // no: 58210441, board: /g/
+const KNOWN_THREAD = makeThread({
+    no: 58210441,
+    board: '/g/',
+    title: 'Anons are still arguing about init systems',
+    excerpt: 'Compiling LLVM takes 40 minutes but everything else is fine.',
+    replies: 318,
+});
+
+/* Nested server-side from the flat post list 4chan returns; the page renders
+   the tree it is handed and does no nesting of its own. */
+const COMMENTS = [
+    makeComment({
+        body: 'Forty minutes for LLVM is not "fine", that is a full coffee break per build.',
+        replies: [
+            makeComment({
+                body: 'Eight cores, 16 GB. It is not fast, it is usable.',
+                op: true,
+            }),
+        ],
+    }),
+    makeComment({ body: 'Mainline kernel support or vendor tree?' }),
+];
 
 function mockPage({ signedIn = false }: { signedIn?: boolean } = {}) {
     usePage.mockReturnValue({
@@ -88,7 +109,15 @@ afterEach(() => {
 
 describe('Thread', () => {
     it('renders the known thread title as the only h1', () => {
-        render(<Thread slug="/g/" no={KNOWN_THREAD.no} />);
+        render(
+            <Thread
+                slug="/g/"
+                no={KNOWN_THREAD.no}
+                thread={KNOWN_THREAD}
+                comments={COMMENTS}
+                maxCommentChars={2000}
+            />,
+        );
 
         const headings = screen.getAllByRole('heading', { level: 1 });
         expect(headings).toHaveLength(1);
@@ -96,20 +125,44 @@ describe('Thread', () => {
     });
 
     it('renders the thread\'s post number in ">>" form', () => {
-        render(<Thread slug="/g/" no={KNOWN_THREAD.no} />);
+        render(
+            <Thread
+                slug="/g/"
+                no={KNOWN_THREAD.no}
+                thread={KNOWN_THREAD}
+                comments={COMMENTS}
+                maxCommentChars={2000}
+            />,
+        );
 
         expect(screen.getByText(`>>${KNOWN_THREAD.no}`)).toBeInTheDocument();
     });
 
     it('links back to the board', () => {
-        render(<Thread slug="/g/" no={KNOWN_THREAD.no} />);
+        render(
+            <Thread
+                slug="/g/"
+                no={KNOWN_THREAD.no}
+                thread={KNOWN_THREAD}
+                comments={COMMENTS}
+                maxCommentChars={2000}
+            />,
+        );
 
         const backLink = screen.getByRole('link', { name: /back to \/g\//i });
         expect(backLink).toHaveAttribute('href', '/g');
     });
 
     it('renders the reply count label matching the fixture, with the number in a MachineValue', () => {
-        render(<Thread slug="/g/" no={KNOWN_THREAD.no} />);
+        render(
+            <Thread
+                slug="/g/"
+                no={KNOWN_THREAD.no}
+                thread={KNOWN_THREAD}
+                comments={COMMENTS}
+                maxCommentChars={2000}
+            />,
+        );
 
         const sectionLabels = document.querySelectorAll(
             '[data-slot="section-label"]',
@@ -128,7 +181,15 @@ describe('Thread', () => {
     });
 
     it('renders the comment tree for a known thread', () => {
-        render(<Thread slug="/g/" no={KNOWN_THREAD.no} />);
+        render(
+            <Thread
+                slug="/g/"
+                no={KNOWN_THREAD.no}
+                thread={KNOWN_THREAD}
+                comments={COMMENTS}
+                maxCommentChars={2000}
+            />,
+        );
 
         expect(
             screen.getByRole('list', { name: 'Replies' }),
@@ -139,7 +200,15 @@ describe('Thread', () => {
     it('shows the composer to a signed-in anon', () => {
         mockPage({ signedIn: true });
 
-        render(<Thread slug="/g/" no={KNOWN_THREAD.no} />);
+        render(
+            <Thread
+                slug="/g/"
+                no={KNOWN_THREAD.no}
+                thread={KNOWN_THREAD}
+                comments={COMMENTS}
+                maxCommentChars={2000}
+            />,
+        );
 
         expect(screen.getByTestId('reply-composer-stub')).toBeInTheDocument();
         expect(
@@ -151,7 +220,15 @@ describe('Thread', () => {
         const user = userEvent.setup();
         mockPage({ signedIn: false });
 
-        render(<Thread slug="/g/" no={KNOWN_THREAD.no} />);
+        render(
+            <Thread
+                slug="/g/"
+                no={KNOWN_THREAD.no}
+                thread={KNOWN_THREAD}
+                comments={COMMENTS}
+                maxCommentChars={2000}
+            />,
+        );
 
         expect(
             screen.queryByTestId('reply-composer-stub'),
@@ -171,10 +248,20 @@ describe('Thread', () => {
     it('renders the not-found state for a post number matching no thread, with no composer and no comment tree', () => {
         mockPage({ signedIn: true });
 
-        render(<Thread slug="/g/" no={999999999} />);
+        render(
+            <Thread
+                slug="/g/"
+                no={999999999}
+                thread={null}
+                comments={[]}
+                maxCommentChars={2000}
+            />,
+        );
 
         expect(
-            screen.getByRole('heading', { name: 'That thread is not here' }),
+            screen.getByRole('heading', {
+                name: 'Thread >>999999999 is not here',
+            }),
         ).toBeInTheDocument();
         expect(
             screen.getByText(
@@ -192,14 +279,30 @@ describe('Thread', () => {
     });
 
     it('points the not-found action at the board the slug names', () => {
-        render(<Thread slug="/g/" no={999999999} />);
+        render(
+            <Thread
+                slug="/g/"
+                no={999999999}
+                thread={null}
+                comments={[]}
+                maxCommentChars={2000}
+            />,
+        );
 
         const backLink = screen.getByRole('link', { name: /back to \/g\//i });
         expect(backLink).toHaveAttribute('href', '/g');
     });
 
     it("does not render a second <main>: that is AppLayout's job", () => {
-        render(<Thread slug="/g/" no={KNOWN_THREAD.no} />);
+        render(
+            <Thread
+                slug="/g/"
+                no={KNOWN_THREAD.no}
+                thread={KNOWN_THREAD}
+                comments={COMMENTS}
+                maxCommentChars={2000}
+            />,
+        );
 
         expect(screen.queryByRole('main')).not.toBeInTheDocument();
     });

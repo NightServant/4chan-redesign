@@ -2,11 +2,13 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { PROFILE_COMMENTS, PROFILE_MEDIA, THREADS } from '@/fixtures/clover';
+import { PROFILE_COMMENTS, PROFILE_MEDIA } from '@/fixtures/clover';
 import Account from '@/pages/account';
 
 vi.mock('@inertiajs/react', () => ({
     Head: () => null,
+    /* AccountOverview reads the sidebar's board list off the shared props. */
+    usePage: () => ({ props: { sidebarBoards: [] } }),
     Link: ({
         href,
         children,
@@ -65,20 +67,19 @@ describe('Account', () => {
         ).toBeInTheDocument();
     });
 
-    it('shows three of the threads this anon opened under Posts', async () => {
+    /**
+     * The tab used to list ingested threads as though this anon had written
+     * them, which was true of none of them: nothing attributes a post to an
+     * anon until posting lands in task 11b. An empty state is the only honest
+     * thing to show, and the tab keeps its place so the absence is visible
+     * rather than the tab silently vanishing.
+     */
+    it('says there are no posts rather than listing threads nobody wrote', async () => {
         render(<Account />);
 
         await openTab('Posts');
 
-        for (const thread of THREADS.slice(0, 3)) {
-            expect(
-                screen.getByRole('link', { name: thread.title }),
-            ).toBeInTheDocument();
-        }
-
-        expect(
-            screen.queryByRole('link', { name: THREADS[4].title }),
-        ).not.toBeInTheDocument();
+        expect(screen.getByText('No posts yet')).toBeInTheDocument();
     });
 
     it('shows four distinct replies under Comments', async () => {
