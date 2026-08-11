@@ -9,7 +9,7 @@ use App\Models\Thread;
 use App\Services\LocalPostNumbers;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -83,7 +83,7 @@ class ReplyController extends Controller
                 'capcode' => null,
                 'body' => trim($validated['body']),
                 'quotes' => $quotes,
-                'posted_at' => Carbon::now(),
+                'posted_at' => Date::now(),
             ]);
 
             /**
@@ -92,7 +92,7 @@ class ReplyController extends Controller
              * every surface that sorts by bump time — which is all of them.
              */
             $target->forceFill([
-                'bumped_at' => Carbon::now(),
+                'bumped_at' => Date::now(),
                 'replies_count' => $target->replies_count + 1,
             ])->save();
         });

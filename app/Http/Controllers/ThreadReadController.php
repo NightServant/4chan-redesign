@@ -8,7 +8,7 @@ use App\Models\Thread;
 use App\Models\ThreadRead;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Date;
 
 /**
  * Recording that an anon read a thread, and how far they got.
@@ -39,7 +39,7 @@ class ThreadReadController extends Controller
                  * would sit above everything real for as long as it existed.
                  */
                 'progress' => ThreadRead::clampProgress((int) ($validated['progress'] ?? 0)),
-                'last_read_at' => Carbon::now(),
+                'last_read_at' => Date::now(),
             ],
         );
 

@@ -9,7 +9,7 @@ use App\Models\Thread;
 use App\Services\LocalPostNumbers;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -37,7 +37,7 @@ class ThreadCreationController extends Controller
         ]);
 
         $user = $request->user();
-        $now = Carbon::now();
+        $now = Date::now();
 
         $thread = DB::transaction(function () use ($model, $user, $validated, $now): Thread {
             $number = LocalPostNumbers::next($model);

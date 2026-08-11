@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Database\Factories\ThreadFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -13,7 +14,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
@@ -27,12 +27,12 @@ use Illuminate\Support\Str;
  * @property bool $closed
  * @property int $replies_count
  * @property int $images_count
- * @property Carbon $posted_at
- * @property Carbon $bumped_at
- * @property Carbon|null $posts_synced_at
- * @property Carbon|null $synced_at
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
+ * @property CarbonImmutable $posted_at
+ * @property CarbonImmutable $bumped_at
+ * @property CarbonImmutable|null $posts_synced_at
+ * @property CarbonImmutable|null $synced_at
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
  * @property-read Board $board
  * @property-read Post|null $originalPost
  * @property-read Collection<int, Post> $posts
