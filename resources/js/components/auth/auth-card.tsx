@@ -30,7 +30,7 @@ function AuthCard({ title, description, children, className }: AuthCardProps) {
         <div
             data-slot="auth-card"
             className={cn(
-                'flex w-full max-w-[480px] flex-col gap-6 rounded-2xl border border-border bg-surface p-8 shadow-lift',
+                'flex w-full max-w-[480px] flex-col gap-6 p-8',
                 className,
             )}
         >

@@ -105,7 +105,7 @@ function AuthBrandPanel({ className, ...props }: AuthBrandPanelProps) {
                         <li key={title} className="flex gap-3">
                             <span
                                 aria-hidden="true"
-                                className="mt-px flex size-8 shrink-0 items-center justify-center rounded-sm border border-primary-line bg-primary-soft"
+                                className="mt-px flex size-8 shrink-0 items-center justify-center"
                             >
                                 <Icon size={15} className="text-primary" />
                             </span>

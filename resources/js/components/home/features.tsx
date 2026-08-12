@@ -69,7 +69,7 @@ function Features() {
             >
                 {FEATURES.map(({ icon: Icon, title, body }) => (
                     <Card key={title} hoverLift className="gap-3 p-5">
-                        <div className="flex size-[34px] items-center justify-center rounded-[10px] border border-primary-line bg-primary-soft">
+                        <div className="flex size-[34px] items-center justify-center rounded-[10px]">
                             <Icon size={16} className="text-primary" />
                         </div>
                         <h3 className="font-display text-h3 font-semibold">
