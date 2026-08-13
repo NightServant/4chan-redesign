@@ -89,7 +89,7 @@ function Hero({ threads, className, ...props }: HeroProps) {
                         threads={left}
                         direction="forward"
                         pixelsPerSecond={LEFT_RATE}
-                        className="hidden h-[520px] border-r border-border lg:block"
+                        className="hidden h-[520px] border-x border-border lg:block"
                     />
 
                     <div className="flex flex-col items-center gap-6 py-20 text-center lg:py-24">
@@ -118,7 +118,7 @@ function Hero({ threads, className, ...props }: HeroProps) {
                         threads={right}
                         direction="reverse"
                         pixelsPerSecond={RIGHT_RATE}
-                        className="hidden h-[520px] border-l border-border lg:block"
+                        className="hidden h-[520px] border-x border-border lg:block"
                     />
                 </div>
             </PatternField>
