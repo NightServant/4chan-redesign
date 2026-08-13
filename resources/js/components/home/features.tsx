@@ -40,6 +40,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
  * reader who only scans the left column has still read the case for the site.
  * Sizing them the same says so.
  *
+ * A rule divides the two, not a gap. Whitespace between columns reads as two
+ * lists that happen to sit side by side, and this pair is one control and its
+ * output. The rule is the list's own right edge, so a single line falls
+ * between the columns rather than two meeting in the gutter.
+ *
  * ## Motion
  *
  * Switching claims is the one moment this band has, so the answer is animated
@@ -103,7 +108,6 @@ function Features() {
     return (
         <Section
             id="features"
-            pattern="dots"
             depth={40}
             label="Features"
             title="Built for reading, not for engagement"
@@ -115,13 +119,19 @@ function Features() {
                 /* Stacked on a phone, equal halves from `md`. The list stays
                    above the answer either way, because the control has to come
                    before the thing it controls for anyone reading in order. */
-                className="grid gap-6 md:grid-cols-2 md:gap-12"
+                className="grid gap-6 md:grid-cols-2 md:gap-0"
             >
                 {/* The primitive's list is a horizontal strip with a bottom
                     rule, so every part of that is overridden here: a column,
                     ruled down its left edge, with each claim marking itself
                     against that rule rather than under it. */}
-                <TabsList className="w-full flex-col items-stretch gap-0 border-b-0 border-l border-border">
+                {/* The divider between the claims and their answer. A rule
+                    rather than a gap: two columns separated by whitespace read
+                    as two lists that happen to be adjacent, and this pair is
+                    one control and its output. It is the list's right edge so
+                    that a single line falls between the columns rather than
+                    two lines meeting in the gutter. */}
+                <TabsList className="w-full flex-col items-stretch gap-0 border-b-0 border-l border-border md:border-r md:pr-0">
                     {FEATURES.map(({ title }) => (
                         <TabsTrigger
                             key={title}
@@ -164,7 +174,7 @@ function Features() {
                             key={title}
                             value={slugFor(title)}
                             forceMount
-                            className="flex flex-col gap-4 md:pt-1"
+                            className="flex flex-col gap-4 md:pt-1 md:pl-12"
                             asChild
                         >
                             <motion.div

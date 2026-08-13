@@ -91,4 +91,34 @@ describe('Section', () => {
         expect(section?.className).toContain('border-t');
         expect(section?.className).not.toMatch(/\bbg-(surface|primary)\b/);
     });
+
+    /**
+     * The content column is ruled on all four sides. Bands share their
+     * horizontal rules with their neighbours, so a stack of them draws one
+     * continuous frame rather than a row of boxes with doubled edges between.
+     */
+    it('rules the content column on its vertical edges', () => {
+        const { container } = render(
+            <Section id="x" label="Label" title="Title">
+                <p>content</p>
+            </Section>,
+        );
+
+        expect(container.querySelector('.mx-auto')?.className).toMatch(
+            /border-x/,
+        );
+    });
+
+    it('draws the band on patterned paper', () => {
+        const { container } = render(
+            <Section id="x" label="Label" title="Title">
+                <p>content</p>
+            </Section>,
+        );
+
+        expect(
+            container.querySelector('[data-slot="pattern-field-paper"]')
+                ?.className,
+        ).toMatch(/bg-dots/);
+    });
 });

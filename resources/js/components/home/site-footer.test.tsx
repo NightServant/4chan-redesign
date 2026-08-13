@@ -117,6 +117,19 @@ describe('SiteFooter', () => {
         ).not.toBeInTheDocument();
     });
 
+    /** The paper runs unbroken to the bottom of the page, footer included. */
+    it('is drawn on the same patterned paper as the bands above it', () => {
+        const { container } = render(<SiteFooter />);
+
+        expect(
+            container.querySelector('[data-slot="pattern-field-paper"]')
+                ?.className,
+        ).toMatch(/bg-dots/);
+        expect(container.querySelector('.mx-auto')?.className).toMatch(
+            /border-x/,
+        );
+    });
+
     it('contains no em dashes anywhere in its rendered text', () => {
         const { container } = render(<SiteFooter />);
 

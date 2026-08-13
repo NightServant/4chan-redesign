@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { useId } from 'react';
 import { MachineValue } from '@/components/clover/machine-value';
+import { PatternField } from '@/components/clover/pattern-field';
 import { SectionLabel } from '@/components/clover/section-label';
 import { Wordmark } from '@/components/clover/wordmark';
 import { communities, faq, privacy, rules, terms } from '@/routes';
@@ -67,29 +68,32 @@ function FooterLinkGroup({ heading, items }: LinkGroup) {
 function SiteFooter() {
     return (
         <footer className="border-t border-border bg-surface">
-            <div
-                className="mx-auto grid max-w-[1180px] gap-7 px-6 py-9"
-                style={{
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                }}
-            >
-                <div className="flex flex-col gap-2">
-                    <Wordmark />
-                    {/* The year is read, not written in.
+            <PatternField depth={30} feather={false}>
+                <div
+                    className="mx-auto grid max-w-[1180px] gap-7 border-x border-border px-6 py-9"
+                    style={{
+                        gridTemplateColumns:
+                            'repeat(auto-fit, minmax(180px, 1fr))',
+                    }}
+                >
+                    <div className="flex flex-col gap-2">
+                        <Wordmark />
+                        {/* The year is read, not written in.
                        
                         It said 2024, which was wrong the moment 2025 arrived
                         and would be wrong again every January. A hardcoded
                         year is a bug with a scheduled start date. */}
-                    <MachineValue>
-                        &copy; {new Date().getFullYear()} Clover. Anonymous
-                        discussion.
-                    </MachineValue>
-                </div>
+                        <MachineValue>
+                            &copy; {new Date().getFullYear()} Clover. Anonymous
+                            discussion.
+                        </MachineValue>
+                    </div>
 
-                {LINK_GROUPS.map((group) => (
-                    <FooterLinkGroup key={group.heading} {...group} />
-                ))}
-            </div>
+                    {LINK_GROUPS.map((group) => (
+                        <FooterLinkGroup key={group.heading} {...group} />
+                    ))}
+                </div>
+            </PatternField>
         </footer>
     );
 }

@@ -23,12 +23,9 @@ import type { Thread } from '@/types/clover';
  * A split composition: headline left, two `ThreadCard`s stacked right, over a
  * ruled grid drawn in repeating gradients. Three things replaced it.
  *
- * The grid went, and has since come back on different terms. It was removed
- * because backgrounds were flat then, and because a static ruled field and two
- * moving columns were two kinds of texture competing for the same job. It
- * returns as `PatternField`: the same 64px module, on its own layer, drifting
- * at its own rate. A grid that moves against the rails reads as the paper they
- * are drawn on rather than as a second pattern arguing with them.
+ * The ruled grid that used to sit here went, came back as a moving layer, and
+ * has now gone again in favour of the dot matrix every other band carries. One
+ * pattern down the whole page is a surface; two alternating is two systems.
  *
  * Two preview cards became sixteen marquee rows because two cards from
  * whichever board bumped most recently could easily both be /v/, which
@@ -82,7 +79,7 @@ function Hero({ threads, className, ...props }: HeroProps) {
             {/* Deepest on the page. The hero is the one band a reader sees
                 before they have scrolled at all, so it has the most travel to
                 spend and the most to gain from spending it. */}
-            <PatternField pattern="grid" depth={90} feather={false}>
+            <PatternField depth={90} feather={false}>
                 {/* Three columns on a wide screen, one on a narrow one. The rails
                 are the first thing to go: on a phone there is no room for a
                 column of ambient text beside the pitch, and stacking them

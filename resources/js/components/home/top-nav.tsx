@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import { MoonIcon, SunIcon } from 'lucide-react';
 import type { ComponentProps } from 'react';
+import { PatternField } from '@/components/clover/pattern-field';
 import { Wordmark } from '@/components/clover/wordmark';
 import { Button } from '@/components/ui/button';
 import { useAppearance } from '@/hooks/use-appearance';
@@ -36,47 +37,51 @@ function TopNav({ className, ...props }: TopNavProps) {
             )}
             {...props}
         >
-            <div className="mx-auto flex h-16 max-w-[1180px] items-center justify-between px-6">
-                <Link href={home()} aria-label="Clover home">
-                    <Wordmark />
-                </Link>
+            <PatternField depth={0} feather={false}>
+                <div className="mx-auto flex h-16 max-w-[1180px] items-center justify-between border-x border-border px-6">
+                    <Link href={home()} aria-label="Clover home">
+                        <Wordmark />
+                    </Link>
 
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={
-                            isDark
-                                ? 'Switch to light theme'
-                                : 'Switch to dark theme'
-                        }
-                        onClick={() =>
-                            updateAppearance(isDark ? 'light' : 'dark')
-                        }
-                    >
-                        {isDark ? (
-                            <SunIcon aria-hidden="true" />
-                        ) : (
-                            <MoonIcon aria-hidden="true" />
-                        )}
-                    </Button>
-
-                    {isSignedIn ? (
-                        <Button variant="primary" asChild>
-                            <Link href={dashboard()}>Go to dashboard</Link>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={
+                                isDark
+                                    ? 'Switch to light theme'
+                                    : 'Switch to dark theme'
+                            }
+                            onClick={() =>
+                                updateAppearance(isDark ? 'light' : 'dark')
+                            }
+                        >
+                            {isDark ? (
+                                <SunIcon aria-hidden="true" />
+                            ) : (
+                                <MoonIcon aria-hidden="true" />
+                            )}
                         </Button>
-                    ) : (
-                        <>
-                            <Button variant="ghost" asChild>
-                                <Link href={login()}>Log in</Link>
-                            </Button>
+
+                        {isSignedIn ? (
                             <Button variant="primary" asChild>
-                                <Link href={register()}>Create account</Link>
+                                <Link href={dashboard()}>Go to dashboard</Link>
                             </Button>
-                        </>
-                    )}
+                        ) : (
+                            <>
+                                <Button variant="ghost" asChild>
+                                    <Link href={login()}>Log in</Link>
+                                </Button>
+                                <Button variant="primary" asChild>
+                                    <Link href={register()}>
+                                        Create account
+                                    </Link>
+                                </Button>
+                            </>
+                        )}
+                    </div>
                 </div>
-            </div>
+            </PatternField>
         </header>
     );
 }

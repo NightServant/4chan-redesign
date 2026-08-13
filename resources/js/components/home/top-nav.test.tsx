@@ -141,6 +141,16 @@ describe('TopNav', () => {
      * see-through header with no blur behind it is unreadable rather than
      * merely unstyled.
      */
+    /** The paper starts at the top of the page, header included. */
+    it('is drawn on the same patterned paper as the bands below it', () => {
+        const { container } = render(<TopNav />);
+
+        expect(
+            container.querySelector('[data-slot="pattern-field-paper"]')
+                ?.className,
+        ).toMatch(/bg-dots/);
+    });
+
     it('frosts the header over the content it covers', () => {
         const { container } = render(<TopNav />);
 

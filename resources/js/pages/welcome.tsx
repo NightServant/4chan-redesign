@@ -20,13 +20,12 @@ import type { Board, Thread, TrendingTag } from '@/types/clover';
  * which is what keeps the page reading as one document instead of a stack of
  * unrelated slabs.
  *
- * They are drawn on visible paper, and the paper alternates: hero ruled,
- * boards dotted, trending ruled, features dotted, how-it-works ruled. Each
- * band's layer drifts at its own rate as it passes, so the page reads as
- * stacked transparencies over a technical drawing rather than as one flat
- * image with a texture on it. The pattern belongs to `Section`, and the depth
- * values live with each band; this comment is the only place the whole
- * sequence is visible at once.
+ * They are drawn on visible paper: one dot matrix, every band, plus the
+ * header and the footer, so the paper runs unbroken from the top of the page
+ * to the bottom. Each band's layer drifts at its own rate as it passes, so the
+ * page reads as stacked transparencies over a drawing rather than as one flat
+ * image with a texture on it. Only the depth varies, and it lives with each
+ * band.
  *
  * Everything on it is ingested data the server chose. Because it is public,
  * the server sends only what a visitor with no content preference may see, so
