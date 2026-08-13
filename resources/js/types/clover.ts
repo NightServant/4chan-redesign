@@ -101,13 +101,6 @@ export interface Thread {
     time: string;
     title: string;
     excerpt?: string;
-    /**
-     * Blessings are Clover's own, not 4chan's: the board has no votes to
-     * import, so this counts what anons here have given. Zero on an ingested
-     * thread nobody has blessed yet, which is a true zero rather than a
-     * missing value.
-     */
-    blessings: number;
     replies: number;
     /**
      * Attached images on the thread. Pre-formatted, e.g. `48`.
@@ -120,12 +113,6 @@ export interface Thread {
     /** The OP's attachment, or null when the thread opened without one. */
     media: Attachment | null;
     pinned: boolean;
-    /**
-     * How the anon reading this voted on it, or null for both "not signed in"
-     * and "signed in and has not voted" — the control renders the same either
-     * way, and the route is what stops a signed-out anon voting.
-     */
-    voteState: 'blessed' | 'cursed' | null;
     /** Whether this anon has saved it. Always false when signed out. */
     bookmarked: boolean;
 }
@@ -138,7 +125,7 @@ export interface Thread {
  * board has always worked and is the one convention worth preserving.
  */
 export interface Comment {
-    /** This application's own id, which the vote route takes. See `Thread.id`. */
+    /** This application's own id, distinct from the board's `no`. See `Thread.id`. */
     id: number;
     no: number;
     /** Post numbers this reply quotes. Empty for a direct reply to the OP. */
@@ -148,7 +135,6 @@ export interface Comment {
     /** Relative and pre-formatted, e.g. `4 min ago`. */
     time: string;
     body: string;
-    blessings: number;
     /** True for the anon who opened the thread. */
     op: boolean;
     /**

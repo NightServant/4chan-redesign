@@ -4,8 +4,7 @@ import type { ComponentProps } from 'react';
 import { BoardAvatar } from '@/components/clover/board-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
 import { PostAttachment } from '@/components/clover/post-image';
-import { VoteControl } from '@/components/clover/vote-control';
-import type { VoteState } from '@/components/clover/vote-control';
+import { ShareControl } from '@/components/clover/share-control';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -15,7 +14,7 @@ import type { Thread } from '@/types/clover';
  * One thread as it appears in a feed.
  *
  * The card reads as clickable everywhere, but the accessible target is the
- * title link alone. Nesting the vote and bookmark buttons inside that link
+ * title link alone. Nesting the share and bookmark buttons inside that link
  * would be invalid HTML and would break their focus and keyboard behaviour,
  * so they stay siblings of it instead: the link stretches over the whole
  * card with a positioned pseudo-element (the "stretched link" pattern), and
@@ -30,14 +29,6 @@ type ThreadCardProps = Omit<ComponentProps<'div'>, 'onClick' | 'children'> & {
      * than at a 404.
      */
     href?: string;
-    /**
-     * The anon's vote, held by the caller. The card owns no vote state of its
-     * own, so without this the bless button reports `aria-pressed="false"`
-     * forever and a landed bless is signalled only by the count changing.
-     */
-    voteState?: VoteState;
-    onBless?: () => void;
-    onCurse?: () => void;
     onBookmark?: () => void;
 };
 
@@ -50,9 +41,6 @@ const iconButtonClasses = cn(
 function ThreadCard({
     thread,
     href,
-    voteState = null,
-    onBless,
-    onCurse,
     onBookmark,
     className,
     ...props
@@ -112,17 +100,9 @@ function ThreadCard({
             ) : null}
 
             <div className="relative flex items-center gap-5 px-5">
-                <VoteControl
-                    count={thread.blessings}
-                    state={voteState}
-                    onBless={onBless}
-                    onCurse={onCurse}
-                    size="sm"
-                />
                 {/* Both stats name their own unit. An icon plus a bare number
                     reads as "318" to a screen reader, which is a figure with no
-                    subject; the icon carries the meaning for sighted anons only.
-                    Matches how `CommentTree` labels its blessing count. */}
+                    subject; the icon carries the meaning for sighted anons only. */}
                 <span
                     aria-label={`${thread.replies} replies`}
                     className="flex items-center gap-1.5 text-caption text-faint"
@@ -141,11 +121,17 @@ function ThreadCard({
                         {thread.images}
                     </MachineValue>
                 </span>
+                <ShareControl
+                    url={titleHref}
+                    title={thread.title}
+                    size="sm"
+                    className="ml-auto"
+                />
                 <button
                     type="button"
                     aria-label="Bookmark thread"
                     onClick={onBookmark}
-                    className={cn(iconButtonClasses, 'ml-auto')}
+                    className={iconButtonClasses}
                 >
                     <Bookmark aria-hidden="true" className="size-4" />
                 </button>

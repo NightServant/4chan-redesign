@@ -33,7 +33,7 @@ describe('AnonBanner', () => {
 
         expect(
             screen.getByText(
-                'You are browsing anonymously. Reading is open to everyone, posting, commenting and blessing need an account.',
+                'You are browsing anonymously. Reading is open to everyone, posting and commenting need an account.',
             ),
         ).toBeInTheDocument();
     });

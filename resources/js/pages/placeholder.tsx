@@ -25,7 +25,7 @@ const PLACEHOLDERS: Record<
         icon: <BellIcon />,
         heading: 'Notifications',
         title: 'You are caught up',
-        body: 'Replies, blessings and janitor actions appear here.',
+        body: 'Replies and janitor actions appear here.',
     },
 };
 

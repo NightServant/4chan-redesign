@@ -18,11 +18,11 @@ const STEPS: Step[] = [
     },
     {
         title: 'Read now, account later',
-        body: 'Browsing is open to everyone. Create an account when you want to post, comment or bless.',
+        body: 'Browsing is open to everyone. Create an account when you want to post or comment.',
     },
     {
         title: 'Bump what deserves it',
-        body: 'Blessings raise a thread, curses sink it, replies bump it back up.',
+        body: 'Replies bump a thread back to the top. There is nothing to upvote and no score to farm.',
     },
 ];
 

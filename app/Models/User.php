@@ -40,12 +40,6 @@ class User extends Authenticatable implements PasskeyUser
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
-    /** @return HasMany<PostVote, $this> */
-    public function votes(): HasMany
-    {
-        return $this->hasMany(PostVote::class);
-    }
-
     /** @return HasMany<Bookmark, $this> */
     public function bookmarks(): HasMany
     {

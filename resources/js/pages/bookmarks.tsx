@@ -27,22 +27,22 @@ import { dashboard } from '@/routes';
 import { destroy as bookmarkDestroy } from '@/routes/threads/bookmark';
 import type { Bookmark } from '@/types/clover';
 
-type Sort = 'saved' | 'blessed';
+type Sort = 'saved' | 'replies';
 
 const SORT_OPTIONS: ReadonlyArray<{ value: Sort; label: string }> = [
     { value: 'saved', label: 'Recently saved' },
-    { value: 'blessed', label: 'Most blessed' },
+    { value: 'replies', label: 'Most replies' },
 ];
 
 /**
  * `saved` keeps fixture order, which already runs most-recently-saved first.
- * `blessed` orders by the thread's blessing count. Neither has a URL of its
+ * `replies` orders by the thread's reply count. Neither has a URL of its
  * own, so the sort is local state rather than a route param.
  */
 function sortBookmarks(bookmarks: Bookmark[], sort: Sort): Bookmark[] {
-    if (sort === 'blessed') {
+    if (sort === 'replies') {
         return [...bookmarks].sort(
-            (a, b) => b.thread.blessings - a.thread.blessings,
+            (a, b) => b.thread.replies - a.thread.replies,
         );
     }
 

@@ -10,8 +10,8 @@ import type { User } from '@/types/auth';
  * `usePage`/`Link`/`Head` need a real Inertia app context this test does not
  * have. Mirrors the mock in `app-sidebar.test.tsx` and `mobile-nav.test.tsx`:
  * `Link` renders a plain anchor so the DOM stays queryable by role, `usePage`
- * reads a mutable fixture, `router.visit` is a spy so the "signed-out anon
- * pressing bless" behaviour is observable without a real navigation.
+ * reads a mutable fixture, `router.visit` is a spy so navigation
+ * is observable without a real one happening.
  *
  * `feed/rail` is mocked too: it is owned by a different Task 7 worker and may
  * not exist yet at the moment this file is written. The contract (a `Rail`
@@ -79,13 +79,11 @@ afterEach(() => {
 const THREADS = [
     makeThread({
         title: 'Anons are still arguing about init systems',
-        blessings: 2412,
     }),
     makeThread({
         title: 'Mainline kernel support or vendor tree',
-        blessings: 512,
     }),
-    makeThread({ title: 'Battery life under sustained load', blessings: 42 }),
+    makeThread({ title: 'Battery life under sustained load' }),
 ];
 
 const BOARDS = [
@@ -221,66 +219,15 @@ describe('Feed', () => {
     });
 
     /**
-     * The count and the pressed state come back from the server now, so this
-     * asserts the request rather than a local increment.
+     * Blessings, curses and the auth gate they opened are all gone from this
+     * page. The gate went with them: it had one caller, and a gate left
+     * mounted with nothing able to open it is the kind of dead control this
+     * codebase has shipped before.
      *
-     * It used to hold an optimistic copy and add one to it, which could
-     * disagree with the database the moment anyone else voted and had no way
-     * to find out.
+     * Asserted as an absence, because every other test here would pass with a
+     * vote control quietly restored.
      */
-    it('asks the server to bless when a signed-in anon presses bless', async () => {
-        const user = userEvent.setup();
-        mockPage({ signedIn: true });
-        const thread = THREADS[0];
-
-        render(
-            <Feed
-                sort="bumped"
-                threads={THREADS}
-                boards={BOARDS}
-                trending={TRENDING}
-            />,
-        );
-
-        const card = screen
-            .getByRole('heading', { level: 3, name: thread.title })
-            .closest('[data-slot="thread-card"]') as HTMLElement;
-
-        await user.click(
-            within(card).getByRole('button', { name: 'Bless this post' }),
-        );
-
-        expect(router.post).toHaveBeenCalledWith(
-            expect.stringContaining('/vote'),
-            { value: 1 },
-            expect.anything(),
-        );
-    });
-
-    it('reports the vote the server sent, not a local guess', () => {
-        mockPage({ signedIn: true });
-
-        render(
-            <Feed
-                sort="bumped"
-                threads={[{ ...THREADS[0], voteState: 'blessed' }]}
-                boards={BOARDS}
-                trending={TRENDING}
-            />,
-        );
-
-        expect(
-            screen.getByRole('button', { name: 'Bless this post' }),
-        ).toHaveAttribute('aria-pressed', 'true');
-    });
-
-    /**
-     * The design's own pattern for a gated action is a dialog, not a redirect.
-     * Sending an anon to /login throws away their place in the feed to answer
-     * a question they may not want to answer yet, and the thread page already
-     * uses the gate, so the two pages agreed on nothing.
-     */
-    it('opens the auth gate instead of voting when a signed-out anon blesses', async () => {
+    it('offers no way to vote and opens no gate', async () => {
         const user = userEvent.setup();
         mockPage({ signedIn: false });
         const thread = THREADS[0];
@@ -298,20 +245,16 @@ describe('Feed', () => {
             .getByRole('heading', { level: 3, name: thread.title })
             .closest('[data-slot="thread-card"]') as HTMLElement;
 
-        await user.click(
-            within(card).getByRole('button', { name: 'Bless this post' }),
-        );
+        for (const name of [/bless/i, /curse/i, /upvote/i]) {
+            expect(
+                within(card).queryByRole('button', { name }),
+            ).not.toBeInTheDocument();
+        }
 
-        expect(
-            await screen.findByRole('dialog', {
-                name: /create an account to continue/i,
-            }),
-        ).toBeInTheDocument();
-        expect(screen.getByText(/bless a thread/i)).toBeInTheDocument();
-        expect(router.visit).not.toHaveBeenCalled();
-        expect(
-            within(card).getByText(String(thread.blessings)),
-        ).toBeInTheDocument();
+        await user.click(within(card).getByRole('button', { name: /share/i }));
+
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(router.post).not.toHaveBeenCalled();
     });
 
     /**
@@ -363,13 +306,6 @@ describe('Feed', () => {
             container.querySelector('[data-slot="feed-column"]'),
         ).toBeInTheDocument();
     });
-
-    /**
-     * The count moving is not enough on its own: a blessing that shows only as
-     * a number changing is state carried by nothing an assistive technology
-     * can report. This is the half that could not be built until `ThreadCard`
-     * gained a `voteState` prop.
-     */
 
     /**
      * The sort tabs were removed as visual overload: the sidebar already lists

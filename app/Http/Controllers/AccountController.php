@@ -7,7 +7,6 @@ namespace App\Http\Controllers;
 use App\Http\Resources\RelativeTime;
 use App\Http\Resources\ThreadResource;
 use App\Models\Post;
-use App\Models\PostVote;
 use App\Models\Thread;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -66,11 +65,12 @@ class AccountController extends Controller
     }
 
     /**
-     * The four figures on the profile header, all real.
+     * The three figures on the profile header, all real.
      *
-     * "Reputation" is blessings received on this anon's own posts, net of
-     * curses — the only reading of the word the data supports. It is zero for
-     * a new account, which is true.
+     * There were four. "Reputation" was blessings received on this anon's own
+     * posts, net of curses, and it went when blessings did — there is no other
+     * reading of the word this application has data for, and inventing one
+     * from post counts would be a score dressed up as a measurement.
      *
      * @return array<int, array<string, string>>
      */
@@ -79,14 +79,9 @@ class AccountController extends Controller
         $posts = $user->posts()->where('is_op', true)->count();
         $replies = $user->posts()->where('is_op', false)->count();
 
-        $reputation = (int) PostVote::query()
-            ->whereIn('post_id', $user->posts()->select('id'))
-            ->sum('value');
-
         return [
             ['label' => 'Posts', 'value' => number_format($posts)],
             ['label' => 'Comments', 'value' => number_format($replies)],
-            ['label' => 'Reputation', 'value' => number_format($reputation)],
             ['label' => 'Bookmarks', 'value' => number_format($user->bookmarks()->count())],
         ];
     }
@@ -176,7 +171,7 @@ class AccountController extends Controller
         return Thread::query()
             ->onVisibleBoard($showsMature)
             ->whereIn('id', $request->user()->bookmarks()->select('thread_id'))
-            ->with(['board', 'originalPost' => fn ($op) => $op->withSum('votes', 'value')->with('votes'), 'bookmarks'])
+            ->with(['board', 'originalPost', 'bookmarks'])
             ->orderByDesc('bumped_at')
             ->limit(self::SAVED)
             ->get();
@@ -198,7 +193,7 @@ class AccountController extends Controller
                     ->where('is_op', true)
                     ->select('thread_id'),
             )
-            ->with(['board', 'originalPost' => fn ($op) => $op->withSum('votes', 'value')->with('votes'), 'bookmarks'])
+            ->with(['board', 'originalPost', 'bookmarks'])
             ->orderByDesc('bumped_at')
             ->limit(self::SAVED)
             ->get();

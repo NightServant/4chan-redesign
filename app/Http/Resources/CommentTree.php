@@ -176,9 +176,6 @@ final class CommentTree
                 'time' => RelativeTime::since($post->posted_at),
                 'body' => $post->body,
 
-                /** Clover's own votes, net of curses. */
-                'blessings' => $post->blessings(),
-
                 'op' => self::isOriginalAnon($post, $originalTripcode),
 
                 /**

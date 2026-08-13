@@ -46,18 +46,18 @@ class FeedController extends Controller
              * lazily loading a board and an OP is sixty extra queries for a
              * page that can be done in three.
              */
-            ->with(['board', 'originalPost' => fn ($op) => $op->withSum('votes', 'value')->with('votes'), 'bookmarks'])
+            ->with(['board', 'originalPost', 'bookmarks'])
 
             ->when($sort === 'bumped', fn ($query) => $query->orderByDesc('bumped_at'))
 
             /**
-             * By replies, not by blessings, even though blessings now exist.
+             * By replies, which is now the only activity signal there is.
              *
-             * Every thread here was ingested and almost none has been voted on,
-             * so ordering by blessings would sort eleven thousand ties and call
-             * the result popularity. Reply count is the activity signal the
-             * board itself runs on and it is real for every row. Worth
-             * revisiting once voting has had time to mean something.
+             * It was always the one doing the work. Blessings were Clover's
+             * own and almost nothing carried any, so ranking by them sorted
+             * eleven thousand ties and called the result popularity. Reply
+             * count is what the board itself runs on and it is real for every
+             * row.
              */
             ->when($sort === 'popular', fn ($query) => $query->orderByDesc('replies_count'))
 

@@ -29,7 +29,7 @@ describe('Features', () => {
         expect(
             screen.getByRole('heading', {
                 level: 3,
-                name: 'Blessings and curses',
+                name: 'Nothing to score',
             }),
         ).toBeInTheDocument();
         expect(
@@ -57,7 +57,7 @@ describe('Features', () => {
 
         expect(
             screen.getByText(
-                'Read any board without an account. Posting, commenting and blessing need one, and posts are still signed Anonymous.',
+                'Read any board without an account. Posting and commenting need one, and posts are still signed Anonymous.',
             ),
         ).toBeInTheDocument();
         expect(
@@ -67,7 +67,7 @@ describe('Features', () => {
         ).toBeInTheDocument();
         expect(
             screen.getByText(
-                'Ranking is bump order plus blessings. No algorithmic timeline deciding what you read.',
+                'No votes, no karma, no reputation. A thread rises because anons replied to it, and you can send one to somebody without an account existing anywhere.',
             ),
         ).toBeInTheDocument();
         expect(

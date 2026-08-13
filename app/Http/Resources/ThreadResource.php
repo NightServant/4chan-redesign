@@ -72,13 +72,6 @@ final class ThreadResource extends JsonResource
                 fn (): ?string => $this->excerpt($thread, $originalPost),
             ),
 
-            /**
-             * Clover's own votes, counted on the opening post: blessing a
-             * thread card and blessing the OP are the same act, recorded once.
-             * A thread nobody has voted on is a true zero.
-             */
-            'blessings' => $originalPost?->blessings() ?? 0,
-
             'replies' => $thread->replies_count,
             'images' => number_format($thread->images_count),
 
@@ -94,12 +87,11 @@ final class ThreadResource extends JsonResource
             'pinned' => $thread->sticky,
 
             /**
-             * Per-viewer state, so the controls render pressed without a
-             * second round trip after the page loads. Both resolve to their
-             * empty value for a signed-out anon, which is correct rather than
-             * a fallback: they have voted on nothing and saved nothing.
+             * Per-viewer state, so the control renders pressed without a
+             * second round trip after the page loads. It resolves to false for
+             * a signed-out anon, which is correct rather than a fallback: they
+             * have saved nothing.
              */
-            'voteState' => $originalPost?->voteStateFor($request->user()),
             'bookmarked' => $this->isBookmarked($request),
         ];
     }

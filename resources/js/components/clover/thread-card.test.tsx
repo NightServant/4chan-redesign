@@ -39,12 +39,10 @@ const baseThread: Thread = {
     time: '4 min ago',
     title: 'RISC-V laptops are finally usable as daily drivers',
     excerpt: 'Compiling LLVM takes 40 minutes but everything else is fine.',
-    blessings: 2412,
     replies: 318,
     images: '48',
     media: null,
     pinned: false,
-    voteState: null,
     bookmarked: false,
 };
 
@@ -66,63 +64,46 @@ describe('ThreadCard', () => {
         ).toHaveAttribute('href', '/g/58210441');
     });
 
-    it('exposes the vote buttons with aria-pressed and the blessing vocabulary', () => {
+    /**
+     * Blessings and curses were removed outright rather than renamed, so the
+     * absence of a score is the thing worth asserting: a card that quietly
+     * regained a vote control would otherwise pass every test below.
+     */
+    it('offers no way to vote and shows no score', () => {
         render(<ThreadCard thread={baseThread} />);
 
-        const bless = screen.getByRole('button', { name: 'Bless this post' });
-        const curse = screen.getByRole('button', { name: 'Curse this post' });
+        for (const name of [/bless/i, /curse/i, /upvote/i, /downvote/i]) {
+            expect(
+                screen.queryByRole('button', { name }),
+            ).not.toBeInTheDocument();
+        }
 
-        expect(bless).toHaveAttribute('aria-pressed', 'false');
-        expect(curse).toHaveAttribute('aria-pressed', 'false');
-        expect(
-            screen.queryByRole('button', { name: /upvote/i }),
-        ).not.toBeInTheDocument();
+        expect(document.querySelector('[data-slot="vote-control"]')).toBeNull();
     });
 
-    it('keeps the vote buttons out of the title link so nesting stays valid', () => {
+    it('keeps the share button out of the title link so nesting stays valid', () => {
         render(<ThreadCard thread={baseThread} />);
 
         const link = screen.getByRole('link', { name: baseThread.title });
-        const bless = screen.getByRole('button', { name: 'Bless this post' });
+        const share = screen.getByRole('button', { name: /share/i });
 
-        expect(link.contains(bless)).toBe(false);
+        expect(link.contains(share)).toBe(false);
     });
 
-    it('calls onBless when the bless button is pressed and never dispatches a click at the title link', async () => {
-        const onBless = vi.fn();
+    it('never dispatches a click at the title link when share is pressed', async () => {
         const linkClick = vi.fn();
 
-        render(<ThreadCard thread={baseThread} onBless={onBless} />);
+        render(<ThreadCard thread={baseThread} />);
 
         const link = screen.getByRole('link', { name: baseThread.title });
         link.addEventListener('click', linkClick);
 
-        await userEvent.click(
-            screen.getByRole('button', { name: 'Bless this post' }),
-        );
+        await userEvent.click(screen.getByRole('button', { name: /share/i }));
 
-        expect(onBless).toHaveBeenCalledTimes(1);
         expect(linkClick).not.toHaveBeenCalled();
     });
 
-    it('calls onCurse when the curse button is pressed and never dispatches a click at the title link', async () => {
-        const onCurse = vi.fn();
-        const linkClick = vi.fn();
-
-        render(<ThreadCard thread={baseThread} onCurse={onCurse} />);
-
-        const link = screen.getByRole('link', { name: baseThread.title });
-        link.addEventListener('click', linkClick);
-
-        await userEvent.click(
-            screen.getByRole('button', { name: 'Curse this post' }),
-        );
-
-        expect(onCurse).toHaveBeenCalledTimes(1);
-        expect(linkClick).not.toHaveBeenCalled();
-    });
-
-    it('keeps the vote buttons independently focusable in an order that matches the visual layout', async () => {
+    it('keeps the footer buttons independently focusable in an order that matches the visual layout', async () => {
         const user = userEvent.setup();
 
         render(<ThreadCard thread={baseThread} />);
@@ -133,13 +114,11 @@ describe('ThreadCard', () => {
         ).toHaveFocus();
 
         await user.tab();
-        expect(
-            screen.getByRole('button', { name: 'Bless this post' }),
-        ).toHaveFocus();
+        expect(screen.getByRole('button', { name: /share/i })).toHaveFocus();
 
         await user.tab();
         expect(
-            screen.getByRole('button', { name: 'Curse this post' }),
+            screen.getByRole('button', { name: 'Bookmark thread' }),
         ).toHaveFocus();
     });
 
@@ -257,40 +236,30 @@ describe('ThreadCard', () => {
     });
 
     /**
-     * The card owns no vote state, so a caller holding it optimistically has
-     * to be able to push it back down. Without this the bless button reports
-     * `aria-pressed="false"` forever and the only signal that a bless landed
-     * is the count, which is exactly the colour-and-number-only state the
-     * accessibility rules forbid.
+     * Share is stateless in a way the vote control was not: it holds no
+     * per-viewer value the server has to send down, so there is nothing for a
+     * caller to push back and nothing to render pressed.
      */
-    it('reflects a caller-held bless back onto the vote control', () => {
-        render(<ThreadCard thread={baseThread} voteState="blessed" />);
+    it('shares the thread at its own address', async () => {
+        const writeText = vi.fn().mockResolvedValue(undefined);
 
-        expect(screen.getByRole('button', { name: /bless/i })).toHaveAttribute(
-            'aria-pressed',
-            'true',
-        );
-        expect(screen.getByRole('button', { name: /curse/i })).toHaveAttribute(
-            'aria-pressed',
-            'false',
-        );
-    });
+        /* `navigator.clipboard` is getter-only in jsdom, so it has to be
+           redefined rather than assigned. */
+        Object.defineProperty(navigator, 'clipboard', {
+            value: { writeText },
+            configurable: true,
+        });
+        Object.defineProperty(navigator, 'share', {
+            value: undefined,
+            configurable: true,
+        });
 
-    it('reflects a caller-held curse back onto the vote control', () => {
-        render(<ThreadCard thread={baseThread} voteState="cursed" />);
-
-        expect(screen.getByRole('button', { name: /curse/i })).toHaveAttribute(
-            'aria-pressed',
-            'true',
-        );
-    });
-
-    it('reports neither vote as pressed by default', () => {
         render(<ThreadCard thread={baseThread} />);
 
-        expect(screen.getByRole('button', { name: /bless/i })).toHaveAttribute(
-            'aria-pressed',
-            'false',
+        await userEvent.click(screen.getByRole('button', { name: /share/i }));
+
+        expect(writeText).toHaveBeenCalledWith(
+            `${window.location.origin}/g/58210441`,
         );
     });
 });

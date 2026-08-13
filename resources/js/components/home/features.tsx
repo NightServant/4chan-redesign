@@ -1,7 +1,7 @@
 import {
-    ArrowBigUp,
     LayoutGrid,
     MessageSquare,
+    Share2,
     Shield,
     Users,
     Zap,
@@ -24,7 +24,7 @@ const FEATURES: Feature[] = [
     {
         icon: Shield,
         title: 'Anonymous by default',
-        body: 'Read any board without an account. Posting, commenting and blessing need one, and posts are still signed Anonymous.',
+        body: 'Read any board without an account. Posting and commenting need one, and posts are still signed Anonymous.',
     },
     {
         icon: Zap,
@@ -32,9 +32,9 @@ const FEATURES: Feature[] = [
         body: 'No infinite feed, no autoplay, no tracking scripts. Threads render in one request.',
     },
     {
-        icon: ArrowBigUp,
-        title: 'Blessings and curses',
-        body: 'Ranking is bump order plus blessings. No algorithmic timeline deciding what you read.',
+        icon: Share2,
+        title: 'Nothing to score',
+        body: 'No votes, no karma, no reputation. A thread rises because anons replied to it, and you can send one to somebody without an account existing anywhere.',
     },
     {
         icon: Users,

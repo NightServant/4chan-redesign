@@ -14,7 +14,6 @@ import { store as storeReply } from '@/routes/replies';
 import {
     bookmark as bookmarkThread,
     read as recordRead,
-    vote as voteOnThread,
 } from '@/routes/threads';
 import type { BoardSlug, Comment, Thread as ThreadType } from '@/types/clover';
 
@@ -26,7 +25,7 @@ import type { BoardSlug, Comment, Thread as ThreadType } from '@/types/clover';
  * the ordinary case, not an exceptional one, so it gets a real not-found
  * state rather than a crash or a blank screen.
  *
- * Reading is open to everyone. Replying, blessing, cursing and bookmarking
+ * Reading is open to everyone. Replying and bookmarking
  * all require an account, and a signed-out anon pressing any of those
  * controls opens `AuthGate` rather than doing nothing.
  */
@@ -112,18 +111,6 @@ export default function Thread({
         );
     }
 
-    function vote(value: 1 | -1) {
-        if (!thread) {
-            return;
-        }
-
-        router.post(
-            voteOnThread(thread.id).url,
-            { value },
-            { preserveScroll: true },
-        );
-    }
-
     function toggleBookmark() {
         if (!thread) {
             return;
@@ -182,12 +169,6 @@ export default function Thread({
 
                 <OriginalPost
                     thread={thread}
-                    onBless={() =>
-                        requireAuth('bless this post', () => vote(1))
-                    }
-                    onCurse={() =>
-                        requireAuth('curse this post', () => vote(-1))
-                    }
                     onBookmark={() =>
                         requireAuth('bookmark this thread', toggleBookmark)
                     }

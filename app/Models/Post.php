@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * The OP or a reply on a thread.
@@ -82,53 +81,6 @@ class Post extends Model
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
-    }
-
-    /** @return HasMany<PostVote, $this> */
-    public function votes(): HasMany
-    {
-        return $this->hasMany(PostVote::class);
-    }
-
-    /**
-     * Net blessings: blessings given minus curses.
-     *
-     * Prefers a `withSum` aggregate so a feed of thirty cards costs one query
-     * rather than thirty. Falling back to a sum keeps a post built from a bare
-     * model correct rather than reporting zero, which would be indistinguishable
-     * from a post nobody has voted on.
-     */
-    public function blessings(): int
-    {
-        $summed = $this->getAttribute('votes_sum_value');
-
-        if ($summed === null) {
-            return (int) $this->votes()->sum('value');
-        }
-
-        return (int) $summed;
-    }
-
-    /**
-     * How this anon voted on this post, in the shape the client expects.
-     *
-     * Null covers both "not signed in" and "signed in and has not voted": the
-     * control renders the same either way, and the gate that stops a signed-out
-     * anon voting is the route, not this.
-     */
-    public function voteStateFor(?User $user): ?string
-    {
-        if ($user === null) {
-            return null;
-        }
-
-        $value = $this->votes->firstWhere('user_id', $user->id)?->value;
-
-        return match ($value) {
-            PostVote::BLESSING => 'blessed',
-            PostVote::CURSE => 'cursed',
-            default => null,
-        };
     }
 
     public function hasMedia(): bool

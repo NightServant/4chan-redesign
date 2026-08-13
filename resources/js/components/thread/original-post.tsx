@@ -4,8 +4,7 @@ import { BoardAvatar } from '@/components/clover/board-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
 import { PostBody } from '@/components/clover/post-body';
 import { PostAttachment } from '@/components/clover/post-image';
-import { VoteControl } from '@/components/clover/vote-control';
-import type { VoteState } from '@/components/clover/vote-control';
+import { ShareControl } from '@/components/clover/share-control';
 import { Badge } from '@/components/ui/badge';
 import { useClipboard } from '@/hooks/use-clipboard';
 import { cn } from '@/lib/utils';
@@ -27,11 +26,7 @@ import type { Thread } from '@/types/clover';
  */
 type OriginalPostProps = {
     thread: Thread;
-    /** The anon's vote, held by the caller. See `VoteControl`. */
-    voteState?: VoteState;
-    onBless?: () => void;
-    onCurse?: () => void;
-    /** Held by the caller, same reasoning as `voteState`. */
+    /** Held by the caller: this component owns no state of its own. */
     bookmarked?: boolean;
     onBookmark?: () => void;
     className?: string;
@@ -51,9 +46,6 @@ function boardToken(slug: Thread['board']): string {
 
 function OriginalPost({
     thread,
-    voteState = null,
-    onBless,
-    onCurse,
     bookmarked = false,
     onBookmark,
     className,
@@ -129,11 +121,13 @@ function OriginalPost({
             <PostAttachment media={thread.media} variant="post" />
 
             <footer className="flex flex-wrap items-center gap-5">
-                <VoteControl
-                    count={thread.blessings}
-                    state={voteState}
-                    onBless={onBless}
-                    onCurse={onCurse}
+                {/* The thread's own address, built the same way the card
+                    builds it, rather than whatever is in the address bar — a
+                    share should survive being sent from a URL carrying a
+                    fragment or a query string. */}
+                <ShareControl
+                    url={`${thread.board}${thread.no}`}
+                    title={thread.title}
                 />
                 {/* `thread.views` used to sit here. Nothing upstream counts
                     views and nothing here counted them either, so the footer now

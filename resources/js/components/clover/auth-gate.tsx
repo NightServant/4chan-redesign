@@ -12,7 +12,7 @@ import { login, register } from '@/routes';
 type AuthGateProps = {
     /**
      * Verb phrase dropped into the body copy, e.g. `reply to this thread`,
-     * `bless a thread`, `post a thread`.
+     * `bookmark this thread`, `post a thread`.
      */
     action: string;
     open: boolean;
@@ -21,7 +21,7 @@ type AuthGateProps = {
 
 /**
  * Shown whenever a signed-out anon reaches for something that needs an
- * account. Reading never triggers this; only replying, blessing, cursing or
+ * account. Reading never triggers this, and neither does sharing; only replying or
  * starting a thread does.
  *
  * The copy is verbatim from the design prototype, with one deliberate

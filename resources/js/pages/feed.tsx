@@ -1,7 +1,5 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { CompassIcon } from 'lucide-react';
-import { useState } from 'react';
-import { AuthGate } from '@/components/clover/auth-gate';
 import { EmptyState } from '@/components/clover/empty-state';
 import { PageHeader } from '@/components/clover/page-header';
 import { ThreadCard } from '@/components/clover/thread-card';
@@ -9,7 +7,6 @@ import { AnonBanner } from '@/components/feed/anon-banner';
 import { Rail } from '@/components/feed/rail';
 import { Button } from '@/components/ui/button';
 import { communities } from '@/routes';
-import { vote as voteOnThread } from '@/routes/threads';
 import type { Board, Thread, TrendingTag } from '@/types/clover';
 
 /**
@@ -59,30 +56,9 @@ export default function Feed({ sort, threads, boards, trending }: FeedProps) {
     const { auth } = usePage().props;
     const signedIn = Boolean(auth.user);
 
-    /* Signed-out anons get the gate rather than a redirect: sending them to
-       /login throws away their place in the feed to answer a question they may
-       not want to answer yet. Matches the thread page. */
-    const [gatedAction, setGatedAction] = useState<string | null>(null);
-
-    /**
-     * The vote is stored, so the count and the pressed state come back from
-     * the server rather than being held here. The optimistic copy this
-     * replaced could disagree with the database the moment anyone else voted,
-     * and had no way to find out.
-     */
-    function bless(thread: Thread) {
-        if (!signedIn) {
-            setGatedAction('bless a thread');
-
-            return;
-        }
-
-        router.post(
-            voteOnThread(thread.id).url,
-            { value: 1 },
-            { preserveScroll: true },
-        );
-    }
+    /* The auth gate went with blessings: sharing needs no account, and the
+       card's bookmark button is not wired on this page yet. When it is, the
+       gate comes back with it rather than sitting here unreachable. */
 
     return (
         <>
@@ -122,12 +98,7 @@ export default function Feed({ sort, threads, boards, trending }: FeedProps) {
 
                     <div className="flex flex-col gap-4">
                         {threads.map((thread) => (
-                            <ThreadCard
-                                key={thread.no}
-                                thread={thread}
-                                voteState={thread.voteState}
-                                onBless={() => bless(thread)}
-                            />
+                            <ThreadCard key={thread.no} thread={thread} />
                         ))}
                     </div>
                 </div>
@@ -136,16 +107,6 @@ export default function Feed({ sort, threads, boards, trending }: FeedProps) {
                     <Rail boards={boards} trending={trending} />
                 </div>
             </div>
-
-            <AuthGate
-                action={gatedAction ?? 'do that'}
-                open={gatedAction !== null}
-                onOpenChange={(open) => {
-                    if (!open) {
-                        setGatedAction(null);
-                    }
-                }}
-            />
         </>
     );
 }

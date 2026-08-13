@@ -45,7 +45,7 @@ const BOOKMARKS = [
     makeBookmark({
         thread: makeThread({
             title: 'The Kola borehole and what stopped it',
-            blessings: 120,
+            replies: 120,
         }),
         savedAt: 'Saved 2 days ago',
         note: 'read later',
@@ -53,14 +53,14 @@ const BOOKMARKS = [
     makeBookmark({
         thread: makeThread({
             title: 'RISC-V laptops as daily drivers',
-            blessings: 90,
+            replies: 90,
         }),
         savedAt: 'Saved 3 days ago',
     }),
     makeBookmark({
         thread: makeThread({
             title: 'Two years of walking 15k steps a day',
-            blessings: 5108,
+            replies: 5108,
         }),
         savedAt: 'Saved last week',
         note: 'Track four timestamp is 11:42, not 11:24 like the OP says.',
@@ -68,7 +68,7 @@ const BOOKMARKS = [
     makeBookmark({
         thread: makeThread({
             title: 'Mainline kernel support or vendor tree',
-            blessings: 40,
+            replies: 40,
         }),
         savedAt: 'Saved last month',
     }),
@@ -139,7 +139,7 @@ describe('Bookmarks page', () => {
         expect(screen.getByText('Nothing matches "zzz".')).toBeInTheDocument();
     });
 
-    it('reorders by blessings when the sort changes', async () => {
+    it('reorders by replies when the sort changes', async () => {
         const user = userEvent.setup();
         render(<Bookmarks bookmarks={BOOKMARKS} />);
 
@@ -148,7 +148,7 @@ describe('Bookmarks page', () => {
         await user.click(
             screen.getByRole('combobox', { name: 'Sort bookmarks' }),
         );
-        await user.click(screen.getByRole('option', { name: 'Most blessed' }));
+        await user.click(screen.getByRole('option', { name: 'Most replies' }));
 
         expect(savedTitles()[0]).toBe(WALKING);
     });
