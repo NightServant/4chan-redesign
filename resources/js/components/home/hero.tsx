@@ -3,8 +3,10 @@ import type { ComponentProps } from 'react';
 import { BlurText } from '@/components/clover/blur-text';
 import { MachineValue } from '@/components/clover/machine-value';
 import { PatternField } from '@/components/clover/pattern-field';
+import { SectionGutter } from '@/components/home/section-gutter';
 import { ThreadMarquee } from '@/components/home/thread-marquee';
 import { Button } from '@/components/ui/button';
+import { homeSectionOrdinal } from '@/lib/home-sections';
 import { cn } from '@/lib/utils';
 import { popular } from '@/routes';
 import type { Thread } from '@/types/clover';
@@ -65,6 +67,13 @@ const INTRO =
 const LEFT_RATE = 52;
 const RIGHT_RATE = 44;
 
+/**
+ * What the margins call this band. The hero has no kicker of its own — it
+ * opens with the headline — so the folio names it for what it is rather than
+ * repeating forty characters of headline down the side of the page.
+ */
+const GUTTER_LABEL = 'The pitch';
+
 function Hero({ threads, className, ...props }: HeroProps) {
     const half = Math.ceil(threads.length / 2);
     const left = threads.slice(0, half);
@@ -72,6 +81,7 @@ function Hero({ threads, className, ...props }: HeroProps) {
 
     return (
         <section
+            id="top"
             data-slot="hero"
             className={cn('border-b border-border', className)}
             {...props}
@@ -80,45 +90,63 @@ function Hero({ threads, className, ...props }: HeroProps) {
                 before they have scrolled at all, so it has the most travel to
                 spend and the most to gain from spending it. */}
             <PatternField depth={90} feather={false}>
-                {/* Three columns on a wide screen, one on a narrow one. The rails
-                are the first thing to go: on a phone there is no room for a
-                column of ambient text beside the pitch, and stacking them
-                above it would put texture before the argument. */}
-                <div className="mx-auto grid max-w-[1180px] grid-cols-1 items-stretch gap-0 px-6 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)_minmax(0,260px)] lg:gap-10 lg:px-0">
-                    <ThreadMarquee
-                        threads={left}
-                        direction="forward"
-                        pixelsPerSecond={LEFT_RATE}
-                        className="hidden h-[520px] border-x border-border lg:block"
+                {/* The hero is the tallest band, so its margins are the
+                    emptiest space on the page. They carry the same folio and
+                    vertical name every other band does. */}
+                <div className="flex items-stretch justify-center">
+                    <SectionGutter
+                        side="left"
+                        ordinal={homeSectionOrdinal('top')}
+                        label={GUTTER_LABEL}
                     />
 
-                    <div className="flex flex-col items-center gap-6 py-20 text-center lg:py-24">
-                        <BlurText
-                            as="h1"
-                            text={HEADLINE}
-                            className="max-w-[22ch] justify-center font-display text-[clamp(34px,3.9vw,46px)] leading-[1.08] font-bold tracking-[-1px] text-balance text-foreground"
+                    {/* Three columns on a wide screen, one on a narrow one.
+                        The rails are the first thing to go: on a phone there
+                        is no room for a column of ambient text beside the
+                        pitch, and stacking them above it would put texture
+                        before the argument. */}
+                    <div className="mx-auto grid w-full max-w-[1180px] grid-cols-1 items-stretch gap-0 px-6 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)_minmax(0,260px)] lg:gap-10 lg:px-0">
+                        <ThreadMarquee
+                            threads={left}
+                            direction="forward"
+                            pixelsPerSecond={LEFT_RATE}
+                            className="hidden h-[520px] border-x border-border lg:block"
                         />
 
-                        <p className="max-w-[46ch] text-[17px] leading-[1.55] text-pretty text-muted-foreground">
-                            {INTRO}
-                        </p>
+                        <div className="flex flex-col items-center gap-6 py-20 text-center lg:py-24">
+                            <BlurText
+                                as="h1"
+                                text={HEADLINE}
+                                className="max-w-[22ch] justify-center font-display text-[clamp(34px,3.9vw,46px)] leading-[1.08] font-bold tracking-[-1px] text-balance text-foreground"
+                            />
 
-                        <Button size="lg" asChild>
-                            <Link href={popular()}>
-                                Browse without an account
-                            </Link>
-                        </Button>
+                            <p className="max-w-[46ch] text-[17px] leading-[1.55] text-pretty text-muted-foreground">
+                                {INTRO}
+                            </p>
 
-                        <MachineValue>
-                            Free · Reading needs no account
-                        </MachineValue>
+                            <Button size="lg" asChild>
+                                <Link href={popular()}>
+                                    Browse without an account
+                                </Link>
+                            </Button>
+
+                            <MachineValue>
+                                Free · Reading needs no account
+                            </MachineValue>
+                        </div>
+
+                        <ThreadMarquee
+                            threads={right}
+                            direction="reverse"
+                            pixelsPerSecond={RIGHT_RATE}
+                            className="hidden h-[520px] border-x border-border lg:block"
+                        />
                     </div>
 
-                    <ThreadMarquee
-                        threads={right}
-                        direction="reverse"
-                        pixelsPerSecond={RIGHT_RATE}
-                        className="hidden h-[520px] border-x border-border lg:block"
+                    <SectionGutter
+                        side="right"
+                        ordinal={homeSectionOrdinal('top')}
+                        label={GUTTER_LABEL}
                     />
                 </div>
             </PatternField>
