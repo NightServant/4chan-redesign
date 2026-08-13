@@ -46,7 +46,11 @@ describe('AuthGate', () => {
 
     it('renders the exact standing copy around the interpolated action', () => {
         render(
-            <AuthGate action="bookmark this thread" open onOpenChange={() => {}} />,
+            <AuthGate
+                action="bookmark this thread"
+                open
+                onOpenChange={() => {}}
+            />,
         );
 
         expect(

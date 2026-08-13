@@ -1,120 +1,112 @@
 import { Link } from '@inertiajs/react';
 import type { ComponentProps } from 'react';
+import { BlurText } from '@/components/clover/blur-text';
 import { MachineValue } from '@/components/clover/machine-value';
-import { ThreadCard } from '@/components/clover/thread-card';
+import { ThreadMarquee } from '@/components/home/thread-marquee';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { popular } from '@/routes';
 import type { Thread } from '@/types/clover';
 
 /**
- * The homepage's opening band: a split composition rather than a centred
- * headline, since a centred hero over a dark field is the single most
- * recognisable AI-generated layout.
+ * The homepage's opening band: a centred thesis with a column of live threads
+ * drifting down either side of it.
  *
- * The right column previews real `ThreadCard`s rather than inventing a
- * screenshot or illustration, and the threads are whatever the page handed
- * down: ingested rows, not a fixture, so the preview is a sample of the site
- * rather than a mock of it.
+ * The columns are the argument. This page says Clover carries the same boards
+ * and threads as 4chan, and the two rails are that sentence made checkable —
+ * real slugs, real titles, real reply counts, ingested rows rather than a
+ * mockup. A visitor can read one and go and find it.
  *
- * The stack stays out of the accessibility tree. Each card carries a title
- * link plus a full set of vote and bookmark controls, and a marketing hero is
- * the wrong place to hand a screen reader six controls that duplicate the CTA
- * beside them. So the whole stack is `aria-hidden` and `inert` together:
- * `aria-hidden` alone would leave its buttons focusable but silent, which is
- * worse than not exposing the stack at all.
+ * ## What was here before
+ *
+ * A split composition: headline left, two `ThreadCard`s stacked right, over a
+ * ruled grid drawn in repeating gradients. Three things replaced it.
+ *
+ * The grid went because the design system says backgrounds are flat, and a
+ * repeating gradient is a pattern however faint it is drawn. It was also
+ * competing with the thing that replaced it: two moving columns and a ruled
+ * field are both texture, and the page only needs one.
+ *
+ * Two preview cards became sixteen marquee rows because two cards from
+ * whichever board bumped most recently could easily both be /v/, which
+ * undersells a site carrying seventy-seven boards. The rails now take one
+ * thread per board.
+ *
+ * The copy was cut roughly in half. A centred column reads badly past about
+ * ten words a line, and the old intro paragraph was three lines of it.
  */
 type HeroProps = Omit<ComponentProps<'section'>, 'children'> & {
     /**
-     * The threads to preview, already sliced by the page. Empty is an
-     * ordinary state, not a failure: before the first sync there is nothing
-     * to show, and the hero's argument is made in the left column anyway.
+     * Threads for the two rails, already one-per-board from the server. Split
+     * down the middle here: first half left, second half right.
+     *
+     * Empty is an ordinary state rather than a failure. Before the first sync
+     * there is nothing to show, the rails render nothing, and the thesis in
+     * the middle still stands on its own.
      */
     threads: readonly Thread[];
 };
 
-const HEADLINE =
-    'The same boards, threads and greentext. Without the 2003 interface.';
+const HEADLINE = 'The same boards. Without the 2003 interface.';
 
 const INTRO =
-    'Clover is an anonymous discussion platform built around boards instead of followers. No profiles on your posts, no recommendation feed, no ads.';
+    'Anonymous discussion, organised by board. No profiles, no algorithm, no ads.';
 
-const GRID_BACKGROUND = {
-    backgroundImage: [
-        'repeating-linear-gradient(to right, var(--color-border) 0, var(--color-border) 1px, transparent 1px, transparent 64px)',
-        'repeating-linear-gradient(to bottom, var(--color-border) 0, var(--color-border) 1px, transparent 1px, transparent 64px)',
-    ].join(', '),
-    maskImage:
-        'radial-gradient(100% 80% at 30% 20%, #000 20%, transparent 75%)',
-    WebkitMaskImage:
-        'radial-gradient(100% 80% at 30% 20%, #000 20%, transparent 75%)',
-};
+/**
+ * Slower on the right, and not by accident: two columns travelling at
+ * identical speeds in opposite directions read as one mechanism, which draws
+ * the eye to the mechanism. Slightly out of step, they read as weather.
+ */
+const LEFT_SECONDS = 84;
+const RIGHT_SECONDS = 96;
 
 function Hero({ threads, className, ...props }: HeroProps) {
+    const half = Math.ceil(threads.length / 2);
+    const left = threads.slice(0, half);
+    const right = threads.slice(half);
+
     return (
         <section
             data-slot="hero"
-            className={cn(
-                'relative overflow-hidden border-b border-border',
-                className,
-            )}
+            className={cn('border-b border-border', className)}
             {...props}
         >
-            <div
-                data-slot="hero-grid"
-                aria-hidden="true"
-                className="absolute inset-0 opacity-50"
-                style={GRID_BACKGROUND}
-            />
+            {/* Three columns on a wide screen, one on a narrow one. The rails
+                are the first thing to go: on a phone there is no room for a
+                column of ambient text beside the pitch, and stacking them
+                above it would put texture before the argument. */}
+            <div className="mx-auto grid max-w-[1180px] grid-cols-1 items-stretch gap-0 px-6 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)_minmax(0,260px)] lg:gap-10 lg:px-0">
+                <ThreadMarquee
+                    threads={left}
+                    direction="up"
+                    seconds={LEFT_SECONDS}
+                    className="hidden h-[520px] border-r border-border lg:block"
+                />
 
-            <div className="relative mx-auto grid max-w-[1180px] grid-cols-1 items-center gap-14 px-6 pt-18 pb-20 lg:grid-cols-[minmax(0,1fr)_minmax(0,520px)]">
-                <div className="flex max-w-[560px] flex-col gap-6">
-                    <h1 className="font-display text-[clamp(34px,4.4vw,52px)] leading-[1.08] font-bold tracking-[-1px] text-balance text-foreground">
-                        {HEADLINE}
-                    </h1>
+                <div className="flex flex-col items-center gap-6 py-20 text-center lg:py-24">
+                    <BlurText
+                        as="h1"
+                        text={HEADLINE}
+                        className="max-w-[22ch] justify-center font-display text-[clamp(34px,3.9vw,46px)] leading-[1.08] font-bold tracking-[-1px] text-balance text-foreground"
+                    />
 
-                    <p className="text-[17px] leading-[1.55] text-pretty text-muted-foreground">
+                    <p className="max-w-[46ch] text-[17px] leading-[1.55] text-pretty text-muted-foreground">
                         {INTRO}
                     </p>
 
-                    <div>
-                        <Button size="lg" asChild>
-                            <Link href={popular()}>
-                                Browse without an account
-                            </Link>
-                        </Button>
-                    </div>
+                    <Button size="lg" asChild>
+                        <Link href={popular()}>Browse without an account</Link>
+                    </Button>
 
-                    {/* This line used to end "· 74 boards". Nothing produced
-                        that 74: 4chan publishes 77 boards and shows a
-                        visitor only the ones their settings permit, so the
-                        figure was wrong for every reader of it. The board
-                        count is stated once, by the grid below, where it is
-                        counted from what is actually on the page. */}
-                    <MachineValue>
-                        Free · Reading needs no account · Posting does
-                    </MachineValue>
+                    <MachineValue>Free · Reading needs no account</MachineValue>
                 </div>
 
-                {/* A spaced column, not a stack. The second card previously
-                    sat `absolute` over the first, so its title printed
-                    straight through the first card's body. Depth now comes
-                    from opacity alone, which cannot collide with anything and
-                    still reads as "there is more below". */}
-                <div
-                    data-slot="hero-thread-preview"
-                    aria-hidden="true"
-                    inert
-                    className="flex flex-col gap-3"
-                >
-                    {threads.map((thread, index) => (
-                        <ThreadCard
-                            key={thread.no}
-                            thread={thread}
-                            className={cn(index > 0 && 'opacity-60')}
-                        />
-                    ))}
-                </div>
+                <ThreadMarquee
+                    threads={right}
+                    direction="down"
+                    seconds={RIGHT_SECONDS}
+                    className="hidden h-[520px] border-l border-border lg:block"
+                />
             </div>
         </section>
     );
