@@ -43,7 +43,7 @@ describe('HowItWorks', () => {
         ).toBeInTheDocument();
         expect(
             screen.getByText(
-                'Browsing is open to everyone. Create an account when you want to post, comment or bless.',
+                'Browsing is open to everyone. Create an account when you want to post or comment.',
             ),
         ).toBeInTheDocument();
 
@@ -55,7 +55,7 @@ describe('HowItWorks', () => {
         ).toBeInTheDocument();
         expect(
             screen.getByText(
-                'Blessings raise a thread, curses sink it, replies bump it back up.',
+                'Replies bump a thread back to the top. There is nothing to upvote and no score to farm.',
             ),
         ).toBeInTheDocument();
     });

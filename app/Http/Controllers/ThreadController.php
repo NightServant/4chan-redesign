@@ -36,7 +36,7 @@ class ThreadController extends Controller
         $found = Thread::query()
             ->where('board_id', $model->id)
             ->where('no', $no)
-            ->with(['board', 'originalPost', 'posts' => fn ($posts) => $posts->withSum('votes', 'value')])
+            ->with(['board', 'originalPost', 'posts'])
             ->first();
 
         return Inertia::render('thread', [

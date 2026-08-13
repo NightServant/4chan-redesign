@@ -6,7 +6,7 @@ import { login, register } from '@/routes';
 
 /**
  * Shown at the top of the feed to a signed-out anon. Reading never needs an
- * account; posting, commenting and blessing do, so this is where that line
+ * account; posting and commenting do, so this is where that line
  * gets drawn rather than at the point of a blocked action.
  */
 function AnonBanner() {
@@ -21,7 +21,7 @@ function AnonBanner() {
 
             <p className="flex-1 text-body-sm text-pretty text-muted-foreground">
                 You are browsing anonymously. Reading is open to everyone,
-                posting, commenting and blessing need an account.
+                posting and commenting need an account.
             </p>
 
             <div className="flex shrink-0 items-center gap-2">

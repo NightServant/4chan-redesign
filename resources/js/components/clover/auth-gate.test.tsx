@@ -46,12 +46,12 @@ describe('AuthGate', () => {
 
     it('renders the exact standing copy around the interpolated action', () => {
         render(
-            <AuthGate action="bless a thread" open onOpenChange={() => {}} />,
+            <AuthGate action="bookmark this thread" open onOpenChange={() => {}} />,
         );
 
         expect(
             screen.getByText(
-                'Reading is open to everyone. You need an account to bless a thread. Posts stay anonymous, the account is never attached to them.',
+                'Reading is open to everyone. You need an account to bookmark this thread. Posts stay anonymous, the account is never attached to them.',
             ),
         ).toBeInTheDocument();
     });

@@ -216,7 +216,7 @@ describe('Board', () => {
             within(tablist).getByRole('tab', { name: 'New' }),
         ).toBeInTheDocument();
         expect(
-            within(tablist).getByRole('tab', { name: 'Most blessed' }),
+            within(tablist).getByRole('tab', { name: 'Most replies' }),
         ).toBeInTheDocument();
     });
 });

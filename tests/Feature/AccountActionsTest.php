@@ -5,12 +5,12 @@ declare(strict_types=1);
 use App\Models\Board;
 use App\Models\Bookmark;
 use App\Models\Post;
-use App\Models\PostVote;
 use App\Models\Thread;
 use App\Models\ThreadRead;
 use App\Models\User;
 use App\Services\LocalPostNumbers;
 use App\Support\RoutableBoards;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * What an account can do, as opposed to read.
@@ -37,92 +37,45 @@ function accountFixture(bool $worksafe = true): array
 }
 
 describe('votes', function (): void {
-    it('records a blessing', function (): void {
-        [, , $post, $user] = accountFixture();
-
-        $this->actingAs($user)->post("/posts/{$post->id}/vote", ['value' => 1]);
-
-        expect($post->votes()->sum('value'))->toBe(1);
-    });
-
-    it('records a curse', function (): void {
-        [, , $post, $user] = accountFixture();
-
-        $this->actingAs($user)->post("/posts/{$post->id}/vote", ['value' => -1]);
-
-        expect($post->votes()->sum('value'))->toBe(-1);
-    });
-
     /**
-     * The control reports `aria-pressed`, so pressing a blessing you have
-     * already given has to withdraw it. Casting a second one would make the
-     * button's own state a lie.
+     * Blessings and curses are gone, table and all. What is left to test is
+     * that they are actually unreachable rather than merely unrendered: the
+     * routes were the only way to write a vote, so their absence is the
+     * feature.
+     *
+     * Asserted through the router rather than by reading the route list,
+     * because a route registered under a different name would still satisfy
+     * the latter.
      */
-    it('withdraws a vote when the same side is pressed again', function (): void {
-        [, , $post, $user] = accountFixture();
-
-        $this->actingAs($user)->post("/posts/{$post->id}/vote", ['value' => 1]);
-        $this->actingAs($user)->post("/posts/{$post->id}/vote", ['value' => 1]);
-
-        expect($post->votes()->count())->toBe(0);
-    });
-
-    it('switches sides rather than holding both', function (): void {
-        [, , $post, $user] = accountFixture();
-
-        $this->actingAs($user)->post("/posts/{$post->id}/vote", ['value' => 1]);
-        $this->actingAs($user)->post("/posts/{$post->id}/vote", ['value' => -1]);
-
-        expect($post->votes()->count())->toBe(1);
-        expect($post->votes()->sum('value'))->toBe(-1);
-    });
-
-    it('counts one anon once, however many times they press', function (): void {
-        [, , $post, $user] = accountFixture();
-
-        foreach (range(1, 5) as $ignored) {
-            $this->actingAs($user)->post("/posts/{$post->id}/vote", ['value' => 1]);
-        }
-
-        expect($post->votes()->count())->toBeLessThanOrEqual(1);
-    });
-
-    it('sums votes from different anons', function (): void {
-        [, , $post] = accountFixture();
-
-        foreach (User::factory()->count(3)->create() as $voter) {
-            $this->actingAs($voter)->post("/posts/{$post->id}/vote", ['value' => 1]);
-        }
-
-        expect($post->votes()->sum('value'))->toBe(3);
-    });
-
-    it('refuses a value that is neither a blessing nor a curse', function (): void {
-        [, , $post, $user] = accountFixture();
-
-        $this->actingAs($user)
-            ->post("/posts/{$post->id}/vote", ['value' => 7])
-            ->assertSessionHasErrors('value');
-
-        expect($post->votes()->count())->toBe(0);
-    });
-
-    it('turns a signed-out anon away', function (): void {
-        [, , $post] = accountFixture();
-
-        $this->post("/posts/{$post->id}/vote", ['value' => 1])->assertRedirect('/login');
-
-        expect($post->votes()->count())->toBe(0);
-    });
-
-    it('will not let an anon vote on a board they cannot see', function (): void {
-        [, , $post, $user] = accountFixture(worksafe: false);
+    it('has no route to vote on a post or a thread', function (): void {
+        [, $thread, $post, $user] = accountFixture();
 
         $this->actingAs($user)
             ->post("/posts/{$post->id}/vote", ['value' => 1])
             ->assertNotFound();
 
-        expect($post->votes()->count())->toBe(0);
+        $this->actingAs($user)
+            ->post("/threads/{$thread->id}/vote", ['value' => 1])
+            ->assertNotFound();
+    });
+
+    it('has dropped the table the votes were kept in', function (): void {
+        expect(Schema::hasTable('post_votes'))->toBeFalse();
+    });
+
+    /**
+     * The model methods went with the table. A `blessings()` left behind
+     * returning zero would read as "nobody has voted" rather than "there is no
+     * such thing", which is the distinction this whole change is about.
+     */
+    it('exposes no vote methods on a post', function (): void {
+        [, , $post] = accountFixture();
+
+        foreach (['votes', 'blessings', 'voteStateFor'] as $method) {
+            expect(method_exists($post, $method))->toBeFalse(
+                "Post::{$method}() is back",
+            );
+        }
     });
 });
 
@@ -439,36 +392,5 @@ describe('replying', function (): void {
             ->assertNotFound();
 
         expect($thread->posts()->where('is_local', true)->count())->toBe(0);
-    });
-});
-
-describe('vote counting', function (): void {
-    it('reports net blessings, not a raw count', function (): void {
-        [, , $post] = accountFixture();
-
-        PostVote::factory()->count(4)->create(['post_id' => $post->id]);
-        PostVote::factory()->create(['post_id' => $post->id, 'value' => PostVote::CURSE]);
-
-        expect($post->blessings())->toBe(3);
-    });
-
-    it('reports how this anon voted', function (): void {
-        [, , $post, $user] = accountFixture();
-
-        expect($post->load('votes')->voteStateFor($user))->toBeNull();
-
-        PostVote::factory()->create([
-            'post_id' => $post->id,
-            'user_id' => $user->id,
-            'value' => PostVote::CURSE,
-        ]);
-
-        expect($post->load('votes')->voteStateFor($user))->toBe('cursed');
-    });
-
-    it('reports nothing for a signed-out anon', function (): void {
-        [, , $post] = accountFixture();
-
-        expect($post->load('votes')->voteStateFor(null))->toBeNull();
     });
 });

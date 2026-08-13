@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Models\Board;
 use App\Models\Bookmark;
 use App\Models\Post;
-use App\Models\PostVote;
 use App\Models\Thread;
 use App\Models\ThreadRead;
 use App\Models\User;
@@ -53,7 +52,6 @@ it('hydrates every model timestamp as an immutable date', function (): void {
         'post.posted_at' => $post->posted_at,
         'post.created_at' => $post->created_at,
         'user.created_at' => $user->created_at,
-        'vote.created_at' => PostVote::factory()->create(['post_id' => $post->id])->created_at,
         'bookmark.created_at' => Bookmark::factory()->create(['thread_id' => $thread->id])->created_at,
         'read.last_read_at' => ThreadRead::factory()->create(['thread_id' => $thread->id])->last_read_at,
     ];

@@ -6,7 +6,7 @@
 
 <p align="center"><em>The same boards, threads and greentext. Without the 2003 interface.</em></p>
 
-A redesign of 4chan built on Laravel, Inertia and React. Fly through boards that keep bump order instead of an algorithm, read threads where greentext still works, bless or curse a post without an account following you around, and browse it all in a design system authored once in OKLCH and derived into two themes.
+A redesign of 4chan built on Laravel, Inertia and React. Fly through boards that keep bump order instead of an algorithm, read threads where greentext still works, send a thread to somebody without an account following you around, and browse it all in a design system authored once in OKLCH and derived into two themes.
 
 ## Overview
 
@@ -27,7 +27,7 @@ Boards, threads and posts are ingested from 4chan's read-only JSON API into Eloq
 - **Overlays on Radix** &mdash; dialog, dropdown, context menu, tabs, tooltip and select, so focus trapping, roving tabindex and typeahead are correct rather than approximated
 - **Command palette** &mdash; ⌘K / Ctrl+K over `cmdk`, net-new work the design prototype never covered
 - **App chrome** &mdash; collapsible sidebar with persisted state, sticky header with account and notification menus, and a mobile bottom bar that respects the home-indicator inset
-- **Community layer** &mdash; thread cards with a stretched-link target so vote buttons stay independently focusable, and a comment tree nested from quotelinks, since 4chan's own posts are flat
+- **Community layer** &mdash; thread cards with a stretched-link target so the share and bookmark buttons stay independently focusable, and a comment tree nested from quotelinks, since 4chan's own posts are flat
 - **Feed, boards and threads** &mdash; three feed sorts, a board page per slug with a real empty state, and a thread view that handles a post number matching nothing as an ordinary case rather than an error
 - **Real data, read-only upstream** &mdash; 77 boards, their catalogs and their posts ingested from 4chan's JSON API by `clover:sync`, rate limited to one request a second and conditional on `If-Modified-Since`; nothing is ever written back
 - **Greentext that works** &mdash; post bodies are parsed from 4chan's HTML to plain text on ingest, then rendered line by line with quote lines styled and `>>` references picked out; no post body ever reaches React as markup
@@ -35,7 +35,7 @@ Boards, threads and posts are ingested from 4chan's read-only JSON API into Eloq
 - **Imageboard URLs** &mdash; `/g/` is a board and `/g/109522303` a thread, constrained to the synced slug list so they cannot shadow the site's own pages
 - **Attachments that render** &mdash; images served straight from 4chan's CDN, addressed by the id it stores them under; spoilered files and everything on a not-worksafe board sit behind a cover that fetches nothing until asked
 - **Composers that persist** &mdash; a reply form inline where replying belongs and a dialog for starting a thread, both refusing empty input, both enforcing the board's own `max_comment_chars` rather than one global guess, and both writing a post that survives a reload
-- **An account layer of its own** &mdash; blessings and curses, saved threads, reading history and followed boards, each private to the anon and none of it attached to anything they post
+- **An account layer of its own** &mdash; saved threads, reading history and followed boards, each private to the anon and none of it attached to anything they post. There is no voting: blessings and curses were removed in task 12, because 4chan has no votes to import and almost nothing cast here ever carried any
 - **Marketing homepage** &mdash; hero, board grid, trending strip, features, and a footer whose every destination resolves to a real page
 - **Accessibility as a build constraint** &mdash; focus rings never removed, state never carried by colour alone, tests asserting accessible names and keyboard paths instead of class strings
 - **Motion that means something** &mdash; four duration tokens, exits at roughly 65% of their enter, layout properties never animated, and a reduced-motion rule asserted against the compiled stylesheet
@@ -162,6 +162,7 @@ Work is sequenced into gated tasks. Each is built, reviewed, merged to `main` as
 | 11a.2 | Image sizing; no attachments on the homepage | [Merged](https://github.com/NightServant/4chan-redesign/pull/22) |
 | 11a.3 | Whole catalog imported, opening post with it | [Merged](https://github.com/NightServant/4chan-redesign/pull/23) |
 | 11b | Account layer: votes, bookmarks, history, subscriptions, local posting; messages removed | [Merged](https://github.com/NightServant/4chan-redesign/pull/25) |
+| 12 | Blessings and curses retired, table and all; sharing a thread in their place | Open |
 
 The app is navigable end to end: homepage, feed, board, thread, reply. Every link resolves, and everything an account does persists.
 
@@ -191,7 +192,7 @@ Boards 4chan marks `ws_board: 0` are hidden unless an anon opts in, and a signed
 
 Several figures the design carried were removed rather than estimated, because nothing publishes them: a per-board "anons online" count, per-thread views, and the rail's site-wide presence panel. Where a number has no source it is not shown. The same rule took the profile's achievement badges and its janitor scope — one measured nothing, the other named a moderation system that does not exist — and emptied the rail's moderation panel, which had claimed a specific live board was under slow mode.
 
-**Everything an account does is its own, and private.** Votes, saved threads, reading history and followed boards are visible to nobody else, and a post carries no identity at all: a reply written here is `Anonymous` whoever wrote it, and the only thing that can appear beside it is a tripcode an anon opted into. Nothing is ever sent upstream — the API accepts `GET`, `HEAD` and `OPTIONS` only — so a reply written on Clover stays on Clover.
+**Everything an account does is its own, and private.** Saved threads, reading history and followed boards are visible to nobody else, and a post carries no identity at all: a reply written here is `Anonymous` whoever wrote it, and the only thing that can appear beside it is a tripcode an anon opted into. Nothing is ever sent upstream — the API accepts `GET`, `HEAD` and `OPTIONS` only — so a reply written on Clover stays on Clover.
 
 Direct messages were removed rather than built. Two anons have no way to find each other here: there is no directory, no profile page for anyone but yourself, and no identity on a post to start from. The screen assumed a social graph the product's own premise rules out.
 

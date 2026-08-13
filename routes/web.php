@@ -9,7 +9,6 @@ use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\PostVoteController;
 use App\Http\Controllers\ReplyController;
 use App\Http\Controllers\ThreadController;
 use App\Http\Controllers\ThreadCreationController;
@@ -51,14 +50,15 @@ Route::middleware('auth')->group(function () {
     /**
      * What an account can do, as opposed to read.
      *
-     * All of it is private to the anon doing it — a vote, a saved thread, a
-     * followed board and a read marker are none of them visible to anyone
-     * else. Each is a toggle in the interface, so each is idempotent here: a
-     * double submit is a double press, not an error.
+     * All of it is private to the anon doing it — a saved thread, a followed
+     * board and a read marker are none of them visible to anyone else. Each is
+     * a toggle in the interface, so each is idempotent here: a double submit is
+     * a double press, not an error.
+     *
+     * Sharing is not here because it needs no route. A share is a link to a
+     * page that already exists, built in the browser from the thread's own URL;
+     * nothing is recorded when one is sent.
      */
-    Route::post('posts/{post}/vote', [PostVoteController::class, 'store'])->name('posts.vote');
-    Route::post('threads/{thread}/vote', [PostVoteController::class, 'storeForThread'])->name('threads.vote');
-
     Route::post('threads/{thread}/bookmark', [BookmarkController::class, 'store'])->name('threads.bookmark');
     Route::delete('threads/{thread}/bookmark', [BookmarkController::class, 'destroy'])->name('threads.bookmark.destroy');
 

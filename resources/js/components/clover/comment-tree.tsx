@@ -1,14 +1,10 @@
-import {
-    ChevronDown,
-    ChevronRight,
-    Reply as ReplyIcon,
-    Sparkles,
-} from 'lucide-react';
+import { ChevronDown, ChevronRight, Reply as ReplyIcon } from 'lucide-react';
 import { useId, useState } from 'react';
 import { AnonAvatar } from '@/components/clover/anon-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
 import { PostBody } from '@/components/clover/post-body';
 import { PostAttachment } from '@/components/clover/post-image';
+import { ShareControl } from '@/components/clover/share-control';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { Comment } from '@/types/clover';
@@ -26,7 +22,8 @@ import type { Comment } from '@/types/clover';
  * automatically compounds the indent and adds exactly one more hairline —
  * no depth-to-pixel arithmetic required.
  *
- * Voting is out of scope here: another component owns the blessing control.
+ * Sharing is per comment and needs nothing from this component but the post
+ * number, which is also the anchor each comment is given.
  * The footer only reports the count.
  */
 
@@ -109,7 +106,12 @@ function CommentNode({
 
     return (
         <li>
+            {/* Anchored by post number so a shared comment link lands on the
+                comment rather than the top of the thread. 4chan's own `>>`
+                references use the same number, which is what makes a link
+                pasted from here recognisable to anyone who reads the board. */}
             <article
+                id={`p${comment.no}`}
                 aria-labelledby={headingId}
                 className="flex flex-col gap-2 py-2"
             >
@@ -202,18 +204,7 @@ function CommentNode({
                         <PostAttachment media={comment.media} variant="post" />
 
                         <footer className="flex items-center gap-3">
-                            <span
-                                aria-label={`${comment.blessings} blessings`}
-                                className="inline-flex items-center gap-1 text-caption text-faint"
-                            >
-                                <Sparkles
-                                    aria-hidden="true"
-                                    className="size-3.5"
-                                />
-                                <MachineValue aria-hidden="true">
-                                    {comment.blessings}
-                                </MachineValue>
-                            </span>
+                            <ShareControl url={`#p${comment.no}`} size="sm" />
                             <button
                                 type="button"
                                 onClick={() => onReply?.(comment)}

@@ -118,36 +118,46 @@ describe('OriginalPost', () => {
         expect(screen.queryByRole('img')).not.toBeInTheDocument();
     });
 
-    it('shows the blessing count, reply count and image count in the footer', () => {
+    it('shows the reply count and image count in the footer', () => {
         render(<OriginalPost thread={THREAD} />);
 
-        expect(screen.getByText(String(THREAD.blessings))).toBeInTheDocument();
         expect(screen.getByText(String(THREAD.replies))).toBeInTheDocument();
         expect(screen.getByText(THREAD.images)).toBeInTheDocument();
     });
 
-    it('fires onBless and onCurse from the vote control', async () => {
+    /** The negative half: no score, and no control that could cast one. */
+    it('offers no way to vote', () => {
+        render(<OriginalPost thread={THREAD} />);
+
+        for (const name of [/bless/i, /curse/i, /upvote/i, /downvote/i]) {
+            expect(
+                screen.queryByRole('button', { name }),
+            ).not.toBeInTheDocument();
+        }
+    });
+
+    it('shares the thread at its own address rather than the current URL', async () => {
         const user = userEvent.setup();
-        const onBless = vi.fn();
-        const onCurse = vi.fn();
+        const writeText = vi.fn().mockResolvedValue(undefined);
 
-        render(
-            <OriginalPost
-                thread={THREAD}
-                onBless={onBless}
-                onCurse={onCurse}
-            />,
-        );
+        /* `navigator.clipboard` is getter-only in jsdom, so it has to be
+           redefined rather than assigned. */
+        Object.defineProperty(navigator, 'clipboard', {
+            value: { writeText },
+            configurable: true,
+        });
+        Object.defineProperty(navigator, 'share', {
+            value: undefined,
+            configurable: true,
+        });
 
-        await user.click(
-            screen.getByRole('button', { name: 'Bless this post' }),
-        );
-        await user.click(
-            screen.getByRole('button', { name: 'Curse this post' }),
-        );
+        render(<OriginalPost thread={THREAD} />);
 
-        expect(onBless).toHaveBeenCalledTimes(1);
-        expect(onCurse).toHaveBeenCalledTimes(1);
+        await user.click(screen.getByRole('button', { name: /share/i }));
+
+        expect(writeText).toHaveBeenCalledWith(
+            `${window.location.origin}${THREAD.board}${THREAD.no}`,
+        );
     });
 
     it('fires onBookmark and reflects bookmarked state without relying on colour alone', async () => {

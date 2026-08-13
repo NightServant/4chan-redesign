@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Models\Board;
 use App\Models\Bookmark;
 use App\Models\Post;
-use App\Models\PostVote;
 use App\Models\Thread;
 use App\Models\ThreadRead;
 use App\Models\User;
@@ -75,24 +74,25 @@ it('counts the anon own posts, replies and bookmarks', function (): void {
         fn ($page) => $page
             ->where('stats.1.label', 'Comments')
             ->where('stats.1.value', '1')
-            ->where('stats.3.label', 'Bookmarks')
-            ->where('stats.3.value', '1'),
+            ->where('stats.2.label', 'Bookmarks')
+            ->where('stats.2.value', '1'),
     );
 });
 
-/** Blessings received on this anon's own posts, net of curses. */
-it('counts reputation from votes on the anon own posts', function (): void {
-    [, $thread, , $user] = anonWithHistory();
-
-    $mine = Post::factory()->for($thread)->create(['user_id' => $user->id]);
-
-    PostVote::factory()->count(3)->create(['post_id' => $mine->id]);
-    PostVote::factory()->create(['post_id' => $mine->id, 'value' => PostVote::CURSE]);
+/**
+ * "Reputation" was the fourth figure, and it counted blessings. It went with
+ * them rather than being redefined against post counts, which would have been
+ * a score presented as a measurement.
+ */
+it('reports three stats and no reputation', function (): void {
+    [, , , $user] = anonWithHistory();
 
     $this->actingAs($user)->get('/account')->assertInertia(
         fn ($page) => $page
-            ->where('stats.2.label', 'Reputation')
-            ->where('stats.2.value', '2'),
+            ->has('stats', 3)
+            ->where('stats.0.label', 'Posts')
+            ->where('stats.1.label', 'Comments')
+            ->where('stats.2.label', 'Bookmarks'),
     );
 });
 
@@ -168,28 +168,17 @@ it('empties the history when the anon clears it', function (): void {
 });
 
 /**
- * The vote a card and the thread page both write to, read back on the card.
- * Blessing a thread is blessing its opening post, recorded once.
+ * A card used to carry a score and a per-viewer vote state. Both are gone from
+ * the payload, not merely unrendered: a client still receiving them would be a
+ * client that could put the control back without the server noticing.
  */
-it('reports a blessing on the thread it was cast on', function (): void {
-    [$board, $thread, , $user] = anonWithHistory();
-
-    $this->actingAs($user)->post("/threads/{$thread->id}/vote", ['value' => 1]);
+it('sends no vote fields on a thread card', function (): void {
+    [$board, , , $user] = anonWithHistory();
 
     $this->actingAs($user)->get("/{$board->slug}")->assertInertia(
         fn ($page) => $page
-            ->where('threads.0.blessings', 1)
-            ->where('threads.0.voteState', 'blessed'),
-    );
-});
-
-it('reports nothing pressed for an anon who has not voted', function (): void {
-    [$board] = anonWithHistory();
-
-    $this->get("/{$board->slug}")->assertInertia(
-        fn ($page) => $page
-            ->where('threads.0.blessings', 0)
-            ->where('threads.0.voteState', null),
+            ->missing('threads.0.blessings')
+            ->missing('threads.0.voteState'),
     );
 });
 

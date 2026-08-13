@@ -40,7 +40,7 @@ class BookmarksController extends Controller
 
             ->with([
                 'thread.board',
-                'thread.originalPost' => fn ($op) => $op->withSum('votes', 'value')->with('votes'),
+                'thread.originalPost',
                 'thread.bookmarks',
             ])
             ->orderByDesc('created_at')

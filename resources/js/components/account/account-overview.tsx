@@ -137,7 +137,7 @@ function AccountOverview({ activity }: AccountOverviewProps) {
                     <EmptyState
                         icon={<SparklesIcon />}
                         title="No threads yet"
-                        body="Threads you start appear here, with the blessings they collect."
+                        body="Threads you start appear here."
                     />
                 </OverviewSection>
             </div>

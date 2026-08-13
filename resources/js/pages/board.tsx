@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { CompassIcon } from 'lucide-react';
 import { useState } from 'react';
 import { EmptyState } from '@/components/clover/empty-state';
@@ -7,15 +7,14 @@ import { BoardHeader } from '@/components/feed/board-header';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { popular } from '@/routes';
-import { vote as voteOnThread } from '@/routes/threads';
 import type { Board as BoardType, Thread } from '@/types/clover';
 
-type SortOption = 'bumped' | 'new' | 'blessed';
+type SortOption = 'bumped' | 'new' | 'replies';
 
 const SORT_TABS: ReadonlyArray<{ value: SortOption; label: string }> = [
     { value: 'bumped', label: 'Recently bumped' },
     { value: 'new', label: 'New' },
-    { value: 'blessed', label: 'Most blessed' },
+    { value: 'replies', label: 'Most replies' },
 ];
 
 /**
@@ -25,9 +24,10 @@ const SORT_TABS: ReadonlyArray<{ value: SortOption; label: string }> = [
  * untouched rather than re-derived, because the client has no field that
  * reproduces `bumped_at` and a second sort here could only disagree with the
  * query. `new` falls back to post number, since higher numbers are strictly
- * newer posts. `blessed` orders by blessing count, which is real now but is
- * still nought on almost every ingested thread, so that tab largely returns
- * bump order — a stable sort leaves equal keys alone.
+ * newer posts. `replies` orders by reply count, which took the place of a
+ * `blessed` tab: blessings were nought on almost every ingested thread, so
+ * that tab returned bump order wearing a different name. Reply count is the
+ * same signal the feed calls popular, and it is real for every row.
  *
  * There is no per-sort board URL, so this stays local state on the page rather
  * than a route param.
@@ -35,8 +35,8 @@ const SORT_TABS: ReadonlyArray<{ value: SortOption; label: string }> = [
 function sortThreads(threads: readonly Thread[], sort: SortOption): Thread[] {
     const sorted = [...threads];
 
-    if (sort === 'blessed') {
-        sorted.sort((a, b) => b.blessings - a.blessings);
+    if (sort === 'replies') {
+        sorted.sort((a, b) => b.replies - a.replies);
     } else if (sort === 'new') {
         sorted.sort((a, b) => b.no - a.no);
     }
@@ -105,17 +105,6 @@ export default function Board({ board, threads }: BoardProps) {
                                             <ThreadCard
                                                 key={thread.no}
                                                 thread={thread}
-                                                voteState={thread.voteState}
-                                                onBless={() =>
-                                                    router.post(
-                                                        voteOnThread(thread.id)
-                                                            .url,
-                                                        { value: 1 },
-                                                        {
-                                                            preserveScroll: true,
-                                                        },
-                                                    )
-                                                }
                                             />
                                         ),
                                     )}
