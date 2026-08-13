@@ -66,7 +66,6 @@ function ThreadCard({
             data-slot="thread-card"
             className={cn(
                 'relative flex flex-col gap-2 border-b border-border py-4',
-                'transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover',
                 className,
             )}
             {...props}
@@ -99,9 +98,18 @@ function ThreadCard({
             </div>
 
             <h3 className="px-5 font-display text-[17px] leading-snug font-semibold text-balance text-foreground">
+                {/* The hover lives on the title and nowhere else.
+                    
+                    The row used to tint entirely, which is a lot of movement
+                    for a pointer that happens to cross a feed, and it made
+                    thirty rows flicker on the way down the page. The title is
+                    the thing being pointed at and the only thing that
+                    navigates, so it is the only thing that reacts. The
+                    stretched pseudo-element still makes the whole row
+                    clickable; it just no longer announces itself. */}
                 <Link
                     href={titleHref}
-                    className="static after:absolute after:inset-0 after:content-['']"
+                    className="static transition-colors duration-[var(--duration-hover)] ease-standard after:absolute after:inset-0 after:content-[''] hover:text-primary"
                 >
                     {thread.title}
                 </Link>

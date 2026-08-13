@@ -52,6 +52,10 @@ import { cn } from '@/lib/utils';
  * oversized layer, but `hidden` makes the element a scroll container, which
  * silently breaks `position: sticky` on anything inside it — the feed's rail
  * among them. `clip` does not.
+ *
+ * And clipped only when `depth` is greater than zero. A pinned layer has no
+ * overhang to contain, and clipping anyway also clips whatever a child puts
+ * outside the box: it hid the header's search dropdown outright.
  */
 type PatternFieldProps = {
     children: ReactNode;
@@ -101,7 +105,19 @@ function PatternField({
         <div
             ref={band}
             data-slot="pattern-field"
-            className={cn('relative isolate overflow-clip', className)}
+            className={cn(
+                'relative isolate',
+                /* Clipped only when there is something to clip.
+                   
+                   The clip contains the paper's overhang, and the overhang
+                   exists to cover the travel. At `depth={0}` there is neither,
+                   so clipping buys nothing and costs a great deal: it also
+                   clips anything a child positions outside the box, which took
+                   the header's search dropdown with it the moment the chrome
+                   was drawn on paper. */
+                depth > 0 && 'overflow-clip',
+                className,
+            )}
         >
             <motion.div
                 data-slot="pattern-field-paper"

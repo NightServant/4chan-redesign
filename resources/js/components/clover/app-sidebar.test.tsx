@@ -264,4 +264,14 @@ describe('AppSidebar', () => {
             container.querySelector('[data-slot="app-sidebar"]'),
         ).toHaveClass('w-[76px]');
     });
+
+    /** The paper runs through the chrome as well as the content. */
+    it('is drawn on the same patterned paper as the page', () => {
+        const { container } = render(<AppSidebar />);
+
+        expect(
+            container.querySelector('[data-slot="pattern-field-paper"]')
+                ?.className,
+        ).toMatch(/bg-dots/);
+    });
 });

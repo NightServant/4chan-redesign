@@ -122,7 +122,7 @@ describe('PatternField', () => {
      */
     it('clips without becoming a scroll container', () => {
         const { container } = render(
-            <PatternField>
+            <PatternField depth={40}>
                 <p>content</p>
             </PatternField>,
         );
@@ -131,5 +131,27 @@ describe('PatternField', () => {
 
         expect(field?.className).toMatch(/overflow-clip/);
         expect(field?.className).not.toMatch(/overflow-hidden/);
+    });
+
+    /**
+     * The clip contains the paper's overhang, and the overhang exists to cover
+     * the travel. Pinned, there is neither, and clipping anyway also clips
+     * whatever a child positions outside the box.
+     *
+     * That is not hypothetical: wrapping the app header in a pinned field hid
+     * the search dropdown outright, because the list hangs below the header
+     * and the clip cut it off. Anything with a popover in it is drawn on
+     * pinned paper.
+     */
+    it('does not clip when the paper is pinned', () => {
+        const { container } = render(
+            <PatternField depth={0}>
+                <p>content</p>
+            </PatternField>,
+        );
+
+        const field = container.querySelector('[data-slot="pattern-field"]');
+
+        expect(field?.className).not.toMatch(/overflow-clip|overflow-hidden/);
     });
 });

@@ -181,7 +181,8 @@ Work is sequenced into gated tasks. Each is built, reviewed, merged to `main` as
 | 13f | Second dot colour dropped; one colour on the paper | [Merged](https://github.com/NightServant/4chan-redesign/pull/35) |
 | 13g | Paper extended to the app shell and the auth form side | [Merged](https://github.com/NightServant/4chan-redesign/pull/36) |
 | 14 | Search that works: header dropdown and a results page, over the synced database | [Merged](https://github.com/NightServant/4chan-redesign/pull/37) |
-| 15 | Threads as rows rather than cards; images shown whole; NSFW marked | Open |
+| 15 | Threads as rows rather than cards; images shown whole; NSFW marked | [Merged](https://github.com/NightServant/4chan-redesign/pull/38) |
+| 15a | Paper on the app chrome; search aligned to the thread column; hover on the title | Open |
 
 The app is navigable end to end: homepage, feed, board, thread, reply. Every link resolves, and everything an account does persists.
 

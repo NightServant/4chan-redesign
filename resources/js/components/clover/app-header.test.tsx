@@ -258,7 +258,13 @@ describe('AppHeader', () => {
         expect(nextName).not.toBe(initialName);
     });
 
-    it('renders the search field capped at 520px, not full bleed', () => {
+    /**
+     * The field is sized to the column the threads are in, and sits in the
+     * same container, so search is directly over the posts. It was capped at
+     * 520px against a 760px column in a full-bleed bar, which read as two
+     * grids that happened to share a page.
+     */
+    it('aligns the search field with the thread column', () => {
         render(<AppHeader />);
 
         /* The field is a combobox now, not a button, and it renders its own
@@ -268,7 +274,19 @@ describe('AppHeader', () => {
             name: /search boards and threads/i,
         });
 
-        expect(search.closest('.max-w-\\[520px\\]')).not.toBeNull();
+        expect(search.closest('.max-w-\\[760px\\]')).not.toBeNull();
+        expect(search.closest('.max-w-\\[1180px\\]')).not.toBeNull();
+        expect(search.closest('.max-w-\\[520px\\]')).toBeNull();
+    });
+
+    /** The paper runs through the chrome as well as the content. */
+    it('is drawn on the same patterned paper as the page', () => {
+        const { container } = render(<AppHeader />);
+
+        expect(
+            container.querySelector('[data-slot="pattern-field-paper"]')
+                ?.className,
+        ).toMatch(/bg-dots/);
     });
 
     it('is a sticky bar sitting above content, not fixed', () => {

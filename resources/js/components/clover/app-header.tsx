@@ -15,6 +15,7 @@ import type { LucideIcon } from 'lucide-react';
 import type { ComponentProps } from 'react';
 import { AnonAvatar } from '@/components/clover/anon-avatar';
 import { NotificationItem } from '@/components/clover/notification-item';
+import { PatternField } from '@/components/clover/pattern-field';
 import { SearchField } from '@/components/clover/search-field';
 import { Button } from '@/components/ui/button';
 import {
@@ -90,163 +91,191 @@ function AppHeader({ className, onCompose, ...props }: AppHeaderProps) {
         <header
             data-slot="app-header"
             className={cn(
-                'sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-bg px-6',
+                'sticky top-0 z-30 h-16 border-b border-border bg-bg',
                 className,
             )}
             {...props}
         >
-            <div className="max-w-[520px] min-w-0 flex-1">
-                <SearchField />
-            </div>
+            <PatternField depth={0} feather={false} className="h-full">
+                {/* The same container the feed uses, and the field is sized to
+                    the same column the threads are, so search sits directly
+                    over the posts rather than floating at its own width in a
+                    full-bleed bar. It was capped at 520px against a 760px
+                    column, which read as two grids that happened to share a
+                    page. */}
+                <div className="mx-auto flex h-16 w-full max-w-[1180px] items-center gap-7 px-6">
+                    <div className="max-w-[760px] min-w-0 flex-1">
+                        <SearchField />
+                    </div>
 
-            <div className="ml-auto flex items-center gap-2">
-                {isSignedIn ? (
-                    <Button
-                        variant="primary"
-                        className="hidden md:inline-flex"
-                        onClick={onCompose}
-                    >
-                        <PlusIcon aria-hidden="true" />
-                        New thread
-                    </Button>
-                ) : (
-                    <Button
-                        variant="primary"
-                        className="hidden md:inline-flex"
-                        asChild
-                    >
-                        <Link href={login()}>
-                            <PlusIcon aria-hidden="true" />
-                            New thread
-                        </Link>
-                    </Button>
-                )}
-
-                {isSignedIn && (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                    <div className="ml-auto flex items-center gap-2">
+                        {isSignedIn ? (
                             <Button
-                                variant="ghost"
-                                size="icon"
-                                className="relative"
-                                aria-label={`Notifications, ${unreadCount} unread`}
+                                variant="primary"
+                                className="hidden md:inline-flex"
+                                onClick={onCompose}
                             >
-                                <BellIcon aria-hidden="true" />
-                                <span
-                                    aria-hidden="true"
-                                    className="absolute top-2 right-2 size-1.5 rounded-full bg-primary"
-                                />
+                                <PlusIcon aria-hidden="true" />
+                                New thread
                             </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-[340px]">
-                            <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-                            {notificationPreview.map((entry, index) => {
-                                const Icon =
-                                    ACTIVITY_ICONS[entry.icon] ?? BellIcon;
-
-                                return (
-                                    <NotificationItem
-                                        key={`${entry.time}-${index}`}
-                                        leading={<Icon />}
-                                        title={entry.text}
-                                        meta={entry.time}
-                                        unread
-                                    />
-                                );
-                            })}
-                            <DropdownMenuSeparator />
-                            {notificationsItem && (
-                                <DropdownMenuItem asChild>
-                                    <Link href={notificationsItem.href}>
-                                        See all notifications
-                                    </Link>
-                                </DropdownMenuItem>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                )}
-
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label={
-                        isDark
-                            ? 'Switch to light theme'
-                            : 'Switch to dark theme'
-                    }
-                    onClick={() => updateAppearance(isDark ? 'light' : 'dark')}
-                >
-                    {isDark ? (
-                        <SunIcon aria-hidden="true" />
-                    ) : (
-                        <MoonIcon aria-hidden="true" />
-                    )}
-                </Button>
-
-                {user ? (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        ) : (
                             <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label={`Account menu for ${user.name}`}
+                                variant="primary"
+                                className="hidden md:inline-flex"
+                                asChild
                             >
-                                <AnonAvatar seed={String(user.id)} />
+                                <Link href={login()}>
+                                    <PlusIcon aria-hidden="true" />
+                                    New thread
+                                </Link>
                             </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-[240px]">
-                            <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem asChild>
-                                <Link href={account()}>
-                                    <UserIcon aria-hidden="true" />
-                                    Your profile
-                                </Link>
-                            </DropdownMenuItem>
-                            {bookmarksItem && (
-                                <DropdownMenuItem asChild>
-                                    <Link href={bookmarksItem.href}>
-                                        <bookmarksItem.icon aria-hidden="true" />
-                                        Bookmarks
-                                    </Link>
-                                </DropdownMenuItem>
+                        )}
+
+                        {isSignedIn && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="relative"
+                                        aria-label={`Notifications, ${unreadCount} unread`}
+                                    >
+                                        <BellIcon aria-hidden="true" />
+                                        <span
+                                            aria-hidden="true"
+                                            className="absolute top-2 right-2 size-1.5 rounded-full bg-primary"
+                                        />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                    align="end"
+                                    className="w-[340px]"
+                                >
+                                    <DropdownMenuLabel>
+                                        Notifications
+                                    </DropdownMenuLabel>
+                                    {notificationPreview.map((entry, index) => {
+                                        const Icon =
+                                            ACTIVITY_ICONS[entry.icon] ??
+                                            BellIcon;
+
+                                        return (
+                                            <NotificationItem
+                                                key={`${entry.time}-${index}`}
+                                                leading={<Icon />}
+                                                title={entry.text}
+                                                meta={entry.time}
+                                                unread
+                                            />
+                                        );
+                                    })}
+                                    <DropdownMenuSeparator />
+                                    {notificationsItem && (
+                                        <DropdownMenuItem asChild>
+                                            <Link href={notificationsItem.href}>
+                                                See all notifications
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
+
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={
+                                isDark
+                                    ? 'Switch to light theme'
+                                    : 'Switch to dark theme'
+                            }
+                            onClick={() =>
+                                updateAppearance(isDark ? 'light' : 'dark')
+                            }
+                        >
+                            {isDark ? (
+                                <SunIcon aria-hidden="true" />
+                            ) : (
+                                <MoonIcon aria-hidden="true" />
                             )}
-                            {historyItem && (
-                                <DropdownMenuItem asChild>
-                                    <Link href={historyItem.href}>
-                                        <historyItem.icon aria-hidden="true" />
-                                        History
-                                    </Link>
-                                </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            {settingsItem && (
-                                <DropdownMenuItem asChild>
-                                    <Link href={settingsItem.href}>
-                                        <settingsItem.icon aria-hidden="true" />
-                                        Settings
-                                    </Link>
-                                </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem asChild variant="destructive">
-                                <Link href={logout()} as="button">
-                                    <LogOutIcon aria-hidden="true" />
-                                    Sign out
-                                </Link>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                ) : (
-                    <>
-                        <Button variant="ghost" asChild>
-                            <Link href={login()}>Log in</Link>
                         </Button>
-                        <Button variant="primary" asChild>
-                            <Link href={register()}>Create account</Link>
-                        </Button>
-                    </>
-                )}
-            </div>
+
+                        {user ? (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        aria-label={`Account menu for ${user.name}`}
+                                    >
+                                        <AnonAvatar seed={String(user.id)} />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                    align="end"
+                                    className="w-[240px]"
+                                >
+                                    <DropdownMenuLabel>
+                                        {user.name}
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem asChild>
+                                        <Link href={account()}>
+                                            <UserIcon aria-hidden="true" />
+                                            Your profile
+                                        </Link>
+                                    </DropdownMenuItem>
+                                    {bookmarksItem && (
+                                        <DropdownMenuItem asChild>
+                                            <Link href={bookmarksItem.href}>
+                                                <bookmarksItem.icon aria-hidden="true" />
+                                                Bookmarks
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    )}
+                                    {historyItem && (
+                                        <DropdownMenuItem asChild>
+                                            <Link href={historyItem.href}>
+                                                <historyItem.icon aria-hidden="true" />
+                                                History
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuSeparator />
+                                    {settingsItem && (
+                                        <DropdownMenuItem asChild>
+                                            <Link href={settingsItem.href}>
+                                                <settingsItem.icon aria-hidden="true" />
+                                                Settings
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuItem
+                                        asChild
+                                        variant="destructive"
+                                    >
+                                        <Link href={logout()} as="button">
+                                            <LogOutIcon aria-hidden="true" />
+                                            Sign out
+                                        </Link>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        ) : (
+                            <>
+                                <Button variant="ghost" asChild>
+                                    <Link href={login()}>Log in</Link>
+                                </Button>
+                                <Button variant="primary" asChild>
+                                    <Link href={register()}>
+                                        Create account
+                                    </Link>
+                                </Button>
+                            </>
+                        )}
+                    </div>
+                </div>
+            </PatternField>
         </header>
     );
 }
