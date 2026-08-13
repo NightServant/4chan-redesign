@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn, toUrl } from '@/lib/utils';
 import { account } from '@/routes';
-import { edit as editProfile } from '@/routes/profile';
+import { edit as editSettings } from '@/routes/settings';
 import type { Profile, ProfileStat } from '@/types/clover';
 
 /**
@@ -119,11 +119,11 @@ function ProfileHeader({ profile, stats }: ProfileHeaderProps) {
                         {copied ? 'Link copied' : 'Share'}
                     </Button>
 
-                    {/* Clover has one settings surface, at /settings/profile.
+                    {/* Clover has one settings surface, at /settings.
                         Editing here too would be a second place to change the
                         same fields, which is how the two drift apart. */}
                     <Button asChild>
-                        <Link href={editProfile()}>
+                        <Link href={editSettings()}>
                             <Settings aria-hidden="true" />
                             Edit profile
                         </Link>

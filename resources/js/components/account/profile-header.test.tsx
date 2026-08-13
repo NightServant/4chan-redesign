@@ -79,7 +79,7 @@ describe('ProfileHeader', () => {
 
         expect(
             screen.getByRole('link', { name: 'Edit profile' }),
-        ).toHaveAttribute('href', '/settings/profile');
+        ).toHaveAttribute('href', '/settings');
     });
 
     it('copies the profile link and says so when Share is pressed', async () => {

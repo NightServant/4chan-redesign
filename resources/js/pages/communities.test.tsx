@@ -25,12 +25,20 @@ vi.mock('@inertiajs/react', () => ({
     ),
 }));
 
-/** Board links look like `/g`; the settings link in the notice does not. */
+/**
+ * Every link on the page except the one inside the hidden-boards notice.
+ *
+ * This used to keep only hrefs shaped like `/g`, on the reasoning that the
+ * settings link was longer. It was, at `/settings/profile` — and then settings
+ * merged onto `/settings`, which matches that shape exactly, and the notice's
+ * link started counting as a board. Excluding the notice by where it sits says
+ * what was actually meant and cannot be broken by a route being shortened.
+ */
 function boardHrefs(): string[] {
     return screen
         .getAllByRole('link')
-        .map((link) => link.getAttribute('href') ?? '')
-        .filter((href) => /^\/[a-z]+$/.test(href));
+        .filter((link) => link.closest('[data-slot="mature-notice"]') === null)
+        .map((link) => link.getAttribute('href') ?? '');
 }
 
 /* What the server sends an anon who has not opted in: worksafe boards only.

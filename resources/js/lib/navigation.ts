@@ -19,7 +19,7 @@ import {
     history,
     popular,
 } from '@/routes';
-import { edit as editProfile } from '@/routes/profile';
+import { edit as editSettings } from '@/routes/settings';
 import type { CloverNavItem } from '@/types/navigation';
 
 /**
@@ -71,7 +71,7 @@ const ACCOUNT_MENU: readonly CloverNavItem[] = [
     },
     {
         title: 'Settings',
-        href: editProfile(),
+        href: editSettings(),
         icon: SettingsIcon,
         requiresAuth: true,
     },
@@ -96,7 +96,7 @@ const MOBILE_NAV: readonly CloverNavItem[] = [
     },
     {
         title: 'You',
-        href: editProfile(),
+        href: editSettings(),
         icon: UserIcon,
         requiresAuth: true,
     },

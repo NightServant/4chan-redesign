@@ -32,7 +32,7 @@ import { ACCOUNT_MENU, PRIMARY_NAV } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import { account, login, logout, register } from '@/routes';
 import { update as boardPreference } from '@/routes/board-preference';
-import { edit as editSecurity } from '@/routes/security';
+import { edit as editSettings } from '@/routes/settings';
 import type { CloverNavItem } from '@/types/navigation';
 
 /**
@@ -268,8 +268,16 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                                         />
                                     </DropdownMenuItem>
 
+                                    {/* Anchored at the panel, not at the top of
+                                        settings. There is one settings page
+                                        now and two-factor sits well down it,
+                                        so a link to the page alone would drop
+                                        an anon at a display-name field and
+                                        leave them to find it. */}
                                     <DropdownMenuItem asChild>
-                                        <Link href={editSecurity()}>
+                                        <Link
+                                            href={`${editSettings().url}#two-factor`}
+                                        >
                                             <ShieldIcon aria-hidden="true" />
                                             Two-factor authentication
                                         </Link>
