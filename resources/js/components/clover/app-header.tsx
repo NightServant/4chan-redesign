@@ -99,7 +99,6 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
 
     const bookmarksItem = findNavItem('Bookmarks');
     const historyItem = findNavItem('History');
-    const settingsItem = findNavItem('Settings');
     const notificationsItem = findNavItem('Notifications');
 
     const notificationPreview = recentActivity.slice(
@@ -283,15 +282,13 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                                         </Link>
                                     </DropdownMenuItem>
 
+                                    {/* No "Settings" row. The two rows above
+                                        *are* settings -- one flips in place,
+                                        the other links straight at its own
+                                        panel -- so a third pointing at the page
+                                        they came from offered the shortcut and
+                                        the long way round at once. */}
                                     <DropdownMenuSeparator />
-                                    {settingsItem && (
-                                        <DropdownMenuItem asChild>
-                                            <Link href={settingsItem.href}>
-                                                <settingsItem.icon aria-hidden="true" />
-                                                Settings
-                                            </Link>
-                                        </DropdownMenuItem>
-                                    )}
                                     <DropdownMenuItem
                                         asChild
                                         variant="destructive"

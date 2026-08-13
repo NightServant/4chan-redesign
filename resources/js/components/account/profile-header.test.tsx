@@ -5,6 +5,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { ProfileHeader } from '@/components/account/profile-header';
 import { makeProfile, makeStat } from '@/fixtures/factories';
 
+/**
+ * The header now mounts the edit dialog, which renders an Inertia `Form`. The
+ * mock supplies one so the dialog's contents stay observable without a server.
+ */
 vi.mock('@inertiajs/react', () => ({
     Link: ({
         href,
@@ -22,6 +26,22 @@ vi.mock('@inertiajs/react', () => ({
             </a>
         );
     },
+    Form: ({
+        children,
+        action,
+        method,
+    }: {
+        children: (state: {
+            processing: boolean;
+            errors: Record<string, string>;
+        }) => ReactNode;
+        action?: string;
+        method?: string;
+    } & Record<string, unknown>) => (
+        <form action={action} method={method}>
+            {children({ processing: false, errors: {} })}
+        </form>
+    ),
 }));
 
 const PROFILE = makeProfile({ tripcode: '!!Xk29fLp2' });
@@ -74,26 +94,71 @@ describe('ProfileHeader', () => {
         expect(screen.queryByText('!!Xk29fLp2')).not.toBeInTheDocument();
     });
 
-    it('points "Edit profile" at the real settings screen', () => {
-        render(<ProfileHeader profile={PROFILE} stats={PROFILE_STATS} />);
-
-        expect(
-            screen.getByRole('link', { name: 'Edit profile' }),
-        ).toHaveAttribute('href', '/settings');
-    });
-
-    it('copies the profile link and says so when Share is pressed', async () => {
+    /**
+     * "Edit profile" opens a dialog over the profile rather than navigating to
+     * settings. It used to link at the settings form, which edits the account's
+     * name and email — neither of which this header shows — so the one button
+     * promising to change what a reader was looking at changed nothing they
+     * could see.
+     */
+    it('opens an edit dialog rather than navigating to settings', async () => {
         const user = userEvent.setup();
         render(<ProfileHeader profile={PROFILE} stats={PROFILE_STATS} />);
 
-        await user.click(screen.getByRole('button', { name: 'Share' }));
+        expect(
+            screen.queryByRole('link', { name: 'Edit profile' }),
+        ).not.toBeInTheDocument();
+
+        await user.click(screen.getByRole('button', { name: 'Edit profile' }));
+
+        const dialog = await screen.findByRole('dialog');
+
+        expect(dialog).toBeInTheDocument();
+    });
+
+    /**
+     * The two fields the profile actually displays, and only those. Seeded from
+     * what is stored: an anon with no handle must get an empty box, not the
+     * `anon_41` fallback they would then save as a real, taken handle.
+     */
+    it('edits the heading and the line under it, seeded from what is stored', async () => {
+        const user = userEvent.setup();
+        render(<ProfileHeader profile={PROFILE} stats={PROFILE_STATS} />);
+
+        await user.click(screen.getByRole('button', { name: 'Edit profile' }));
+
+        expect(await screen.findByLabelText('Username')).toHaveValue(
+            'anon_4412',
+        );
+        expect(screen.getByLabelText('Bio')).toHaveValue('Reads /g/ at 3am.');
+        expect(screen.queryByLabelText(/email/i)).not.toBeInTheDocument();
+    });
+
+    it('leaves the username box empty for an anon who has set none', async () => {
+        const user = userEvent.setup();
+        render(
+            <ProfileHeader
+                profile={makeProfile({ handle: 'anon_41', storedHandle: null })}
+                stats={PROFILE_STATS}
+            />,
+        );
+
+        await user.click(screen.getByRole('button', { name: 'Edit profile' }));
+
+        expect(await screen.findByLabelText('Username')).toHaveValue('');
+    });
+
+    /**
+     * Share copied a link to `/account`, which resolves to whoever is signed
+     * in — so the "shared" link showed the recipient their own profile, never
+     * the sender's. Asserted as an absence so it does not come back.
+     */
+    it('offers no share control, which could only ever send the wrong link', () => {
+        render(<ProfileHeader profile={PROFILE} stats={PROFILE_STATS} />);
 
         expect(
-            await screen.findByRole('button', { name: 'Link copied' }),
-        ).toBeInTheDocument();
-        await expect(navigator.clipboard.readText()).resolves.toBe(
-            `${window.location.origin}/account`,
-        );
+            screen.queryByRole('button', { name: /share/i }),
+        ).not.toBeInTheDocument();
     });
 
     it('renders every stat as a value beside its label', () => {

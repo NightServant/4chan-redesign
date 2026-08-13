@@ -22,6 +22,15 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
 
     /**
+     * The handle and bio the account screen shows. Its own endpoint because it
+     * is submitted from a dialog on that screen rather than from the settings
+     * form, and `profile.update` requires a name and an email that dialog has
+     * no business asking for.
+     */
+    Route::patch('account/profile', [ProfileController::class, 'updateIdentity'])
+        ->name('profile-identity.update');
+
+    /**
      * Whether adult boards appear in the directory. Its own endpoint because
      * it saves on flip rather than on a form submit.
      */

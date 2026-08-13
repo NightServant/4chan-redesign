@@ -200,7 +200,18 @@ export interface HistoryEntry {
  * only thing on this type that can ever appear beside something they wrote.
  */
 export interface Profile {
+    /** What the heading shows: the stored handle, or the `anon_{id}` fallback. */
     handle: string;
+    /**
+     * What is actually stored, which is null for an anon who has set none.
+     *
+     * Both, because the two are needed for different jobs and conflating them
+     * breaks one of them: the heading must always read as something, and the
+     * edit dialog must not seed its field with `anon_41` — an anon who opened
+     * the dialog to fix their bio would save the fallback as a real handle on
+     * the way out.
+     */
+    storedHandle: string | null;
     /** Opt-in post signature, e.g. `!!Xk29fLp2`. Null when never set. */
     tripcode: string | null;
     bio: string;

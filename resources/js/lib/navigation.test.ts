@@ -7,6 +7,7 @@ import {
     PRIMARY_NAV,
 } from '@/lib/navigation';
 import { toUrl } from '@/lib/utils';
+import { account } from '@/routes';
 
 /**
  * The sidebar, the mobile bar and the header all read their destinations from
@@ -68,9 +69,14 @@ describe('MOBILE_NAV', () => {
      * destinations along the bottom is the whole of small-screen navigation.
      */
     it('draws every destination from the sidebar or the account menu', () => {
-        const known = [...PRIMARY_NAV, ...ACCOUNT_MENU].map((item) =>
-            toUrl(item.href),
-        );
+        const known = [
+            ...PRIMARY_NAV,
+            ...ACCOUNT_MENU,
+            /* The account screen is in neither list and is deliberately on the
+               phone bar: it is where the profile is read and, since the edit
+               dialog landed, where it is written. */
+            { href: account() },
+        ].map((item) => toUrl(item.href));
 
         for (const item of MOBILE_NAV) {
             expect(known).toContain(toUrl(item.href));
@@ -119,10 +125,14 @@ describe('navHref', () => {
      * not to lose them.
      */
     it('keeps the personal destinations for the account menu', () => {
+        /* Settings is not here. It was, as a row in the avatar menu, and it
+           went once the menu grew controls that *are* settings: the adult-
+           boards switch flips in place and two-factor links at its own panel,
+           so a third row pointing at the page those came from offered the
+           shortcut and the long way round at once. */
         expect(ACCOUNT_MENU.map((item) => item.title)).toEqual([
             'Bookmarks',
             'History',
-            'Settings',
         ]);
 
         for (const item of ACCOUNT_MENU) {

@@ -140,10 +140,10 @@ describe('Settings', () => {
         }
     });
 
-    it('labels the name and email controls and seeds them from the anon', () => {
+    it('labels the account controls and seeds them from the anon', () => {
         renderSettings();
 
-        expect(screen.getByLabelText('Name')).toHaveValue('Anon');
+        expect(screen.getByLabelText('Account name')).toHaveValue('Anon');
         expect(screen.getByLabelText('Email address')).toHaveValue(
             'anon@example.com',
         );
@@ -152,60 +152,27 @@ describe('Settings', () => {
     it('keeps the name attributes the profile request is built from', () => {
         renderSettings();
 
-        expect(screen.getByLabelText('Name')).toHaveAttribute('name', 'name');
+        expect(screen.getByLabelText('Account name')).toHaveAttribute(
+            'name',
+            'name',
+        );
         expect(screen.getByLabelText('Email address')).toHaveAttribute(
             'name',
             'email',
         );
     });
 
-    it('announces a profile validation failure and marks the control invalid', () => {
-        formState.errors = { email: 'The email has already been taken.' };
-
+    /**
+     * The username and bio are not on this form. They are the two fields the
+     * account screen displays, and they are edited in a dialog on that screen,
+     * beside the profile they appear on. Two editors for one set of fields is
+     * how the two drift apart, so this is asserted as an absence.
+     */
+    it('does not also edit what the account screen shows', () => {
         renderSettings();
 
-        expect(screen.getByLabelText('Email address')).toHaveAttribute(
-            'aria-invalid',
-            'true',
-        );
-        expect(
-            screen.getAllByRole('alert').map((alert) => alert.textContent),
-        ).toContain('The email has already been taken.');
-    });
-
-    it('offers to re-send verification only while the email is unverified', () => {
-        mockPage({ ...USER, email_verified_at: null });
-
-        renderSettings({ mustVerifyEmail: true });
-
-        expect(
-            screen.getByRole('link', {
-                name: /re-send the verification email/i,
-            }),
-        ).toBeInTheDocument();
-    });
-
-    it('hides the verification notice once the email is verified', () => {
-        renderSettings({ mustVerifyEmail: true });
-
-        expect(
-            screen.queryByRole('link', {
-                name: /re-send the verification email/i,
-            }),
-        ).toBeNull();
-    });
-
-    it('confirms a sent verification link', () => {
-        mockPage({ ...USER, email_verified_at: null });
-
-        renderSettings({
-            mustVerifyEmail: true,
-            status: 'verification-link-sent',
-        } as Partial<typeof BASE_PROPS>);
-
-        expect(
-            screen.getByText(/new verification link has been sent/i),
-        ).toBeInTheDocument();
+        expect(screen.queryByLabelText('Username')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('Bio')).not.toBeInTheDocument();
     });
 
     it('labels all three password controls', () => {
