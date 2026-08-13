@@ -47,6 +47,7 @@ export function makeBoard(overrides: Partial<Board> = {}): Board {
         slug: '/g/',
         name: 'Technology',
         threads: '18,402',
+        nsfw: false,
         subscribed: false,
         ...overrides,
     };
@@ -60,6 +61,7 @@ export function makeThread(overrides: Partial<Thread> = {}): Thread {
         boardName: 'Technology',
         time: '4 min ago',
         title: 'Anons are still arguing about init systems',
+        nsfw: false,
         replies: 12,
         images: '3',
         media: null,

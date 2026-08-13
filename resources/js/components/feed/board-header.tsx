@@ -2,6 +2,7 @@ import { Check, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { BoardAvatar } from '@/components/clover/board-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Board } from '@/types/clover';
@@ -56,9 +57,19 @@ function BoardHeader({ board, className }: BoardHeaderProps) {
                 <div className="flex items-start gap-3">
                     <BoardAvatar slug={board.slug} size={44} />
                     <div className="flex flex-col gap-1.5">
-                        <h1 className="font-display text-h2 font-semibold text-foreground">
-                            {board.name}
-                        </h1>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <h1 className="font-display text-h2 font-semibold text-foreground">
+                                {board.name}
+                            </h1>
+
+                            {/* Beside the board's name, where somebody arriving
+                                from a link sees it before they scroll into the
+                                threads. Named in words rather than signalled by
+                                colour. */}
+                            {board.nsfw ? (
+                                <Badge tone="danger">NSFW</Badge>
+                            ) : null}
+                        </div>
                         <MachineValue>
                             {board.slug} · {board.threads}{' '}
                             {board.threads === '1' ? 'thread' : 'threads'}

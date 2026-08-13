@@ -39,6 +39,7 @@ const baseThread: Thread = {
     time: '4 min ago',
     title: 'RISC-V laptops are finally usable as daily drivers',
     excerpt: 'Compiling LLVM takes 40 minutes but everything else is fine.',
+    nsfw: false,
     replies: 318,
     images: '48',
     media: null,
@@ -47,6 +48,54 @@ const baseThread: Thread = {
 };
 
 describe('ThreadCard', () => {
+    /**
+     * It was a bordered, rounded, lifting `Card`. A feed of thirty of those is
+     * thirty boxes, and the box is the loudest thing on each: the border
+     * competes with the thread's own attachment and the lift animates
+     * furniture rather than content.
+     */
+    it('is a row on a hairline, not a card', () => {
+        const { container } = render(<ThreadCard thread={baseThread} />);
+
+        const row = container.querySelector('[data-slot="thread-card"]');
+
+        expect(container.querySelector('[data-slot="card"]')).toBeNull();
+        expect(row?.className).toMatch(/border-b/);
+        expect(row?.className).not.toMatch(/shadow-lift|rounded-xl/);
+    });
+
+    /**
+     * The excerpt was the first 240 characters of the opening post, printed
+     * under a title that is very often the first line of that same post, so a
+     * row frequently said the same thing twice at two sizes.
+     */
+    it('prints no excerpt under the title', () => {
+        render(
+            <ThreadCard
+                thread={{ ...baseThread, excerpt: 'A body that repeats.' }}
+            />,
+        );
+
+        expect(
+            screen.queryByText('A body that repeats.'),
+        ).not.toBeInTheDocument();
+    });
+
+    /**
+     * Named in words rather than signalled by colour, and placed beside the
+     * board rather than over the attachment: a reader needs to know what a row
+     * is before deciding to look at it, and a label on the image is too late.
+     */
+    it('marks a not-worksafe thread in words', () => {
+        const { rerender } = render(<ThreadCard thread={baseThread} />);
+
+        expect(screen.queryByText('NSFW')).not.toBeInTheDocument();
+
+        rerender(<ThreadCard thread={{ ...baseThread, nsfw: true }} />);
+
+        expect(screen.getByText('NSFW')).toBeInTheDocument();
+    });
+
     it('makes the title the one link, named for the thread', () => {
         render(<ThreadCard thread={baseThread} />);
 
@@ -176,20 +225,6 @@ describe('ThreadCard', () => {
         expect(image).not.toHaveClass('w-auto');
     });
 
-    it('renders the excerpt when present and omits it otherwise', () => {
-        const { rerender } = render(<ThreadCard thread={baseThread} />);
-
-        expect(
-            screen.getByText(baseThread.excerpt as string),
-        ).toBeInTheDocument();
-
-        rerender(<ThreadCard thread={{ ...baseThread, excerpt: undefined }} />);
-
-        expect(
-            screen.queryByText(baseThread.excerpt as string),
-        ).not.toBeInTheDocument();
-    });
-
     it('renders the reply and view counts through MachineValue with tabular figures', () => {
         render(<ThreadCard thread={baseThread} />);
 
@@ -203,15 +238,6 @@ describe('ThreadCard', () => {
         expect(
             screen.getByRole('button', { name: /bookmark/i }),
         ).toBeInTheDocument();
-    });
-
-    it('lifts on hover and rests without a shadow', () => {
-        render(<ThreadCard thread={baseThread} data-testid="thread-card" />);
-
-        const card = screen.getByTestId('thread-card');
-
-        expect(card.className).not.toMatch(/(^|\s)shadow-/);
-        expect(card).toHaveClass('hover:shadow-lift');
     });
 
     /**
