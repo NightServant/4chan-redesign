@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+    ACCOUNT_MENU,
     FOOTER_LINKS,
     MOBILE_NAV,
     navHref,
@@ -13,16 +14,19 @@ import { toUrl } from '@/lib/utils';
  * copies of the same list is how a nav starts disagreeing with itself.
  */
 describe('PRIMARY_NAV', () => {
-    it('lists the eight Clover destinations in the designed order', () => {
+    /**
+     * Bookmarks, History and Settings left the sidebar for the account menu
+     * behind the avatar, where all three already were: the sidebar was a
+     * second copy of a list a few pixels away. Notifications stays, because it
+     * is the one of the four that menu does not carry.
+     */
+    it('lists the five sidebar destinations in the designed order', () => {
         expect(PRIMARY_NAV.map((item) => item.title)).toEqual([
             'Home',
             'Popular',
             'Latest',
             'Communities',
-            'Bookmarks',
-            'History',
             'Notifications',
-            'Settings',
         ]);
     });
 
@@ -38,12 +42,7 @@ describe('PRIMARY_NAV', () => {
             (item) => item.title,
         );
 
-        expect(gated).toEqual([
-            'Bookmarks',
-            'History',
-            'Notifications',
-            'Settings',
-        ]);
+        expect(gated).toEqual(['Notifications']);
     });
 
     it('uses no emoji in any label', () => {
@@ -62,11 +61,19 @@ describe('MOBILE_NAV', () => {
         expect(MOBILE_NAV.length).toBeLessThanOrEqual(5);
     });
 
-    it('draws every destination from the primary nav so the two cannot disagree', () => {
-        const primaryHrefs = PRIMARY_NAV.map((item) => toUrl(item.href));
+    /**
+     * The phone bar is not the sidebar and no longer has to be a subset of it.
+     * History and the profile left the sidebar for the account menu, and a
+     * phone has no avatar menu to put them in, so the bar keeps them: five
+     * destinations along the bottom is the whole of small-screen navigation.
+     */
+    it('draws every destination from the sidebar or the account menu', () => {
+        const known = [...PRIMARY_NAV, ...ACCOUNT_MENU].map((item) =>
+            toUrl(item.href),
+        );
 
         for (const item of MOBILE_NAV) {
-            expect(primaryHrefs).toContain(toUrl(item.href));
+            expect(known).toContain(toUrl(item.href));
         }
     });
 });
@@ -102,6 +109,25 @@ describe('navHref', () => {
         for (const item of PRIMARY_NAV.filter((i) => i.title !== 'Home')) {
             expect(toUrl(navHref(item, true))).toBe(toUrl(item.href));
             expect(toUrl(navHref(item, false))).toBe(toUrl(item.href));
+        }
+    });
+
+    /**
+     * The three that left the sidebar have to still exist somewhere: removing
+     * them from `PRIMARY_NAV` alone also took them out of the avatar menu,
+     * which reads its destinations by name. The point was to name them once,
+     * not to lose them.
+     */
+    it('keeps the personal destinations for the account menu', () => {
+        expect(ACCOUNT_MENU.map((item) => item.title)).toEqual([
+            'Bookmarks',
+            'History',
+            'Settings',
+        ]);
+
+        for (const item of ACCOUNT_MENU) {
+            expect(item.requiresAuth).toBe(true);
+            expect(PRIMARY_NAV).not.toContainEqual(item);
         }
     });
 });

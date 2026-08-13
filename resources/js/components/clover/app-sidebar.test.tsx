@@ -28,10 +28,16 @@ const mockPage: {
         /* Shared from `HandleInertiaRequests`: the sidebar is app chrome and
            renders on every screen, so its board list is not a page prop. */
         sidebarBoards: Board[];
+        sidebarTrending: Board[];
     };
     url: string;
 } = {
-    props: { auth: { user: null }, sidebarOpen: true, sidebarBoards: BOARDS },
+    props: {
+        auth: { user: null },
+        sidebarOpen: true,
+        sidebarBoards: BOARDS,
+        sidebarTrending: BOARDS,
+    },
     url: '/',
 };
 
@@ -76,6 +82,7 @@ beforeEach(() => {
         auth: { user: null },
         sidebarOpen: true,
         sidebarBoards: BOARDS,
+        sidebarTrending: BOARDS,
     };
     mockPage.url = '/';
     document.cookie = 'sidebar_state=; path=/; max-age=0';
@@ -134,14 +141,25 @@ describe('AppSidebar', () => {
         expect(inactiveLink).not.toHaveAttribute('aria-current');
     });
 
-    it('renders the footer links and a "Boards you use" section when expanded', () => {
+    /**
+     * The section was labelled "Boards you use" and ordered by thread count,
+     * which is not a thing any particular anon uses: it was the busiest boards
+     * under a name that claimed otherwise. It is two honest lists now, moved
+     * down from the feed's right rail so they reach every screen rather than
+     * the three that mount a rail.
+     */
+    it('renders the footer links and both board lists when expanded', () => {
         mockPage.props.auth.user = SIGNED_IN_USER;
 
         render(<AppSidebar />);
 
-        expect(
-            screen.getByText('Boards you use', { exact: false }),
-        ).toBeInTheDocument();
+        const lists = document.querySelectorAll(
+            '[data-slot="sidebar-board-list"]',
+        );
+
+        expect(lists).toHaveLength(2);
+        expect(lists[0].textContent).toContain('Popular');
+        expect(lists[1].textContent).toContain('Trending');
 
         for (const link of FOOTER_LINKS) {
             expect(
@@ -170,15 +188,15 @@ describe('AppSidebar', () => {
         ).toBeInTheDocument();
     });
 
-    it('hides the "Boards you use" section and footer links when collapsed', () => {
+    it('hides the board lists and footer links when collapsed', () => {
         mockPage.props.auth.user = SIGNED_IN_USER;
         mockPage.props.sidebarOpen = false;
 
         render(<AppSidebar />);
 
         expect(
-            screen.queryByText('Boards you use', { exact: false }),
-        ).not.toBeInTheDocument();
+            document.querySelectorAll('[data-slot="sidebar-board-list"]'),
+        ).toHaveLength(0);
 
         for (const link of FOOTER_LINKS) {
             expect(

@@ -228,11 +228,23 @@ it('shows a local reply in the thread and on the account', function (): void {
     );
 });
 
+/**
+ * Seeded rather than posted. This drove the thread-creation route, which is
+ * gone: Clover accepts no uploads, and a board where every new thread opens
+ * without an image is not the board it is mirroring.
+ *
+ * What the screen does with a thread an anon started is still worth asserting,
+ * and there are still local threads in the database from before the composer
+ * was removed, so the row is built directly.
+ */
 it('shows a thread this anon started under their own posts', function (): void {
     [$board, , , $user] = anonWithHistory();
 
-    $this->actingAs($user)->post("/{$board->slug}/threads", [
-        'subject' => 'A thread I started',
+    $mine = Thread::factory()->for($board)->create(['subject' => 'A thread I started']);
+
+    Post::factory()->for($mine)->op()->create([
+        'user_id' => $user->id,
+        'is_local' => true,
         'body' => 'The opening post.',
     ]);
 

@@ -12,7 +12,6 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ReplyController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ThreadController;
-use App\Http\Controllers\ThreadCreationController;
 use App\Http\Controllers\ThreadReadController;
 use App\Support\RoutableBoards;
 use Illuminate\Support\Facades\Route;
@@ -135,12 +134,12 @@ Route::get('{board}/{thread}', ThreadController::class)
  * above. Registered with the board-shaped routes rather than beside the other
  * account actions, because it takes the same two constrained segments and
  * splitting it from them is how the constraint gets forgotten.
+ *
+ * Starting a thread is not here. Clover accepts no uploads, and a board where
+ * every new thread opens without an image is not the board it is mirroring;
+ * the composer, its route and its controller are gone rather than left
+ * offering something the product cannot honour.
  */
-Route::post('{board}/threads', [ThreadCreationController::class, 'store'])
-    ->middleware('auth')
-    ->where('board', $boardPattern)
-    ->name('threads.store');
-
 Route::post('{board}/{thread}/replies', [ReplyController::class, 'store'])
     ->middleware('auth')
     ->where(['board' => $boardPattern, 'thread' => '[0-9]+'])

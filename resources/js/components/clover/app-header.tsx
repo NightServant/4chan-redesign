@@ -6,7 +6,6 @@ import {
     LogOutIcon,
     MessageSquareIcon,
     MoonIcon,
-    PlusIcon,
     ShieldIcon,
     SunIcon,
     UserIcon,
@@ -27,7 +26,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAppearance } from '@/hooks/use-appearance';
-import { PRIMARY_NAV } from '@/lib/navigation';
+import { ACCOUNT_MENU, PRIMARY_NAV } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import { account, login, logout, register } from '@/routes';
 import type { CloverNavItem } from '@/types/navigation';
@@ -56,20 +55,23 @@ const ACTIVITY_ICONS: Record<string, LucideIcon> = {
 };
 
 function findNavItem(title: string): CloverNavItem | undefined {
-    return PRIMARY_NAV.find((item) => item.title === title);
+    return (
+        ACCOUNT_MENU.find((item) => item.title === title) ??
+        PRIMARY_NAV.find((item) => item.title === title)
+    );
 }
 
 type AppHeaderProps = Omit<ComponentProps<'header'>, 'children'> & {
     /**
-     * Opens the thread composer. Only ever reachable by a signed-in anon: a
-     * signed-out anon pressing "New thread" goes to log in instead, which
-     * this component decides on its own since it already knows the auth
-     * state that decision depends on.
+     * `onCompose` is gone with the composer it opened.
+     *
+     * Clover accepts no uploads, and a board where every new thread opens
+     * without an image is not the board it is mirroring. The dialog was also
+     * mounted by nothing, so the button opened a component no screen rendered.
      */
-    onCompose?: () => void;
 };
 
-function AppHeader({ className, onCompose, ...props }: AppHeaderProps) {
+function AppHeader({ className, ...props }: AppHeaderProps) {
     const { auth, recentActivity } = usePage().props;
     const user = auth.user;
     const isSignedIn = Boolean(user);
@@ -109,28 +111,6 @@ function AppHeader({ className, onCompose, ...props }: AppHeaderProps) {
                     </div>
 
                     <div className="ml-auto flex items-center gap-2">
-                        {isSignedIn ? (
-                            <Button
-                                variant="primary"
-                                className="hidden md:inline-flex"
-                                onClick={onCompose}
-                            >
-                                <PlusIcon aria-hidden="true" />
-                                New thread
-                            </Button>
-                        ) : (
-                            <Button
-                                variant="primary"
-                                className="hidden md:inline-flex"
-                                asChild
-                            >
-                                <Link href={login()}>
-                                    <PlusIcon aria-hidden="true" />
-                                    New thread
-                                </Link>
-                            </Button>
-                        )}
-
                         {isSignedIn && (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>

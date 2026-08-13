@@ -394,3 +394,58 @@ describe('replying', function (): void {
         expect($thread->posts()->where('is_local', true)->count())->toBe(0);
     });
 });
+
+/**
+ * Bookmarking, from the button an anon actually presses.
+ *
+ * The route and the table have existed since task 11b and the card has had a
+ * bookmark button since task 5, and no page ever passed it a handler: pressing
+ * it did nothing at all on every feed, board and search result. The existing
+ * tests all posted to the route directly, which is exactly the shape of test
+ * that cannot see a missing caller.
+ *
+ * This asserts the round trip the interface depends on: save it, and the card
+ * comes back marked saved.
+ */
+it('reports a thread as bookmarked on the feed once it is saved', function (): void {
+    $board = Board::factory()->slug('g')->create();
+    $thread = Thread::factory()->for($board)->create();
+    Post::factory()->for($thread)->op()->create();
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->get('/popular')->assertInertia(
+        fn ($page) => $page->where('threads.0.bookmarked', false),
+    );
+
+    $this->actingAs($user)->post("/threads/{$thread->id}/bookmark")->assertRedirect();
+
+    $this->actingAs($user)->get('/popular')->assertInertia(
+        fn ($page) => $page->where('threads.0.bookmarked', true),
+    );
+});
+
+it('unsaves a thread that was saved', function (): void {
+    $board = Board::factory()->slug('g')->create();
+    $thread = Thread::factory()->for($board)->create();
+    Post::factory()->for($thread)->op()->create();
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post("/threads/{$thread->id}/bookmark");
+    $this->actingAs($user)->delete("/threads/{$thread->id}/bookmark");
+
+    $this->actingAs($user)->get('/popular')->assertInertia(
+        fn ($page) => $page->where('threads.0.bookmarked', false),
+    );
+});
+
+/** Starting a thread is gone: Clover accepts no uploads. */
+it('has no route for starting a thread', function (): void {
+    $board = Board::factory()->slug('g')->create();
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post("/{$board->slug}/threads", ['subject' => 'x', 'body' => 'y'])
+        ->assertNotFound();
+});

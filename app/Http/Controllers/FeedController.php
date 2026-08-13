@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Http\Resources\BoardResource;
 use App\Http\Resources\ThreadResource;
-use App\Http\Resources\TrendingTagResource;
 use App\Models\Board;
 use App\Models\Thread;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -28,11 +25,6 @@ class FeedController extends Controller
 {
     /** A screenful and a bit. The page paginates below this. */
     private const THREADS = 30;
-
-    /** The rail lists a handful of boards, not the whole directory. */
-    private const RAIL_BOARDS = 4;
-
-    private const TRENDING_BOARDS = 6;
 
     public function __invoke(Request $request, string $sort): Response
     {
@@ -68,37 +60,6 @@ class FeedController extends Controller
         return Inertia::render('feed', [
             'sort' => $sort,
             'threads' => ThreadResource::collection($threads),
-            'boards' => BoardResource::collection($this->railBoards($showsMature)),
-            'trending' => TrendingTagResource::collection($this->trendingBoards($showsMature)),
         ]);
-    }
-
-    /**
-     * The busiest boards the rail lists, by how much is on them.
-     *
-     * @return Collection<int, Board>
-     */
-    private function railBoards(bool $showsMature): Collection
-    {
-        return Board::query()
-            ->visible($showsMature)
-            ->withCount('threads')
-            ->orderByDesc('threads_count')
-            ->limit(self::RAIL_BOARDS)
-            ->get();
-    }
-
-    /**
-     * @return Collection<int, Board>
-     */
-    private function trendingBoards(bool $showsMature): Collection
-    {
-        return Board::query()
-            ->visible($showsMature)
-            ->withCount('threads')
-            ->withSum('threads', 'replies_count')
-            ->orderByDesc('threads_sum_replies_count')
-            ->limit(self::TRENDING_BOARDS)
-            ->get();
     }
 }

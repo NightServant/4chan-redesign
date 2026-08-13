@@ -129,6 +129,23 @@ afterEach(() => {
 });
 
 describe('AppHeader', () => {
+    /**
+     * Starting a thread is gone. Clover accepts no uploads, and a board where
+     * every new thread opens without an image is not the board it is
+     * mirroring. The dialog it opened was also mounted by nothing, so the
+     * button opened a component no screen rendered.
+     */
+    it('offers no way to start a thread', () => {
+        render(<AppHeader />);
+
+        expect(
+            screen.queryByRole('button', { name: /new thread/i }),
+        ).not.toBeInTheDocument();
+        expect(
+            screen.queryByRole('link', { name: /new thread/i }),
+        ).not.toBeInTheDocument();
+    });
+
     it('shows Log in and Create account and no avatar for a signed-out anon', () => {
         render(<AppHeader />);
 
@@ -141,13 +158,6 @@ describe('AppHeader', () => {
         expect(
             document.querySelector('[data-slot="anon-avatar"]'),
         ).not.toBeInTheDocument();
-    });
-
-    it('sends a signed-out anon to log in rather than a composer when New thread is pressed', () => {
-        render(<AppHeader />);
-
-        const newThread = screen.getByRole('link', { name: /new thread/i });
-        expect(newThread).toHaveAttribute('href', '/login');
     });
 
     it('shows the account avatar trigger and opens the account menu on click, with items reachable', async () => {
@@ -184,19 +194,6 @@ describe('AppHeader', () => {
 
         const signOut = screen.getByRole('menuitem', { name: /sign out/i });
         expect(signOut.tagName).toBe('BUTTON');
-    });
-
-    it('calls onCompose for a signed-in anon pressing New thread, instead of navigating', async () => {
-        const user = userEvent.setup();
-        const onCompose = vi.fn();
-        mockPage.props.auth.user = SIGNED_IN_USER;
-
-        render(<AppHeader onCompose={onCompose} />);
-
-        const newThread = screen.getByRole('button', { name: /new thread/i });
-        await user.click(newThread);
-
-        expect(onCompose).toHaveBeenCalledTimes(1);
     });
 
     it('names the notifications button with the unread count, not colour alone', () => {

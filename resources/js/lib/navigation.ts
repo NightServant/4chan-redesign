@@ -1,22 +1,22 @@
 import {
-    BellIcon,
+    SettingsIcon,
     BookmarkIcon,
+    BellIcon,
     ClockIcon,
     FlameIcon,
-    HistoryIcon,
     HouseIcon,
+    HistoryIcon,
     LayoutGridIcon,
-    SettingsIcon,
     UserIcon,
 } from 'lucide-react';
 import {
-    bookmarks,
     dashboard,
     communities,
-    history,
     home,
     latest,
     notifications,
+    bookmarks,
+    history,
     popular,
 } from '@/routes';
 import { edit as editProfile } from '@/routes/profile';
@@ -36,6 +36,28 @@ const PRIMARY_NAV: readonly CloverNavItem[] = [
     { title: 'Latest', href: latest(), icon: ClockIcon },
     { title: 'Communities', href: communities(), icon: LayoutGridIcon },
     {
+        title: 'Notifications',
+        href: notifications(),
+        icon: BellIcon,
+        requiresAuth: true,
+    },
+];
+
+/**
+ * The account menu's own destinations, which are not sidebar rows.
+ *
+ * Bookmarks, History and Settings were in `PRIMARY_NAV` and are not any more:
+ * all three already sat in the menu behind the avatar, so the sidebar was a
+ * second copy of a list a few pixels away. Notifications stays in the sidebar
+ * because it is the one of the four the menu does not carry.
+ *
+ * They live here rather than nowhere because the header reads them by name to
+ * build that menu. Removing them from `PRIMARY_NAV` alone took them out of the
+ * avatar menu too, which is the opposite of the intent: the point was to name
+ * them once, not to lose them.
+ */
+const ACCOUNT_MENU: readonly CloverNavItem[] = [
+    {
         title: 'Bookmarks',
         href: bookmarks(),
         icon: BookmarkIcon,
@@ -45,12 +67,6 @@ const PRIMARY_NAV: readonly CloverNavItem[] = [
         title: 'History',
         href: history(),
         icon: HistoryIcon,
-        requiresAuth: true,
-    },
-    {
-        title: 'Notifications',
-        href: notifications(),
-        icon: BellIcon,
         requiresAuth: true,
     },
     {
@@ -109,4 +125,4 @@ function navHref(
     return signedIn && item.authedHref ? item.authedHref : item.href;
 }
 
-export { FOOTER_LINKS, MOBILE_NAV, navHref, PRIMARY_NAV };
+export { ACCOUNT_MENU, FOOTER_LINKS, MOBILE_NAV, navHref, PRIMARY_NAV };
