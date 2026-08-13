@@ -30,8 +30,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('settings/password', [SecurityController::class, 'update'])
         ->middleware('throttle:6,1')
         ->name('user-password.update');
-
-    Route::inertia('settings/appearance', 'settings/appearance')->name('appearance.edit');
+    /**
+     * `settings/appearance` is gone. It held one control, a light/dark
+     * switch, and the header carries that switch on every screen: the page
+     * was a second way to reach a toggle that is always one press away.
+     */
 });
 
 Route::get('.well-known/passkey-endpoints', function () {

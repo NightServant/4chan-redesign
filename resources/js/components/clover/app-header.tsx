@@ -1,5 +1,6 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import {
+    EyeIcon,
     ArrowBigUpIcon,
     BellIcon,
     BookmarkIcon,
@@ -16,6 +17,7 @@ import { AnonAvatar } from '@/components/clover/anon-avatar';
 import { NotificationItem } from '@/components/clover/notification-item';
 import { PatternField } from '@/components/clover/pattern-field';
 import { SearchField } from '@/components/clover/search-field';
+import { Switch } from '@/components/clover/switch';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -29,6 +31,8 @@ import { useAppearance } from '@/hooks/use-appearance';
 import { ACCOUNT_MENU, PRIMARY_NAV } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import { account, login, logout, register } from '@/routes';
+import { update as boardPreference } from '@/routes/board-preference';
+import { edit as editSecurity } from '@/routes/security';
 import type { CloverNavItem } from '@/types/navigation';
 
 /**
@@ -74,6 +78,21 @@ type AppHeaderProps = Omit<ComponentProps<'header'>, 'children'> & {
 function AppHeader({ className, ...props }: AppHeaderProps) {
     const { auth, recentActivity } = usePage().props;
     const user = auth.user;
+    const showsMatureBoards = Boolean(user?.shows_mature_boards);
+
+    /**
+     * Written straight to the server rather than held here. It changes what
+     * every board query returns, so a local copy would be a second opinion on
+     * a preference the database already owns.
+     */
+    function toggleMatureBoards(): void {
+        router.patch(
+            boardPreference().url,
+            { shows_mature_boards: !showsMatureBoards },
+            { preserveScroll: true },
+        );
+    }
+
     const isSignedIn = Boolean(user);
     const { resolvedAppearance, updateAppearance } = useAppearance();
     const isDark = resolvedAppearance === 'dark';
@@ -221,6 +240,41 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                                             </Link>
                                         </DropdownMenuItem>
                                     )}
+                                    <DropdownMenuSeparator />
+
+                                    {/* The two settings that were worth
+                                        keeping, brought up to where an anon
+                                        actually is.
+                                        
+                                        Adult boards changes what every screen
+                                        shows, and two-factor is the one
+                                        security control that is not a form
+                                        field, so both were a page visit away
+                                        from a preference they affect
+                                        everywhere. */}
+                                    <DropdownMenuItem
+                                        onSelect={(event) => {
+                                            event.preventDefault();
+                                            toggleMatureBoards();
+                                        }}
+                                    >
+                                        <EyeIcon aria-hidden="true" />
+                                        Show adult boards
+                                        <Switch
+                                            checked={showsMatureBoards}
+                                            aria-label="Show adult boards"
+                                            className="ml-auto"
+                                            tabIndex={-1}
+                                        />
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuItem asChild>
+                                        <Link href={editSecurity()}>
+                                            <ShieldIcon aria-hidden="true" />
+                                            Two-factor authentication
+                                        </Link>
+                                    </DropdownMenuItem>
+
                                     <DropdownMenuSeparator />
                                     {settingsItem && (
                                         <DropdownMenuItem asChild>

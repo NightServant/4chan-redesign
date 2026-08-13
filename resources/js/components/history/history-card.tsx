@@ -1,16 +1,9 @@
 import { Link } from '@inertiajs/react';
-import { BookOpen, Trash2 } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import { BoardAvatar } from '@/components/clover/board-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
 import { PostAttachment } from '@/components/clover/post-image';
-import { Progress } from '@/components/clover/progress';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { thread } from '@/routes';
 import type { HistoryEntry } from '@/types/clover';
 
@@ -22,26 +15,42 @@ function boardToken(slug: string): string {
 type HistoryCardProps = {
     entry: HistoryEntry;
     /** Drops this entry from the list. Local state; there is no backend. */
-    onRemove: () => void;
 };
 
 /**
- * One previously-opened thread.
+ * One previously-opened thread, presented exactly as the feed presents one.
  *
- * The card is clickable everywhere through the stretched-link pattern the
- * feed already uses: the title link paints a pseudo-element over the whole
- * card, and the trailing controls are given `position: relative` so they sit
- * above that stretch and stay independently clickable and focusable. Nesting
- * them inside the link instead would be invalid HTML.
+ * It was a bordered `Card` with a progress bar and a delete button. Three
+ * things went:
+ *
+ * The **card** went, because the feed's rows stopped being cards and a history
+ * of threads should look like the threads it is a history of.
+ *
+ * The **progress bar** went because it was always zero. Reading progress is
+ * never measured — nothing on the thread page reports how far down an anon
+ * got — so every row reported `0% read` under a bar that never moved. A
+ * measurement nobody takes is not a measurement.
+ *
+ * The **delete button** went because the page has a Clear all, and a row of
+ * bins invites the reader to curate a list that is only a record of what they
+ * opened. Removing one entry is not a thing worth thirty controls.
+ *
+ * The row stays clickable everywhere through the stretched-link pattern the
+ * feed uses: the title link paints a pseudo-element over the whole row, and
+ * the trailing control sits `relative` above that stretch so it stays
+ * independently clickable.
  */
-function HistoryCard({ entry, onRemove }: HistoryCardProps) {
+function HistoryCard({ entry }: HistoryCardProps) {
     const href = thread({
         board: boardToken(entry.board),
         thread: entry.no,
     });
 
     return (
-        <Card className="relative flex-row items-center gap-4 px-5 py-4">
+        <div
+            data-slot="history-row"
+            className="relative flex flex-row items-center gap-4 border-b border-border px-5 py-4"
+        >
             {/* The thread's own attachment, or nothing when it opened
                 without one. It was a required label while history was a
                 fixture, which meant every row claimed an image. */}
@@ -58,27 +67,14 @@ function HistoryCard({ entry, onRemove }: HistoryCardProps) {
                     </MachineValue>
                 </div>
 
-                <h3 className="font-display text-h3 font-semibold text-foreground">
+                <h3 className="font-display text-[17px] leading-snug font-semibold text-balance text-foreground">
                     <Link
                         href={href}
-                        className="static after:absolute after:inset-0 after:content-['']"
+                        className="static transition-colors duration-[var(--duration-hover)] ease-standard after:absolute after:inset-0 after:content-[''] hover:text-primary"
                     >
                         {entry.title}
                     </Link>
                 </h3>
-
-                <div className="flex items-center gap-3">
-                    <Progress
-                        value={entry.progress}
-                        label={`Read progress: ${entry.title}`}
-                        className="max-w-[260px] flex-1"
-                    />
-                    <MachineValue className="shrink-0">
-                        {entry.progress >= 100
-                            ? 'Read'
-                            : `${entry.progress}% read`}
-                    </MachineValue>
-                </div>
             </div>
 
             <div className="relative flex shrink-0 items-center gap-2">
@@ -88,22 +84,8 @@ function HistoryCard({ entry, onRemove }: HistoryCardProps) {
                         Continue reading
                     </Link>
                 </Button>
-
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Remove from history"
-                            onClick={onRemove}
-                        >
-                            <Trash2 aria-hidden="true" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Remove from history</TooltipContent>
-                </Tooltip>
             </div>
-        </Card>
+        </div>
     );
 }
 

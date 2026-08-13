@@ -284,3 +284,39 @@ it('reports no activity for an anon who has done nothing', function (): void {
         fn ($page) => $page->has('activity', 0),
     );
 });
+
+/**
+ * The two settings that moved into the account menu behind the avatar.
+ *
+ * Both were a page visit away from a preference they affect everywhere:
+ * showing adult boards changes what every screen lists, and two-factor is the
+ * one security control that is not a form field.
+ */
+it('changes the adult-board preference from the header control', function (): void {
+    $user = User::factory()->create(['shows_mature_boards' => false]);
+
+    $this->actingAs($user)
+        ->patch('/settings/board-preference', ['shows_mature_boards' => true])
+        ->assertRedirect();
+
+    expect($user->fresh()->shows_mature_boards)->toBeTrue();
+});
+
+/** The appearance page held one control the header carries on every screen. */
+it('no longer serves an appearance settings page', function (): void {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->get('/settings/appearance')->assertNotFound();
+});
+
+/**
+ * Reachable, not necessarily rendered: security sits behind a password
+ * confirmation, so a fresh session is redirected to confirm rather than shown
+ * the page. What matters here is that the route the menu links to still
+ * exists, which a 404 would disprove and a 302 does not.
+ */
+it('still routes to the security page the menu links to', function (): void {
+    $user = User::factory()->create(['email_verified_at' => now()]);
+
+    $this->actingAs($user)->get('/settings/security')->assertStatus(302);
+});

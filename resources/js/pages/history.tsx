@@ -16,7 +16,6 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { destroy as clearHistory } from '@/routes/history';
-import { forget as forgetRead } from '@/routes/threads/read';
 import type { HistoryEntry } from '@/types/clover';
 
 type SortOption = 'recent' | 'unfinished';
@@ -67,15 +66,8 @@ function matches(entry: HistoryEntry, query: string): boolean {
  * puts the least-read thread on top, which is the one an anon is most likely
  * to be looking for.
  */
-function sortEntries(
-    entries: readonly HistoryEntry[],
-    sort: SortOption,
-): HistoryEntry[] {
+function sortEntries(entries: readonly HistoryEntry[]): HistoryEntry[] {
     const sorted = [...entries];
-
-    if (sort === 'unfinished') {
-        sorted.sort((a, b) => a.progress - b.progress);
-    }
 
     return sorted;
 }
@@ -104,7 +96,6 @@ export default function History({ entries }: HistoryProps) {
 
     const matched = sortEntries(
         entries.filter((entry) => matches(entry, query)),
-        sort,
     );
 
     const pageCount = Math.max(1, Math.ceil(matched.length / PAGE_SIZE));
@@ -114,19 +105,8 @@ export default function History({ entries }: HistoryProps) {
         current * PAGE_SIZE,
     );
 
-    /* Forgotten on the server, not filtered out of a copy the page still
-       holds: an anon who removes a row means it. */
-    function remove(id: number) {
-        router.delete(forgetRead(id).url, { preserveScroll: true });
-    }
-
     function clearAll() {
         router.delete(clearHistory().url);
-    }
-
-    function reset() {
-        setQuery('');
-        setPage(1);
     }
 
     const searching = query.trim() !== '';
@@ -201,11 +181,6 @@ export default function History({ entries }: HistoryProps) {
                                 ? `Nothing matches "${query}".`
                                 : 'Threads you open appear here so you can pick them back up.'
                         }
-                        action={
-                            <Button variant="outline" onClick={reset}>
-                                Reset
-                            </Button>
-                        }
                     />
                 ) : (
                     <div className="flex flex-col gap-5">
@@ -226,14 +201,11 @@ export default function History({ entries }: HistoryProps) {
                                 >
                                     <SectionLabel>{group}</SectionLabel>
 
-                                    <div className="flex flex-col gap-3">
+                                    <div className="flex flex-col">
                                         {entries.map((entry) => (
                                             <HistoryCard
                                                 key={entry.no}
                                                 entry={entry}
-                                                onRemove={() =>
-                                                    remove(entry.id)
-                                                }
                                             />
                                         ))}
                                     </div>
