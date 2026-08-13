@@ -166,7 +166,8 @@ Work is sequenced into gated tasks. Each is built, reviewed, merged to `main` as
 | 13a | Hero rebuilt around live thread rails; light-theme green fixed; boards as a carousel | [Merged](https://github.com/NightServant/4chan-redesign/pull/30) |
 | 13b | Features as tabs; footer cut to what Clover has, with the pages written | [Merged](https://github.com/NightServant/4chan-redesign/pull/31) |
 | 13c | Patterns in the design system, parallax bands, ticker-speed marquees, trending as a ticker | [Merged](https://github.com/NightServant/4chan-redesign/pull/32) |
-| 13d | One pattern throughout, ruled columns, legible boxed marquee rows | Open |
+| 13d | One pattern throughout, ruled columns, legible boxed marquee rows | [Merged](https://github.com/NightServant/4chan-redesign/pull/33) |
+| 13e | Dots alternate green and grey; hero rails ruled both sides | Open |
 
 The app is navigable end to end: homepage, feed, board, thread, reply. Every link resolves, and everything an account does persists.
 
