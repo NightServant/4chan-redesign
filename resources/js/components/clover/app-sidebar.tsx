@@ -3,6 +3,7 @@ import { PanelLeftCloseIcon, PanelLeftOpenIcon } from 'lucide-react';
 import { useState } from 'react';
 import type { ComponentProps } from 'react';
 import { BoardAvatar } from '@/components/clover/board-avatar';
+import { PatternField } from '@/components/clover/pattern-field';
 import { Mark, Wordmark } from '@/components/clover/wordmark';
 import {
     Tooltip,
@@ -107,114 +108,123 @@ function AppSidebar({ className, ...props }: AppSidebarProps) {
             <aside
                 data-slot="app-sidebar"
                 className={cn(
-                    'sticky top-0 z-20 hidden h-screen shrink-0 flex-col border-r border-border bg-bg md:flex',
+                    'sticky top-0 z-20 hidden h-screen shrink-0 border-r border-border bg-bg md:block',
                     open ? 'w-[268px]' : 'w-[76px]',
                     className,
                 )}
                 {...props}
             >
-                {/* Exactly the header's height, so the wordmark and the
+                <PatternField
+                    depth={0}
+                    feather={false}
+                    className="flex h-full flex-col"
+                    contentClassName="flex min-h-0 flex-1 flex-col"
+                >
+                    {/* Exactly the header's height, so the wordmark and the
                     header content share a baseline. The sidebar is a sibling
                     of the header's column, not its parent, so nothing lines
                     these up automatically. */}
-                <div
-                    data-slot="sidebar-brand"
-                    className={cn(
-                        'flex h-16 shrink-0 items-center px-3',
-                        open ? 'justify-between gap-1' : 'justify-center',
-                    )}
-                >
-                    <Link
-                        href={home()}
-                        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover"
-                    >
-                        {open ? (
-                            <Wordmark />
-                        ) : (
-                            <Mark aria-label="clover, home" />
+                    <div
+                        data-slot="sidebar-brand"
+                        className={cn(
+                            'flex h-16 shrink-0 items-center px-3',
+                            open ? 'justify-between gap-1' : 'justify-center',
                         )}
-                    </Link>
-
-                    {open ? (
-                        <button
-                            type="button"
-                            onClick={toggleOpen}
-                            className={toggleClasses}
+                    >
+                        <Link
+                            href={home()}
+                            className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover"
                         >
-                            <PanelLeftCloseIcon
-                                aria-hidden="true"
-                                className="size-4"
-                            />
-                            <span className="sr-only">Collapse sidebar</span>
-                        </button>
-                    ) : null}
-                </div>
+                            {open ? (
+                                <Wordmark />
+                            ) : (
+                                <Mark aria-label="clover, home" />
+                            )}
+                        </Link>
 
-                {/* Collapsed, the toggle drops below the mark and centres on
+                        {open ? (
+                            <button
+                                type="button"
+                                onClick={toggleOpen}
+                                className={toggleClasses}
+                            >
+                                <PanelLeftCloseIcon
+                                    aria-hidden="true"
+                                    className="size-4"
+                                />
+                                <span className="sr-only">
+                                    Collapse sidebar
+                                </span>
+                            </button>
+                        ) : null}
+                    </div>
+
+                    {/* Collapsed, the toggle drops below the mark and centres on
                     the same axis as every nav icon. Side by side they would
                     not fit a 76px rail. */}
-                {!open ? (
-                    <div className="flex shrink-0 justify-center px-2 pb-2">
-                        <button
-                            type="button"
-                            onClick={toggleOpen}
-                            className={toggleClasses}
-                        >
-                            <PanelLeftOpenIcon
-                                aria-hidden="true"
-                                className="size-4"
-                            />
-                            <span className="sr-only">Expand sidebar</span>
-                        </button>
-                    </div>
-                ) : null}
-
-                <nav
-                    aria-label="Primary"
-                    className="flex flex-col gap-0.5 px-2 py-2"
-                >
-                    {visibleNav.map((item) => renderRow(item))}
-                </nav>
-
-                {open && boards.length > 0 ? (
-                    <div className="mt-2 flex flex-col gap-0.5 px-2 py-2">
-                        <p className="px-[11px] py-1 text-label text-faint uppercase">
-                            Boards you use
-                        </p>
-                        {boards.map((board) => (
-                            <Link
-                                key={board.slug}
-                                href={board.slug}
-                                className="flex h-[38px] items-center gap-3 rounded-lg px-[11px] text-body-sm text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover hover:text-foreground"
+                    {!open ? (
+                        <div className="flex shrink-0 justify-center px-2 pb-2">
+                            <button
+                                type="button"
+                                onClick={toggleOpen}
+                                className={toggleClasses}
                             >
-                                <BoardAvatar
-                                    slug={board.slug}
-                                    size={20}
-                                    decorative
+                                <PanelLeftOpenIcon
+                                    aria-hidden="true"
+                                    className="size-4"
                                 />
-                                <span className="truncate">
-                                    {board.slug} {board.name}
-                                </span>
-                            </Link>
-                        ))}
-                    </div>
-                ) : null}
+                                <span className="sr-only">Expand sidebar</span>
+                            </button>
+                        </div>
+                    ) : null}
 
-                <div className="mt-auto" />
+                    <nav
+                        aria-label="Primary"
+                        className="flex flex-col gap-0.5 px-2 py-2"
+                    >
+                        {visibleNav.map((item) => renderRow(item))}
+                    </nav>
 
-                {open ? (
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 px-4 py-4 text-caption text-faint">
-                        {FOOTER_LINKS.map((link) => (
-                            <Link
-                                key={link.title}
-                                href={link.href}
-                                className="transition-colors duration-[var(--duration-hover)] ease-standard hover:text-foreground"
-                            >
-                                {link.title}
-                            </Link>
-                        ))}
-                    </div>
-                ) : null}
+                    {open && boards.length > 0 ? (
+                        <div className="mt-2 flex flex-col gap-0.5 px-2 py-2">
+                            <p className="px-[11px] py-1 text-label text-faint uppercase">
+                                Boards you use
+                            </p>
+                            {boards.map((board) => (
+                                <Link
+                                    key={board.slug}
+                                    href={board.slug}
+                                    className="flex h-[38px] items-center gap-3 rounded-lg px-[11px] text-body-sm text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover hover:text-foreground"
+                                >
+                                    <BoardAvatar
+                                        slug={board.slug}
+                                        size={20}
+                                        decorative
+                                    />
+                                    <span className="truncate">
+                                        {board.slug} {board.name}
+                                    </span>
+                                </Link>
+                            ))}
+                        </div>
+                    ) : null}
+
+                    <div className="mt-auto" />
+
+                    {open ? (
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 px-4 py-4 text-caption text-faint">
+                            {FOOTER_LINKS.map((link) => (
+                                <Link
+                                    key={link.title}
+                                    href={link.href}
+                                    className="transition-colors duration-[var(--duration-hover)] ease-standard hover:text-foreground"
+                                >
+                                    {link.title}
+                                </Link>
+                            ))}
+                        </div>
+                    ) : null}
+                </PatternField>
             </aside>
         </TooltipProvider>
     );

@@ -69,6 +69,21 @@ describe('ThreadCard', () => {
      * under a title that is very often the first line of that same post, so a
      * row frequently said the same thing twice at two sizes.
      */
+    /**
+     * A whole row tinting is a lot of movement for a pointer that happens to
+     * cross a feed, and thirty of them flicker on the way down the page. The
+     * title is the thing being pointed at and the only thing that navigates.
+     */
+    it('reacts on the title alone, and never on the row', () => {
+        const { container } = render(<ThreadCard thread={baseThread} />);
+
+        const row = container.querySelector('[data-slot="thread-card"]');
+        const title = screen.getByRole('link', { name: baseThread.title });
+
+        expect(row?.className).not.toMatch(/hover:/);
+        expect(title.className).toMatch(/hover:text-primary/);
+    });
+
     it('prints no excerpt under the title', () => {
         render(
             <ThreadCard
