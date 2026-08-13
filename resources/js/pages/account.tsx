@@ -21,11 +21,10 @@ import type {
  * The signed-in anon's own account screen.
  *
  * The design carries a sixth "Settings" tab holding display name, bio and
- * tripcode fields plus a preferences panel. It is not ported: this app has
- * real settings at /settings/profile, /settings/security and
- * /settings/appearance, backed by Fortify and a controller that persists.
- * Two editors for one set of fields is a defect, so "Edit profile" in the
- * header points at the real one instead.
+ * tripcode fields plus a preferences panel. It is not ported: this app has real
+ * settings at /settings, backed by Fortify and a controller that persists. Two
+ * editors for one set of fields is a defect, so "Edit profile" in the header
+ * points at the real one instead.
  */
 const TABS = [
     { value: 'overview', label: 'Overview' },

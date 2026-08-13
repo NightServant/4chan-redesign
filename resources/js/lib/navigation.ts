@@ -1,5 +1,4 @@
 import {
-    SettingsIcon,
     BookmarkIcon,
     BellIcon,
     ClockIcon,
@@ -10,6 +9,7 @@ import {
     UserIcon,
 } from 'lucide-react';
 import {
+    account,
     dashboard,
     communities,
     home,
@@ -19,7 +19,6 @@ import {
     history,
     popular,
 } from '@/routes';
-import { edit as editProfile } from '@/routes/profile';
 import type { CloverNavItem } from '@/types/navigation';
 
 /**
@@ -69,12 +68,14 @@ const ACCOUNT_MENU: readonly CloverNavItem[] = [
         icon: HistoryIcon,
         requiresAuth: true,
     },
-    {
-        title: 'Settings',
-        href: editProfile(),
-        icon: SettingsIcon,
-        requiresAuth: true,
-    },
+    /* Settings is not on this list. It was, as a row in the avatar menu, and
+       it went at the point the menu grew controls that *are* settings: the
+       adult-boards switch flips in place, and two-factor links straight at its
+       own panel. A third row pointing at the page those two came from was the
+       menu offering both the shortcut and the long way round.
+       
+       The page is still reached from "Edit profile" on the account screen, from
+       the two-factor row here, and from "You" on the mobile bar. */
 ];
 
 /**
@@ -94,9 +95,13 @@ const MOBILE_NAV: readonly CloverNavItem[] = [
         icon: HistoryIcon,
         requiresAuth: true,
     },
+    /* The account screen, not the settings page. "You" reading as settings
+       was always a stretch, and it is plainly wrong now that the profile is
+       edited from a dialog on the account screen rather than from a form on
+       the settings one. */
     {
         title: 'You',
-        href: editProfile(),
+        href: account(),
         icon: UserIcon,
         requiresAuth: true,
     },

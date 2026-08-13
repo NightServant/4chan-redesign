@@ -75,14 +75,21 @@ class User extends Authenticatable implements PasskeyUser
     /**
      * The name the profile shows.
      *
-     * Falls back to the account's display name, then to something derived
-     * from its id, because `handle` is nullable: every account created before
-     * the column existed has none, and a profile with a blank heading reads
-     * as broken rather than as unset.
+     * `handle` is nullable — every account created before the column existed
+     * has none, and a profile with a blank heading reads as broken rather than
+     * as unset — so there is a fallback. It is derived from the id and nothing
+     * else.
+     *
+     * It used to fall through the account's `name` first, which put whatever
+     * an anon typed at registration on their profile. Registration asks for a
+     * name and people give their real one; this account's is a full legal name.
+     * On a site whose entire premise is anonymity, defaulting the public
+     * heading to that is a leak, not a nicety. An anon who wants their name
+     * shown can set it as their handle, which is now a field they can reach.
      */
     public function displayHandle(): string
     {
-        return $this->handle ?? $this->name ?? "anon_{$this->id}";
+        return $this->handle ?? "anon_{$this->id}";
     }
 
     /**

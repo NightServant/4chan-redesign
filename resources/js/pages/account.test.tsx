@@ -30,6 +30,23 @@ vi.mock('@inertiajs/react', () => ({
             </a>
         );
     },
+    /* The profile header mounts the edit dialog, which renders a `Form`. */
+    Form: ({
+        children,
+        action,
+        method,
+    }: {
+        children: (state: {
+            processing: boolean;
+            errors: Record<string, string>;
+        }) => ReactNode;
+        action?: string;
+        method?: string;
+    } & Record<string, unknown>) => (
+        <form action={action} method={method}>
+            {children({ processing: false, errors: {} })}
+        </form>
+    ),
 }));
 
 async function openTab(name: string) {

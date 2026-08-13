@@ -1,13 +1,8 @@
-import { Link } from '@inertiajs/react';
-import { Settings, Share2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { EditProfileDialog } from '@/components/account/edit-profile-dialog';
 import { AnonAvatar } from '@/components/clover/anon-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { cn, toUrl } from '@/lib/utils';
-import { account } from '@/routes';
-import { edit as editProfile } from '@/routes/profile';
+import { cn } from '@/lib/utils';
 import type { Profile, ProfileStat } from '@/types/clover';
 
 /**
@@ -24,9 +19,6 @@ const COVER_GRID = {
         'repeating-linear-gradient(to bottom, var(--color-border) 0, var(--color-border) 1px, transparent 1px, transparent 48px)',
     ].join(', '),
 };
-
-/** How long "Link copied" stays on the Share button before it reverts. */
-const COPIED_FEEDBACK_MS = 2000;
 
 type ProfileHeaderProps = {
     profile: Profile;
@@ -46,39 +38,6 @@ function metaLine(profile: Profile): string {
 }
 
 function ProfileHeader({ profile, stats }: ProfileHeaderProps) {
-    const [copied, setCopied] = useState(false);
-
-    /**
-     * The label reverts on a timer rather than staying changed forever. The
-     * cleanup is what keeps the state update from landing after unmount.
-     */
-    useEffect(() => {
-        if (!copied) {
-            return;
-        }
-
-        const timer = setTimeout(() => setCopied(false), COPIED_FEEDBACK_MS);
-
-        return () => clearTimeout(timer);
-    }, [copied]);
-
-    /**
-     * Sharing writes the profile URL to the clipboard. There is no share
-     * backend and no native share sheet to fall back on here, and a button
-     * that does nothing at all is worse than one that does the small real
-     * thing an anon actually wanted.
-     */
-    function copyProfileLink(): void {
-        const url = `${window.location.origin}${toUrl(account())}`;
-
-        navigator.clipboard
-            ?.writeText(url)
-            .then(() => setCopied(true))
-            /* A refused clipboard permission does not deserve an error
-               surface. The label simply does not change. */
-            .catch(() => setCopied(false));
-    }
-
     return (
         <Card className="gap-0 overflow-hidden py-0">
             <div
@@ -113,22 +72,18 @@ function ProfileHeader({ profile, stats }: ProfileHeaderProps) {
                     <MachineValue>{metaLine(profile)}</MachineValue>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="outline" onClick={copyProfileLink}>
-                        <Share2 aria-hidden="true" />
-                        {copied ? 'Link copied' : 'Share'}
-                    </Button>
+                {/* A dialog over the profile rather than a link to
+                    settings. It used to navigate to the settings form, which
+                    edited the account's name and email -- neither of which this
+                    page shows -- so the one button promising to change what a
+                    reader was looking at changed nothing they could see.
 
-                    {/* Clover has one settings surface, at /settings/profile.
-                        Editing here too would be a second place to change the
-                        same fields, which is how the two drift apart. */}
-                    <Button asChild>
-                        <Link href={editProfile()}>
-                            <Settings aria-hidden="true" />
-                            Edit profile
-                        </Link>
-                    </Button>
-                </div>
+                    Share went with it. It copied a link to `/account`, which is
+                    whichever anon is signed in, so the "shared" link showed the
+                    recipient their own profile rather than the sender's. A
+                    button that reliably sends the wrong thing is worse than no
+                    button at all. */}
+                <EditProfileDialog profile={profile} />
             </div>
 
             <dl className="flex flex-wrap border-t border-border">

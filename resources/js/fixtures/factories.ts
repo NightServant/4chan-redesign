@@ -135,6 +135,7 @@ export function makeTrendingTag(
 export function makeProfile(overrides: Partial<Profile> = {}): Profile {
     return {
         handle: 'anon_4412',
+        storedHandle: 'anon_4412',
         tripcode: null,
         bio: 'Reads /g/ at 3am.',
         joined: '14 Mar 2024',

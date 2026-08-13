@@ -9,7 +9,7 @@ import { BoardCard } from '@/components/communities/board-card';
 import { Input } from '@/components/ui/input';
 import { plural } from '@/lib/utils';
 import { subscribe as subscribeToBoard } from '@/routes/boards';
-import { edit as editProfile } from '@/routes/profile';
+import { edit as editSettings } from '@/routes/settings';
 import type { BoardDirectoryEntry } from '@/types/clover';
 
 /** Subscription state, keyed by slug. Local: there is no backend. */
@@ -116,7 +116,7 @@ export function BoardDirectory({
                     {plural(hiddenCount, 'board')} hidden by your content
                     settings.{' '}
                     <Link
-                        href={editProfile()}
+                        href={editSettings()}
                         className="text-primary underline decoration-primary-line underline-offset-2"
                     >
                         Change what you see

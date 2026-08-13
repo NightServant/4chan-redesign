@@ -51,6 +51,11 @@ class AccountController extends Controller
         return Inertia::render('account', [
             'profile' => [
                 'handle' => $user->displayHandle(),
+                /* What is stored, for the edit dialog to seed its field from.
+                   Seeding it with `displayHandle()` would put the `anon_41`
+                   fallback in the box, and an anon who opened the dialog to fix
+                   their bio would save that as a real handle on the way out. */
+                'storedHandle' => $user->handle,
                 'tripcode' => $user->tripcode,
                 'bio' => $user->bio,
                 'joined' => $user->created_at?->format('j M Y') ?? '',

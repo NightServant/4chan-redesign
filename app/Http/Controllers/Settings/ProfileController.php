@@ -4,27 +4,19 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
+use App\Http\Requests\Settings\ProfileIdentityRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
-use Inertia\Response;
 
+/**
+ * Writes to the anon's profile. It no longer renders anything: the screen these
+ * fields live on is `SettingsController`, which is one page rather than the two
+ * this used to be half of.
+ */
 class ProfileController extends Controller
 {
-    /**
-     * Show the user's profile settings page.
-     */
-    public function edit(Request $request): Response
-    {
-        return Inertia::render('settings/profile', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
-            'status' => $request->session()->get('status'),
-        ]);
-    }
-
     /**
      * Update the user's profile information.
      */
@@ -40,7 +32,28 @@ class ProfileController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);
 
-        return to_route('profile.edit');
+        return to_route('settings.edit');
+    }
+
+    /**
+     * Update what the account screen shows: the handle and the bio.
+     *
+     * These were displayed by the profile and writable by nothing. The screen
+     * put a handle at the top of the page and a line underneath it, and "Edit
+     * profile" led to a settings form that edited neither — so the one button
+     * on the profile promising to change it changed nothing a reader could see.
+     *
+     * Separate from `update` because it is opened in a dialog on the profile
+     * rather than on the settings page, and because it must not demand an email
+     * address to fix a typo in a bio.
+     */
+    public function updateIdentity(ProfileIdentityRequest $request): RedirectResponse
+    {
+        $request->user()->fill($request->validated())->save();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);
+
+        return back();
     }
 
     /**

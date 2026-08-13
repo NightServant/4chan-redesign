@@ -188,9 +188,14 @@ describe('AppHeader', () => {
         expect(
             screen.getByRole('menuitem', { name: /history/i }),
         ).toBeInTheDocument();
+
+        /* No "Settings" row. The two rows this menu already carries *are*
+           settings -- the adult-boards switch flips in place, two-factor links
+           at its own panel -- so a third pointing at the page they came from
+           offered the shortcut and the long way round at once. */
         expect(
-            screen.getByRole('menuitem', { name: /settings/i }),
-        ).toBeInTheDocument();
+            screen.queryByRole('menuitem', { name: /^settings$/i }),
+        ).not.toBeInTheDocument();
 
         const signOut = screen.getByRole('menuitem', { name: /sign out/i });
         expect(signOut.tagName).toBe('BUTTON');
