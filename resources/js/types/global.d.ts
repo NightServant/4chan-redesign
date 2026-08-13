@@ -32,6 +32,7 @@ declare module '@inertiajs/core' {
              * visibility rule as every other surface that names a board.
              */
             sidebarBoards: Board[];
+            sidebarTrending: Board[];
             [key: string]: unknown;
         };
     }

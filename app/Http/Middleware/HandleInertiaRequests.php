@@ -71,21 +71,43 @@ class HandleInertiaRequests extends Middleware
             ),
 
             /**
-             * The sidebar's board list.
+             * The sidebar's two board lists.
              *
              * Shared rather than passed per page because the sidebar is app
-             * chrome: it renders on every screen, and threading the same prop
+             * chrome: it renders on every screen, and threading the same props
              * through nine controllers to feed one nav list would mean any
-             * future page that forgot it silently loses part of the navigation.
+             * future page that forgot them silently loses part of the
+             * navigation. That is also why these moved here from the feed's
+             * right rail rather than being copied: the rail rendered on three
+             * screens, the sidebar renders on all of them.
              *
              * Filtered by the same visibility rule as everything else. A board
              * an anon has asked not to see must not reappear in the furniture.
+             *
+             * `sidebarBoards` is ordered by thread count, which is what the
+             * sidebar labelled "Boards you use" while showing nothing of the
+             * kind. It is labelled "Popular" now, which is what it always was.
              */
             'sidebarBoards' => BoardResource::collection(
                 Board::query()
                     ->visible((bool) $request->user()?->shows_mature_boards)
                     ->withCount('threads')
                     ->orderByDesc('threads_count')
+                    ->limit(self::SIDEBAR_BOARDS)
+                    ->get(),
+            ),
+
+            /**
+             * Busiest by conversation rather than by thread count: a board can
+             * hold a great many threads nobody is replying to, and the two
+             * orderings pick out genuinely different boards.
+             */
+            'sidebarTrending' => BoardResource::collection(
+                Board::query()
+                    ->visible((bool) $request->user()?->shows_mature_boards)
+                    ->withCount('threads')
+                    ->withSum('threads', 'replies_count')
+                    ->orderByDesc('threads_sum_replies_count')
                     ->limit(self::SIDEBAR_BOARDS)
                     ->get(),
             ),

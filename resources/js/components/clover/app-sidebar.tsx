@@ -14,7 +14,7 @@ import {
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { FOOTER_LINKS, navHref, PRIMARY_NAV } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
-import { home } from '@/routes';
+import type { Board } from '@/types/clover';
 import type { CloverNavItem } from '@/types/navigation';
 
 /**
@@ -29,7 +29,7 @@ import type { CloverNavItem } from '@/types/navigation';
 const SIDEBAR_COOKIE_NAME = 'sidebar_state';
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
-/** Boards you use caps at five rows, whatever the fixture holds. */
+/** Each board list caps at five rows, whatever the server sends. */
 const MAX_BOARD_ROWS = 5;
 
 const rowBaseClasses =
@@ -44,10 +44,50 @@ const rowActiveClasses = 'bg-primary-soft font-semibold text-primary';
 const toggleClasses =
     'flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover hover:text-foreground';
 
+/**
+ * One of the sidebar's board lists. Hidden entirely when empty rather than
+ * rendering a heading over nothing, which is what a fresh database has.
+ */
+function BoardList({
+    heading,
+    boards,
+}: {
+    heading: string;
+    boards: readonly Board[];
+}) {
+    if (boards.length === 0) {
+        return null;
+    }
+
+    return (
+        <div
+            data-slot="sidebar-board-list"
+            className="mt-2 flex flex-col gap-0.5 px-2 py-2"
+        >
+            <p className="px-[11px] py-1 text-label text-faint uppercase">
+                {heading}
+            </p>
+            {boards.map((board) => (
+                <Link
+                    key={board.slug}
+                    href={board.slug}
+                    className="flex h-[38px] items-center gap-3 rounded-lg px-[11px] text-body-sm text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover hover:text-foreground"
+                >
+                    <BoardAvatar slug={board.slug} size={20} decorative />
+                    <span className="truncate">
+                        {board.slug} {board.name}
+                    </span>
+                </Link>
+            ))}
+        </div>
+    );
+}
+
 type AppSidebarProps = Omit<ComponentProps<'aside'>, 'children'>;
 
 function AppSidebar({ className, ...props }: AppSidebarProps) {
-    const { auth, sidebarOpen, sidebarBoards } = usePage().props;
+    const { auth, sidebarOpen, sidebarBoards, sidebarTrending } =
+        usePage().props;
     const { isCurrentUrl } = useCurrentUrl();
     const [open, setOpen] = useState(sidebarOpen);
 
@@ -63,7 +103,8 @@ function AppSidebar({ className, ...props }: AppSidebarProps) {
     /* Shared from `HandleInertiaRequests`, already filtered by the anon's
        content settings and already capped server-side. Sliced again here only
        so the row count stays this component's decision. */
-    const boards = sidebarBoards.slice(0, MAX_BOARD_ROWS);
+    const popular = sidebarBoards.slice(0, MAX_BOARD_ROWS);
+    const trending = sidebarTrending.slice(0, MAX_BOARD_ROWS);
 
     function renderRow(item: CloverNavItem) {
         const href = navHref(item, Boolean(auth.user));
@@ -131,16 +172,17 @@ function AppSidebar({ className, ...props }: AppSidebarProps) {
                             open ? 'justify-between gap-1' : 'justify-center',
                         )}
                     >
-                        <Link
-                            href={home()}
-                            className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover"
-                        >
-                            {open ? (
-                                <Wordmark />
-                            ) : (
-                                <Mark aria-label="clover, home" />
-                            )}
-                        </Link>
+                        {/* The mark, not a link.
+                            
+                            It used to go to `/`, which for a signed-in anon is
+                            the marketing homepage: pressing the logo took them
+                            out of the product and back to the pitch for it.
+                            The feed is where a signed-in anon belongs and the
+                            nav below already names it, so the wordmark is
+                            identity rather than navigation. */}
+                        <div className="flex items-center gap-2 px-2 py-1.5 text-foreground">
+                            {open ? <Wordmark /> : <Mark aria-label="clover" />}
+                        </div>
 
                         {open ? (
                             <button
@@ -185,28 +227,21 @@ function AppSidebar({ className, ...props }: AppSidebarProps) {
                         {visibleNav.map((item) => renderRow(item))}
                     </nav>
 
-                    {open && boards.length > 0 ? (
-                        <div className="mt-2 flex flex-col gap-0.5 px-2 py-2">
-                            <p className="px-[11px] py-1 text-label text-faint uppercase">
-                                Boards you use
-                            </p>
-                            {boards.map((board) => (
-                                <Link
-                                    key={board.slug}
-                                    href={board.slug}
-                                    className="flex h-[38px] items-center gap-3 rounded-lg px-[11px] text-body-sm text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover hover:text-foreground"
-                                >
-                                    <BoardAvatar
-                                        slug={board.slug}
-                                        size={20}
-                                        decorative
-                                    />
-                                    <span className="truncate">
-                                        {board.slug} {board.name}
-                                    </span>
-                                </Link>
-                            ))}
-                        </div>
+                    {/* Popular and trending, moved down from the feed's
+                        right rail.
+                        
+                        The rail rendered on three screens; the sidebar renders
+                        on all of them, so the same two lists now reach every
+                        page instead of the three that happened to mount a
+                        rail. The section this replaced was labelled "Boards
+                        you use" and was ordered by thread count, which is not
+                        a thing any particular anon uses — it was the busiest
+                        boards under a name that claimed otherwise. */}
+                    {open ? (
+                        <>
+                            <BoardList heading="Popular" boards={popular} />
+                            <BoardList heading="Trending" boards={trending} />
+                        </>
                     ) : null}
 
                     <div className="mt-auto" />

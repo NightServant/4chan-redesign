@@ -1,5 +1,7 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { CompassIcon } from 'lucide-react';
+import { useState } from 'react';
+import { AuthGate } from '@/components/clover/auth-gate';
 import { EmptyState } from '@/components/clover/empty-state';
 import { PageHeader } from '@/components/clover/page-header';
 import { ThreadCard } from '@/components/clover/thread-card';
@@ -7,7 +9,8 @@ import { AnonBanner } from '@/components/feed/anon-banner';
 import { Rail } from '@/components/feed/rail';
 import { Button } from '@/components/ui/button';
 import { communities } from '@/routes';
-import type { Board, Thread, TrendingTag } from '@/types/clover';
+import { bookmark as bookmarkThread } from '@/routes/threads';
+import type { Thread } from '@/types/clover';
 
 /**
  * The feed, in three sorts. The server decides which by the route it renders
@@ -46,19 +49,40 @@ type FeedProps = {
     sort: Sort;
     /** Already ordered for `sort`. Rendered in the order given. */
     threads: Thread[];
-    /** The rail's board panel: the busiest boards, chosen server-side. */
-    boards: Board[];
-    /** The rail's trending panel, derived from real reply totals. */
-    trending: TrendingTag[];
 };
 
-export default function Feed({ sort, threads, boards, trending }: FeedProps) {
+export default function Feed({ sort, threads }: FeedProps) {
     const { auth } = usePage().props;
     const signedIn = Boolean(auth.user);
 
-    /* The auth gate went with blessings: sharing needs no account, and the
-       card's bookmark button is not wired on this page yet. When it is, the
-       gate comes back with it rather than sitting here unreachable. */
+    /* Back, and with a caller this time. It was removed when blessings went
+       because blessing was the only thing that opened it; bookmarking is now
+       the thing that does. */
+    const [gatedAction, setGatedAction] = useState<string | null>(null);
+
+    /**
+     * Saving a thread, which is the bug this fixes.
+     *
+     * `ThreadCard` has offered a bookmark button since it was written and no
+     * page ever passed it a handler, so pressing it did nothing at all on
+     * every feed, board and search result. The route and the table have
+     * existed since task 11b; nothing was calling them.
+     *
+     * The request is a toggle and the server owns the answer, so this posts
+     * and lets the reloaded prop set the pressed state rather than guessing
+     * locally and drifting from the database.
+     */
+    function toggleBookmark(thread: Thread) {
+        if (!signedIn) {
+            setGatedAction('save a thread');
+
+            return;
+        }
+
+        const request = thread.bookmarked ? router.delete : router.post;
+
+        request(bookmarkThread(thread.id).url, { preserveScroll: true });
+    }
 
     return (
         <>
@@ -98,15 +122,29 @@ export default function Feed({ sort, threads, boards, trending }: FeedProps) {
 
                     <div className="flex flex-col gap-4">
                         {threads.map((thread) => (
-                            <ThreadCard key={thread.no} thread={thread} />
+                            <ThreadCard
+                                key={thread.no}
+                                thread={thread}
+                                onBookmark={() => toggleBookmark(thread)}
+                            />
                         ))}
                     </div>
                 </div>
 
                 <div className="hidden w-[330px] shrink-0 lg:block">
-                    <Rail boards={boards} trending={trending} />
+                    <Rail />
                 </div>
             </div>
+
+            <AuthGate
+                action={gatedAction ?? 'do that'}
+                open={gatedAction !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setGatedAction(null);
+                    }
+                }}
+            />
         </>
     );
 }
