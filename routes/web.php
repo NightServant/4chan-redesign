@@ -11,6 +11,7 @@ use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ReplyController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\StatusController;
 use App\Http\Controllers\ThreadController;
 use App\Http\Controllers\ThreadReadController;
 use App\Support\RoutableBoards;
@@ -42,6 +43,12 @@ Route::get('communities', CommunityController::class)->name('communities');
  * Public, like the boards it searches. `suggest` is registered first and more
  * specifically, so it is never swallowed by the page route.
  */
+/**
+ * How fresh the mirror is. Public: a visitor deciding whether the site is
+ * worth an account should be able to see when it last heard from 4chan.
+ */
+Route::get('status', StatusController::class)->name('status');
+
 Route::get('search/suggest', [SearchController::class, 'suggest'])->name('search.suggest');
 Route::get('search', SearchController::class)->name('search');
 

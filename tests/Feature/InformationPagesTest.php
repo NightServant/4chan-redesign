@@ -33,7 +33,6 @@ it('serves every linked information page', function (string $uri): void {
 it('does not serve a page for a feature Clover does not have', function (string $uri): void {
     $this->get($uri)->assertNotFound();
 })->with([
-    '/status',
     '/dmca',
     '/contact',
     '/janitors',

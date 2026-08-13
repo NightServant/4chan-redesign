@@ -76,6 +76,13 @@ afterEach(() => {
 
 /* Exactly what the controller sends: threads already ordered for the sort,
    plus the two lists the rail renders. Nothing here is filtered client-side. */
+const LIBRARY = {
+    boards: '77',
+    threads: '11,301',
+    posts: '52,884',
+    lastSyncedAt: '2 hr ago',
+};
+
 const THREADS = [
     makeThread({
         title: 'Anons are still arguing about init systems',
@@ -88,7 +95,7 @@ const THREADS = [
 
 describe('Feed', () => {
     it('renders "Home" for the bumped sort', () => {
-        render(<Feed sort="bumped" threads={THREADS} />);
+        render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
 
         expect(
             screen.getByRole('heading', { level: 1, name: 'Home' }),
@@ -96,7 +103,7 @@ describe('Feed', () => {
     });
 
     it('renders "Popular" for the popular sort', () => {
-        render(<Feed sort="popular" threads={THREADS} />);
+        render(<Feed sort="popular" threads={THREADS} library={LIBRARY} />);
 
         expect(
             screen.getByRole('heading', { level: 1, name: 'Popular' }),
@@ -104,7 +111,7 @@ describe('Feed', () => {
     });
 
     it('renders "Latest" for the latest sort', () => {
-        render(<Feed sort="latest" threads={THREADS} />);
+        render(<Feed sort="latest" threads={THREADS} library={LIBRARY} />);
 
         expect(
             screen.getByRole('heading', { level: 1, name: 'Latest' }),
@@ -112,7 +119,7 @@ describe('Feed', () => {
     });
 
     it("does not render a second <main>: that is AppLayout's job", () => {
-        render(<Feed sort="bumped" threads={THREADS} />);
+        render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
 
         expect(screen.queryByRole('main')).not.toBeInTheDocument();
     });
@@ -120,7 +127,7 @@ describe('Feed', () => {
     it('shows the anon banner when signed out', () => {
         mockPage({ signedIn: false });
 
-        render(<Feed sort="bumped" threads={THREADS} />);
+        render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
 
         expect(screen.getByText(/browsing anonymously/i)).toBeInTheDocument();
     });
@@ -128,7 +135,7 @@ describe('Feed', () => {
     it('hides the anon banner when signed in', () => {
         mockPage({ signedIn: true });
 
-        render(<Feed sort="bumped" threads={THREADS} />);
+        render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
 
         expect(
             screen.queryByText(/browsing anonymously/i),
@@ -136,7 +143,7 @@ describe('Feed', () => {
     });
 
     it('renders every fixture thread', () => {
-        render(<Feed sort="bumped" threads={THREADS} />);
+        render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
 
         for (const thread of THREADS) {
             expect(
@@ -146,7 +153,7 @@ describe('Feed', () => {
     });
 
     it('does not override the thread link: it resolves to the board and post number', () => {
-        render(<Feed sort="bumped" threads={THREADS} />);
+        render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
 
         const first = THREADS[0];
         expect(screen.getByRole('link', { name: first.title })).toHaveAttribute(
@@ -169,7 +176,7 @@ describe('Feed', () => {
         mockPage({ signedIn: false });
         const thread = THREADS[0];
 
-        render(<Feed sort="bumped" threads={THREADS} />);
+        render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
 
         const card = screen
             .getByRole('heading', { level: 3, name: thread.title })
@@ -202,7 +209,7 @@ describe('Feed', () => {
      * comment is here so the next person knows it was deliberate.
      */
     it('offers no paging control it cannot honour', () => {
-        render(<Feed sort="bumped" threads={THREADS} />);
+        render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
 
         expect(
             screen.queryByRole('button', { name: 'Load more threads' }),
@@ -213,7 +220,9 @@ describe('Feed', () => {
     });
 
     it('hides the rail below lg and never squeezes the centre column', () => {
-        const { container } = render(<Feed sort="bumped" threads={THREADS} />);
+        const { container } = render(
+            <Feed sort="bumped" threads={THREADS} library={LIBRARY} />,
+        );
 
         const railWrapper = screen.getByTestId('rail-stub').parentElement;
         expect(railWrapper?.className).toMatch(/hidden/);
@@ -229,7 +238,7 @@ describe('Feed', () => {
      * second control for navigation the chrome already provides.
      */
     it('does not repeat the sidebar destinations as a tab row', () => {
-        render(<Feed sort="bumped" threads={THREADS} />);
+        render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
 
         expect(
             screen.queryByRole('navigation', { name: /sort threads/i }),

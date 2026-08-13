@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/clover/page-header';
 import { ThreadCard } from '@/components/clover/thread-card';
 import { AnonBanner } from '@/components/feed/anon-banner';
 import { Rail } from '@/components/feed/rail';
+import type { FeedLibrary } from '@/components/feed/rail';
 import { Button } from '@/components/ui/button';
 import { communities } from '@/routes';
 import { bookmark as bookmarkThread } from '@/routes/threads';
@@ -47,11 +48,13 @@ const SORT_DESCRIPTIONS: Record<Sort, string> = {
 
 type FeedProps = {
     sort: Sort;
+    /** What Clover holds, counted server-side for the rail. */
+    library: FeedLibrary;
     /** Already ordered for `sort`. Rendered in the order given. */
     threads: Thread[];
 };
 
-export default function Feed({ sort, threads }: FeedProps) {
+export default function Feed({ sort, threads, library }: FeedProps) {
     const { auth } = usePage().props;
     const signedIn = Boolean(auth.user);
 
@@ -132,7 +135,7 @@ export default function Feed({ sort, threads }: FeedProps) {
                 </div>
 
                 <div className="hidden w-[330px] shrink-0 lg:block">
-                    <Rail />
+                    <Rail library={library} threads={threads} />
                 </div>
             </div>
 
