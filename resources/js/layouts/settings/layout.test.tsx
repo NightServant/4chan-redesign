@@ -65,7 +65,7 @@ describe('SettingsLayout', () => {
         expect(links.map((link) => link.getAttribute('href'))).toEqual([
             '/settings/profile',
             '/settings/security',
-                    ]);
+        ]);
     });
 
     it('marks only the current destination with aria-current', () => {

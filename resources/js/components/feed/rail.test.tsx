@@ -1,8 +1,8 @@
 import { render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { activityIconFor, Rail } from '@/components/feed/rail';
-import { makeBoard } from '@/fixtures/factories';
+import { Rail } from '@/components/feed/rail';
+import { makeThread } from '@/fixtures/factories';
 
 /**
  * The real `Link` requires an Inertia page context that only exists inside
@@ -49,24 +49,21 @@ vi.mock('@inertiajs/react', () => ({
     },
 }));
 
-/* Five boards so the "does not render beyond the first four" case has a fifth
-   to leave out, and the rail is handed exactly what the feed page sends it. */
-const BOARDS = [
-    makeBoard({
-        slug: '/g/',
-        name: 'Technology',
-        threads: '18,402',
-        subscribed: true,
-    }),
-    makeBoard({ slug: '/biz/', name: 'Business', threads: '11,067' }),
-    makeBoard({ slug: '/x/', name: 'Paranormal', threads: '6,204' }),
-    makeBoard({ slug: '/fit/', name: 'Fitness', threads: '5,118' }),
-    makeBoard({ slug: '/co/', name: 'Comics', threads: '4,002' }),
+const LIBRARY = {
+    boards: '77',
+    threads: '11,301',
+    posts: '52,884',
+    lastSyncedAt: '2 hr ago',
+};
+
+const THREADS = [
+    makeThread({ board: '/g/', replies: 12, media: null }),
+    makeThread({ board: '/x/', replies: 8, media: null }),
 ];
 
 describe('Rail', () => {
     it('is a complementary landmark with its own accessible name, not a second nav', () => {
-        render(<Rail />);
+        render(<Rail library={LIBRARY} threads={THREADS} />);
 
         const rail = screen.getByRole('complementary');
 
@@ -74,16 +71,8 @@ describe('Rail', () => {
         expect(rail.tagName).toBe('ASIDE');
     });
 
-    it('does not render boards beyond the first four', () => {
-        render(<Rail />);
-
-        const fifthBoard = BOARDS[4];
-
-        expect(screen.queryByText(fifthBoard.name)).not.toBeInTheDocument();
-    });
-
     it('renders the community rules verbatim as an ordered list', () => {
-        render(<Rail />);
+        render(<Rail library={LIBRARY} threads={THREADS} />);
 
         const rulesRegion = screen.getByRole('region', {
             name: 'Community rules',
@@ -111,65 +100,8 @@ describe('Rail', () => {
         ).toBeInTheDocument();
     });
 
-    /**
-     * The panel claimed /biz/ was under slow mode until 18:00 UTC. Harmless
-     * copy against a fixture, a specific false statement about a live board
-     * once /biz/ is a real one. Nothing upstream reports moderation state, so
-     * the panel keeps its place and says nothing rather than saying something
-     * untrue.
-     */
-    it('keeps the moderation panel but makes no claim about any board', () => {
-        render(<Rail />);
-
-        const region = screen.getByRole('region', {
-            name: 'Moderation notices',
-        });
-
-        expect(
-            within(region).getByText('No notices right now.'),
-        ).toBeInTheDocument();
-        expect(region).not.toHaveTextContent('/biz/');
-    });
-
-    /**
-     * "Who is online" was `228,025 anons online` and a row of decorative
-     * avatars. 4chan's JSON API publishes no presence figure at any scope, so
-     * there is no honest version of the panel — not even an empty one, because
-     * the panel was the number.
-     */
-    it('has no online panel, since nothing publishes an online count', () => {
-        render(<Rail />);
-
-        expect(
-            screen.queryByRole('region', { name: 'Who is online' }),
-        ).not.toBeInTheDocument();
-        expect(screen.queryByText(/anons online/)).not.toBeInTheDocument();
-    });
-
-    it('renders every recent-activity entry with its text and time', () => {
-        render(<Rail />);
-
-        const activityRegion = screen.getByRole('region', {
-            name: 'Recent activity',
-        });
-
-        for (const entry of ACTIVITY) {
-            expect(
-                within(activityRegion).getByText(entry.text),
-            ).toBeInTheDocument();
-        }
-    });
-
-    it('falls back to a neutral icon for an unrecognised activity icon name instead of crashing', () => {
-        expect(() =>
-            activityIconFor('a-name-that-does-not-exist'),
-        ).not.toThrow();
-        expect(activityIconFor('a-name-that-does-not-exist')).toBeTruthy();
-        expect(activityIconFor('message-square')).toBeTruthy();
-    });
-
     it('is hidden below lg and only appears as a flex column at lg and up', () => {
-        render(<Rail />);
+        render(<Rail library={LIBRARY} threads={THREADS} />);
 
         const rail = screen.getByRole('complementary');
 
@@ -178,25 +110,52 @@ describe('Rail', () => {
     });
 
     /**
-     * Trending and popular boards moved into the app sidebar, which renders on
-     * every screen rather than the three that mount a rail. Asserted as an
-     * absence: the rail would otherwise regrow them and the product would list
-     * the same boards twice on the pages that have both.
+     * The two panels this replaced were permanently blank: "Moderation
+     * notices" said "No notices right now" on every render because nothing has
+     * ever written one, and "Recent activity" was empty for every signed-out
+     * visitor. Asserted as an absence so neither comes back.
      */
-    it('lists no boards, which the sidebar now does', () => {
-        render(<Rail />);
+    it('shows no panel that can only ever be empty', () => {
+        render(<Rail library={LIBRARY} threads={THREADS} />);
 
         expect(
-            screen.queryByRole('region', { name: /trending/i }),
+            screen.queryByRole('region', { name: /moderation/i }),
         ).not.toBeInTheDocument();
         expect(
-            screen.queryByRole('region', { name: /popular/i }),
+            screen.queryByRole('region', { name: /recent activity/i }),
+        ).not.toBeInTheDocument();
+        expect(
+            screen.queryByText(/no notices right now/i),
         ).not.toBeInTheDocument();
     });
 
-    it('keeps the three panels that belong beside a feed', () => {
-        render(<Rail />);
+    it('reports what Clover holds, counted rather than awaited', () => {
+        render(<Rail library={LIBRARY} threads={THREADS} />);
 
-        expect(screen.getAllByRole('region')).toHaveLength(3);
+        const panel = screen.getByRole('region', { name: /clover holds/i });
+
+        expect(panel).toHaveTextContent('11,301');
+        expect(panel).toHaveTextContent('77');
+        expect(panel).toHaveTextContent('2 hr ago');
+    });
+
+    /** Derived from the threads on screen, so it cannot be empty when they are not. */
+    it('describes the threads actually on the page', () => {
+        render(<Rail library={LIBRARY} threads={THREADS} />);
+
+        const panel = screen.getByRole('region', { name: /on this page/i });
+
+        expect(panel).toHaveTextContent('Threads shown');
+        expect(panel).toHaveTextContent('2');
+        expect(panel).toHaveTextContent('Boards represented');
+    });
+
+    /** A rule a reader must interpret is one they will read differently to a janitor. */
+    it('explains each rule rather than stating it bare', () => {
+        render(<Rail library={LIBRARY} threads={THREADS} />);
+
+        expect(
+            screen.getByText(/belongs on none of them/i),
+        ).toBeInTheDocument();
     });
 });

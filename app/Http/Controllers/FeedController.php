@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\RelativeTime;
 use App\Http\Resources\ThreadResource;
 use App\Models\Board;
+use App\Models\Post;
 use App\Models\Thread;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -60,6 +62,43 @@ class FeedController extends Controller
         return Inertia::render('feed', [
             'sort' => $sort,
             'threads' => ThreadResource::collection($threads),
+
+            /**
+             * What the rail reports. Counted within this anon's own
+             * visibility, because a panel telling a signed-out visitor the
+             * site holds eleven thousand threads while the feed beside it
+             * shows rather fewer is a page disagreeing with itself.
+             */
+            'library' => [
+                'boards' => number_format(Board::query()->visible($showsMature)->count()),
+                'threads' => number_format(Thread::query()->onVisibleBoard($showsMature)->count()),
+                'posts' => number_format(
+                    Post::query()
+                        ->whereIn(
+                            'thread_id',
+                            Thread::query()->onVisibleBoard($showsMature)->select('id'),
+                        )
+                        ->count(),
+                ),
+                'lastSyncedAt' => ($lastSync = self::lastSyncedAt()) === null
+                    ? null
+                    : RelativeTime::since($lastSync),
+            ],
         ]);
+    }
+
+    /**
+     * When any board was last synced, as a date rather than a string.
+     *
+     * Read through the model so Eloquent's cast applies. `max('synced_at')`
+     * returns whatever the driver hands back, which is a raw string, and
+     * `RelativeTime::since()` type-hints `?DateTimeInterface` — so the
+     * aggregate form type-errored on every request that had a board to
+     * report. It only survived the test suite because those cases had no
+     * boards at all and took the null branch.
+     */
+    private static function lastSyncedAt(): ?\DateTimeInterface
+    {
+        return Board::query()->latest('synced_at')->first()?->synced_at;
     }
 }
