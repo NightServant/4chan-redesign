@@ -118,26 +118,36 @@ describe('Welcome', () => {
     });
 
     /**
-     * Thread routes exist now, so the guard inverts: a card must point at its
-     * own thread rather than at the feed. What it is really protecting is that
-     * every link resolves, which is why it checks the shape against the boards
-     * the page was given rather than merely that the href is non-empty.
+     * The homepage no longer links to an individual thread, and that is a
+     * deliberate trade rather than an oversight.
+     *
+     * Both bands that showed threads are marquees now. A marquee renders its
+     * list twice so the loop has no seam, which would mean every thread link
+     * appearing twice, and a link that is sliding across the screen is a poor
+     * target however it is marked up. So both are `aria-hidden` and `inert`,
+     * and the threads are read rather than clicked.
+     *
+     * What the page still owes a visitor is a way *in*, and this asserts that
+     * it keeps one: every board is a link, and the feed is one press away.
      */
-    it('links thread cards at real thread routes', () => {
+    it('sends a visitor onward to boards and the feed, not to single threads', () => {
         render(
             <Welcome boards={BOARDS} threads={THREADS} trending={TRENDING} />,
         );
 
-        const threadLinks = screen
+        const hrefs = screen
             .getAllByRole('link')
-            .map((link) => link.getAttribute('href') ?? '')
-            .filter((href) => /^\/[a-z0-9]+\/\d+$/.test(href));
+            .map((link) => link.getAttribute('href') ?? '');
 
-        expect(threadLinks.length).toBeGreaterThan(0);
+        expect(hrefs.filter((href) => /^\/[a-z0-9]+\/\d+$/.test(href))).toEqual(
+            [],
+        );
 
-        for (const href of threadLinks) {
-            expect(href).toMatch(/^\/(g|biz)\/\d+$/);
+        for (const board of BOARDS) {
+            expect(hrefs).toContain(`/${board.slug.replaceAll('/', '')}`);
         }
+
+        expect(hrefs).toContain('/popular');
     });
 
     /**

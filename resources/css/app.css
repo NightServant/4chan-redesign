@@ -82,6 +82,11 @@
     --border-hairline: oklch(91.59% 0.0093 150.7);
     --border-strong: oklch(84.17% 0.0145 155.5);
 
+    /* The drawing grid. Weaker than a hairline on purpose: this is the paper
+       the layout is drawn on, and it stops being paper the moment it competes
+       with a real rule. */
+    --pattern-line: oklch(18.28% 0.0123 166.9 / 0.09);
+
     /* Action */
     /* Darker than the dark theme's green, which is the point.
        
@@ -133,6 +138,10 @@
     /* Lines */
     --border-hairline: oklch(24.93% 0.0171 155.8);
     --border-strong: oklch(32.93% 0.0171 159);
+
+    /* Lighter than the light theme's, not darker. The grid is drawn *onto*
+       near-black here, so it has to be an emission rather than a shadow. */
+    --pattern-line: oklch(96.7% 0.0051 145.5 / 0.07);
 
     /* Action */
     --primary: oklch(73.37% 0.1751 152.1);
@@ -251,6 +260,30 @@
     --duration-overlay: 180ms;
     --duration-enter: 250ms;
 
+    /*
+    |---------------------------------------------------------------------------
+    | Surface patterns
+    |---------------------------------------------------------------------------
+    |
+    | Clover's backgrounds used to be flat, with no gradient, pattern, texture
+    | or grain anywhere. That rule is amended rather than abandoned: what is
+    | allowed now is *structure*, and only structure.
+    |
+    | A grid and a dot matrix are drawings of the layout module, not decoration
+    | applied over it. Both are built from hard-stop gradients, which paint a
+    | line and then stop; the thing the old rule was written against is the
+    | colour wash, the soft ramp behind a hero, and that is still out. So are
+    | texture, grain and anything organic.
+    |
+    | The module is 64px, which is the column rhythm the page already uses, so
+    | the grid a reader sees is the grid the layout is actually on. That is the
+    | whole argument for showing it.
+    |
+    */
+    --pattern-size: 64px;
+    --pattern-size-dense: 24px;
+    --pattern-dot: 1.5px;
+
     --ease-standard: cubic-bezier(0.2, 0, 0, 1);
     --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 
@@ -268,12 +301,23 @@
        the right speed depends on how tall that rail's content is. */
     --animate-thread-marquee: thread-marquee 90s linear infinite;
 
+    --animate-thread-marquee-x: thread-marquee-x 90s linear infinite;
+
     @keyframes thread-marquee {
         from {
             transform: translate3d(0, 0, 0);
         }
         to {
             transform: translate3d(0, -50%, 0);
+        }
+    }
+
+    @keyframes thread-marquee-x {
+        from {
+            transform: translate3d(0, 0, 0);
+        }
+        to {
+            transform: translate3d(-50%, 0, 0);
         }
     }
 
@@ -408,4 +452,40 @@
             transition-duration: 0.01ms !important;
         }
     }
+}
+
+/*
+|-------------------------------------------------------------------------------
+| Pattern utilities
+|-------------------------------------------------------------------------------
+|
+| Applied to a layer behind content, never to the element holding the content:
+| a pattern painted on a text container moves with the text and reads as noise
+| under it. `PatternField` is the component that gets this right, and these
+| utilities exist for it.
+|
+| Sized in a custom property rather than hardcoded so a caller can tighten the
+| module without redeclaring the whole background.
+|
+*/
+@utility bg-grid {
+    background-image:
+        repeating-linear-gradient(
+            to right,
+            var(--pattern-line) 0 1px,
+            transparent 1px var(--pattern-size)
+        ),
+        repeating-linear-gradient(
+            to bottom,
+            var(--pattern-line) 0 1px,
+            transparent 1px var(--pattern-size)
+        );
+}
+
+@utility bg-dots {
+    background-image: radial-gradient(
+        var(--pattern-line) var(--pattern-dot),
+        transparent var(--pattern-dot)
+    );
+    background-size: var(--pattern-size-dense) var(--pattern-size-dense);
 }

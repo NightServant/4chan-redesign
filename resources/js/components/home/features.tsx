@@ -6,6 +6,8 @@ import {
     Users,
     Zap,
 } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { useState } from 'react';
 import type { ComponentType } from 'react';
 import { Section } from '@/components/home/section';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -27,11 +29,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
  *
  * ## The composition
  *
- * Two columns. The left holds the claims and is the control; the right holds
- * the answer to whichever is selected. Vertical rather than the primitive's
- * default horizontal strip, because six labels of this length in a row either
- * wrap into an unreadable block or scroll sideways, and a list of claims reads
- * as a list of claims.
+ * Two equal columns. The left holds the claims and is the control; the right
+ * holds the answer to whichever is selected. Vertical rather than the
+ * primitive's default horizontal strip, because six labels of this length in a
+ * row either wrap into an unreadable block or scroll sideways, and a list of
+ * claims reads as a list of claims.
+ *
+ * Equal halves rather than a narrow rail beside a wide panel. The claims are
+ * not a table of contents for the answers, they are half the argument: a
+ * reader who only scans the left column has still read the case for the site.
+ * Sizing them the same says so.
+ *
+ * ## Motion
+ *
+ * Switching claims is the one moment this band has, so the answer is animated
+ * rather than swapped. The outgoing answer leaves before the incoming one
+ * arrives, which reads as a card being turned over rather than as text being
+ * replaced; the marker on the selected claim slides between rows on a shared
+ * layout id, so the eye is carried from the old row to the new one instead of
+ * having to find it again.
+ *
+ * All of it is position and opacity on content already on the page, and all of
+ * it resolves. Nothing here paints a surface.
  */
 type Feature = {
     icon: ComponentType<{ size?: number; className?: string }>;
@@ -78,19 +97,25 @@ function slugFor(title: string): string {
 }
 
 function Features() {
+    const reduced = useReducedMotion();
+    const [selected, setSelected] = useState(slugFor(FEATURES[0].title));
+
     return (
         <Section
             id="features"
+            pattern="dots"
+            depth={40}
             label="Features"
             title="Built for reading, not for engagement"
         >
             <Tabs
-                defaultValue={slugFor(FEATURES[0].title)}
+                value={selected}
+                onValueChange={setSelected}
                 orientation="vertical"
-                /* Stacked on a phone, side by side from `md`. The list stays
+                /* Stacked on a phone, equal halves from `md`. The list stays
                    above the answer either way, because the control has to come
                    before the thing it controls for anyone reading in order. */
-                className="grid gap-6 md:grid-cols-[minmax(0,280px)_minmax(0,1fr)] md:gap-12"
+                className="grid gap-6 md:grid-cols-2 md:gap-12"
             >
                 {/* The primitive's list is a horizontal strip with a bottom
                     rule, so every part of that is overridden here: a column,
@@ -101,30 +126,75 @@ function Features() {
                         <TabsTrigger
                             key={title}
                             value={slugFor(title)}
-                            className="-mb-0 -ml-px justify-start border-b-0 border-l-2 px-4 py-3 text-left whitespace-normal data-[state=active]:border-l-primary data-[state=active]:font-semibold"
+                            /* The border is transparent even when active: the
+                               marker below paints it, so the two cannot both
+                               claim the same edge and double it. */
+                            className="relative -mb-0 -ml-px justify-start border-b-0 border-l-2 border-l-transparent px-4 py-3 text-left whitespace-normal data-[state=active]:border-l-transparent data-[state=active]:font-semibold"
                         >
+                            {selected === slugFor(title) ? (
+                                <motion.span
+                                    layoutId="feature-marker"
+                                    aria-hidden="true"
+                                    transition={
+                                        reduced
+                                            ? { duration: 0 }
+                                            : {
+                                                  type: 'spring',
+                                                  stiffness: 480,
+                                                  damping: 40,
+                                              }
+                                    }
+                                    className="absolute inset-y-0 -left-0.5 w-0.5 bg-primary"
+                                />
+                            ) : null}
                             {title}
                         </TabsTrigger>
                     ))}
                 </TabsList>
 
-                {FEATURES.map(({ icon: Icon, title, body }) => (
-                    <TabsContent
-                        key={title}
-                        value={slugFor(title)}
-                        className="flex flex-col gap-4 md:pt-1"
-                    >
-                        <Icon size={20} className="text-primary" />
+                {/* `mode="wait"` so the two answers never overlap. Crossfading
+                    them stacks two paragraphs of body copy on top of each
+                    other for the length of the transition, which is unreadable
+                    for exactly as long as it lasts. */}
+                <AnimatePresence mode="wait" initial={false}>
+                    {FEATURES.filter(
+                        ({ title }) => slugFor(title) === selected,
+                    ).map(({ icon: Icon, title, body }) => (
+                        <TabsContent
+                            key={title}
+                            value={slugFor(title)}
+                            forceMount
+                            className="flex flex-col gap-4 md:pt-1"
+                            asChild
+                        >
+                            <motion.div
+                                initial={
+                                    reduced ? false : { opacity: 0, y: 10 }
+                                }
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={
+                                    reduced
+                                        ? { opacity: 1 }
+                                        : { opacity: 0, y: -6 }
+                                }
+                                transition={{
+                                    duration: 0.22,
+                                    ease: [0.2, 0, 0, 1],
+                                }}
+                            >
+                                <Icon size={20} className="text-primary" />
 
-                        <h3 className="font-display text-[clamp(22px,2.2vw,28px)] leading-[1.15] font-semibold tracking-[-0.4px] text-balance text-foreground">
-                            {title}
-                        </h3>
+                                <h3 className="font-display text-[clamp(22px,2.2vw,28px)] leading-[1.15] font-semibold tracking-[-0.4px] text-balance text-foreground">
+                                    {title}
+                                </h3>
 
-                        <p className="max-w-[52ch] text-[17px] leading-[1.55] text-pretty text-muted-foreground">
-                            {body}
-                        </p>
-                    </TabsContent>
-                ))}
+                                <p className="max-w-[52ch] text-[17px] leading-[1.55] text-pretty text-muted-foreground">
+                                    {body}
+                                </p>
+                            </motion.div>
+                        </TabsContent>
+                    ))}
+                </AnimatePresence>
             </Tabs>
         </Section>
     );

@@ -43,30 +43,51 @@ const TRENDING = [
 const expectedThreads = THREADS.slice(1, 4);
 
 describe('Trending', () => {
-    it('renders exactly the expected three-thread slice of the fixture', () => {
+    /**
+     * The threads were a grid of `ThreadCard`s and are now a ticker, so they
+     * are no longer links: a marquee renders its list twice to loop seamlessly,
+     * and the whole thing is `aria-hidden` and `inert` because reading every
+     * title twice is worse than not reading it at all. The band's own link is
+     * the action in its header.
+     */
+    it('renders exactly the threads it was given, and no others', () => {
         render(<Trending threads={expectedThreads} trending={TRENDING} />);
 
         expectedThreads.forEach((thread) => {
-            expect(
-                screen.getByRole('link', { name: thread.title }),
-            ).toBeInTheDocument();
+            expect(screen.getAllByText(thread.title)).toHaveLength(2);
         });
 
         expect(screen.queryByText(THREADS[0].title)).not.toBeInTheDocument();
         expect(screen.queryByText(THREADS[4].title)).not.toBeInTheDocument();
     });
 
-    it('points every thread card at its own thread', () => {
-        render(<Trending threads={expectedThreads} trending={TRENDING} />);
+    it('runs the threads as a horizontal ticker', () => {
+        const { container } = render(
+            <Trending threads={expectedThreads} trending={TRENDING} />,
+        );
 
-        expectedThreads.forEach((thread) => {
-            expect(
-                screen.getByRole('link', { name: thread.title }),
-            ).toHaveAttribute(
-                'href',
-                `/${thread.board.replaceAll('/', '')}/${thread.no}`,
-            );
-        });
+        const track = container.querySelector<HTMLElement>(
+            '[data-slot="thread-marquee-track"]',
+        );
+
+        expect(track?.className).toMatch(/animate-thread-marquee-x/);
+        expect(
+            container.querySelector('[data-slot="thread-marquee"]'),
+        ).toHaveAttribute('aria-hidden', 'true');
+    });
+
+    /**
+     * Three cards carried a share button and a bookmark button each. In a band
+     * whose real call to action is the button in its header, that was six
+     * controls competing with one.
+     */
+    it('renders no thread cards or their controls', () => {
+        const { container } = render(
+            <Trending threads={expectedThreads} trending={TRENDING} />,
+        );
+
+        expect(container.querySelector('[data-slot="thread-card"]')).toBeNull();
+        expect(screen.queryAllByRole('button')).toHaveLength(0);
     });
 
     it('renders the "Open the feed" action linking to popular', () => {
