@@ -47,6 +47,11 @@ import { cn } from '@/lib/utils';
  *
  * Anyone who asked for less motion gets the paper without the movement. The
  * pattern is not the animation and does not need to go with it.
+ *
+ * Clipped with `overflow-clip` rather than `overflow-hidden`. Both contain the
+ * oversized layer, but `hidden` makes the element a scroll container, which
+ * silently breaks `position: sticky` on anything inside it — the feed's rail
+ * among them. `clip` does not.
  */
 type PatternFieldProps = {
     children: ReactNode;
@@ -96,7 +101,7 @@ function PatternField({
         <div
             ref={band}
             data-slot="pattern-field"
-            className={cn('relative isolate overflow-hidden', className)}
+            className={cn('relative isolate overflow-clip', className)}
         >
             <motion.div
                 data-slot="pattern-field-paper"
