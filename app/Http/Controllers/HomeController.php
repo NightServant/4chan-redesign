@@ -28,10 +28,29 @@ class HomeController extends Controller
     /** The homepage grid is a sample of the directory, not the directory. */
     private const BOARDS = 8;
 
-    /** Two preview cards in the hero, plus the trending strip below it. */
-    private const THREADS = 6;
+    /**
+     * Threads for the homepage: three for the trending strip and sixteen for
+     * the hero's two rails, eight a side.
+     *
+     * How they are divided is the page's business, not this controller's, so
+     * the split lives in `welcome.tsx` where both bands are composed. What is
+     * decided here is how many to send and which ones.
+     *
+     * They are drawn one per board. Ordering purely by bump time gave rails
+     * that could easily be eight threads from /v/, which is a poor argument
+     * for a site carrying seventy-seven boards: the rails exist to show
+     * breadth, so breadth is what they are selected for.
+     */
+    private const THREADS = 19;
 
     private const TRENDING = 6;
+
+    /**
+     * How deep to look for one-thread-per-board. Busy boards bump constantly,
+     * so the most recent rows cluster heavily and a window the size of the
+     * answer would return the same handful of boards.
+     */
+    private const THREAD_CANDIDATES = 400;
 
     public function __invoke(Request $request): Response
     {
@@ -44,12 +63,25 @@ class HomeController extends Controller
             ->limit(self::BOARDS)
             ->get();
 
+        /**
+         * One thread per board, most recently bumped first.
+         *
+         * Done in PHP over a generous candidate window rather than as a
+         * group-wise maximum in SQL. The window is the cost of one indexed
+         * `order by bumped_at` and the de-duplication is a pass over at most
+         * a few hundred rows in memory; the SQL form needs either a window
+         * function or a correlated subquery per board, and this list is
+         * decoration on a public page, not a report.
+         */
         $threads = Thread::query()
             ->onVisibleBoard($showsMature)
             ->with(['board', 'originalPost'])
             ->orderByDesc('bumped_at')
-            ->limit(self::THREADS)
-            ->get();
+            ->limit(self::THREAD_CANDIDATES)
+            ->get()
+            ->unique('board_id')
+            ->take(self::THREADS)
+            ->values();
 
         $trending = Board::query()
             ->visible($showsMature)

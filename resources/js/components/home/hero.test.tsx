@@ -28,174 +28,184 @@ vi.mock('@inertiajs/react', () => ({
     },
 }));
 
-/* The hero previews whatever the page hands it. Four threads is enough to
-   prove it shows the two it is given and not the rest. */
 const THREADS = [
     makeThread({ title: 'Anons are still arguing about init systems' }),
     makeThread({ title: 'Mainline kernel support or vendor tree' }),
     makeThread({ title: 'Battery life under sustained load' }),
-    makeThread({ title: 'A thread the hero was not given' }),
+    makeThread({ title: 'Wallpaper thread, 4K only' }),
 ];
 
-const PREVIEW = THREADS.slice(0, 2);
+const HEADLINE = 'The same boards. Without the 2003 interface.';
+
+/**
+ * `BlurText` renders one flex item per word and joins them with U+00A0,
+ * because an ordinary space between flex items collapses to nothing. What a
+ * reader sees is the headline; what `textContent` returns is the headline with
+ * non-breaking spaces, so it is normalised before comparison.
+ */
+function visibleText(el: HTMLElement): string {
+    return (el.textContent ?? '').replace(/\u00a0/g, ' ');
+}
 
 describe('Hero', () => {
-    it("renders the hero heading as the page's only h1, with the exact copy", () => {
-        render(<Hero threads={PREVIEW} />);
+    /**
+     * The heading is split into one span per word by `BlurText`, so its text
+     * arrives in fragments and `getByText` on the whole string will not match.
+     * `textContent` on the heading is what a reader actually ends up with, and
+     * asserting that keeps the test honest about the animation being cosmetic.
+     */
+    it("renders the headline as the page's only h1, with the exact copy", () => {
+        render(<Hero threads={THREADS} />);
 
         const headings = screen.getAllByRole('heading', { level: 1 });
 
         expect(headings).toHaveLength(1);
-        expect(headings[0]).toHaveTextContent(
-            'The same boards, threads and greentext. Without the 2003 interface.',
-        );
+        expect(visibleText(headings[0])).toBe(HEADLINE);
     });
 
     it('renders the intro paragraph verbatim', () => {
-        render(<Hero threads={PREVIEW} />);
+        render(<Hero threads={THREADS} />);
 
         expect(
             screen.getByText(
-                'Clover is an anonymous discussion platform built around boards instead of followers. No profiles on your posts, no recommendation feed, no ads.',
+                'Anonymous discussion, organised by board. No profiles, no algorithm, no ads.',
             ),
         ).toBeInTheDocument();
     });
 
     it('makes the CTA a primary button linking to /popular, with the given label', () => {
-        render(<Hero threads={PREVIEW} />);
+        render(<Hero threads={THREADS} />);
 
-        const cta = screen.getByRole('link', {
-            name: 'Browse without an account',
-        });
-
-        expect(cta).toHaveAttribute('href', '/popular');
-        expect(cta.className).toContain('bg-primary');
+        expect(
+            screen.getByRole('link', { name: 'Browse without an account' }),
+        ).toHaveAttribute('href', '/popular');
     });
 
     it('renders the machine-value line verbatim', () => {
-        render(<Hero threads={PREVIEW} />);
+        render(<Hero threads={THREADS} />);
 
         expect(
-            screen.getByText('Free · Reading needs no account · Posting does'),
+            screen.getByText('Free · Reading needs no account'),
         ).toBeInTheDocument();
     });
 
-    it('hides the gridline background from assistive technology', () => {
-        render(<Hero threads={PREVIEW} />);
-
-        const grid = document.querySelector('[data-slot="hero-grid"]');
-
-        expect(grid).toHaveAttribute('aria-hidden', 'true');
-        expect(grid).toHaveClass('absolute', 'inset-0');
-    });
-
-    it('is a hairline-bordered band, not centred over a filled backdrop', () => {
-        render(<Hero threads={PREVIEW} />);
-
-        const hero = document.querySelector('[data-slot="hero"]');
-
-        expect(hero).toHaveClass('border-b', 'relative', 'overflow-hidden');
-    });
-
     /**
-     * Thread routes do not exist yet. Both preview cards must point at
-     * /popular rather than their own thread, or a first-time visitor lands
-     * in a 404 straight out of the hero.
+     * The band was a split composition over a ruled grid drawn in repeating
+     * gradients. The grid is gone: the design system says backgrounds are
+     * flat, and a repeating gradient is a pattern however faintly it is drawn.
      */
-    it('renders a thread-card preview for each thread it is given', () => {
-        const { container } = render(<Hero threads={PREVIEW} />);
-
-        const previewLinks = container.querySelectorAll(
-            '[data-slot="thread-card"] a',
-        );
-
-        expect(previewLinks).toHaveLength(2);
-        previewLinks.forEach((link, index) => {
-            const thread = PREVIEW[index];
-
-            expect(link).toHaveAttribute(
-                'href',
-                `/${thread.board.replaceAll('/', '')}/${thread.no}`,
-            );
-        });
-    });
-
-    /**
-     * Two full thread cards (title link, vote buttons, bookmark button) are
-     * noise for a screen reader in the middle of a marketing hero, and
-     * giving both the same /popular destination would present a keyboard
-     * user with two indistinguishable links. The whole preview stack is
-     * taken out of the accessibility tree and the tab order rather than
-     * exposing either card's controls.
-     */
-    it('removes the preview stack from the accessibility tree and the tab order', () => {
-        render(<Hero threads={PREVIEW} />);
-
-        const preview = document.querySelector(
-            '[data-slot="hero-thread-preview"]',
-        );
-
-        expect(preview).toHaveAttribute('aria-hidden', 'true');
-        expect(preview).toHaveAttribute('inert');
+    it('paints no gridlines or other pattern behind itself', () => {
+        const { container } = render(<Hero threads={THREADS} />);
 
         expect(
-            screen.queryByRole('link', { name: THREADS[0].title }),
+            container.querySelector('[data-slot="hero-grid"]'),
         ).not.toBeInTheDocument();
-        expect(
-            screen.queryByRole('link', { name: THREADS[3].title }),
-        ).not.toBeInTheDocument();
-        expect(
-            screen.queryByRole('button', { name: /bless this post/i }),
-        ).not.toBeInTheDocument();
-    });
 
-    /**
-     * The trailing card recedes by opacity alone. It used to also scale, but
-     * scaling only reads as depth when the cards overlap, and overlapping
-     * them is what made the pair unreadable in the first place.
-     */
-    it('fades the trailing card so the pair reads as a stack', () => {
-        const { container } = render(<Hero threads={PREVIEW} />);
-
-        const cards = container.querySelectorAll('[data-slot="thread-card"]');
-
-        expect(cards).toHaveLength(2);
-        expect(cards[0].className).not.toMatch(/\bopacity-/);
-        expect(cards[1]).toHaveClass('opacity-60');
-    });
-
-    /**
-     * Reported from a screenshot: the two preview cards were laid on top of
-     * each other, so the lower card's title printed straight through the
-     * upper card's body text. Absolute positioning pulled the second card out
-     * of flow with nothing reserving space for it.
-     *
-     * They now stack in normal flow. The second recedes by opacity alone,
-     * which cannot collide with anything.
-     */
-    it('never lifts a preview card out of flow on top of the other', () => {
-        const { container } = render(<Hero threads={PREVIEW} />);
-
-        const preview = container.querySelector(
-            '[data-slot="hero-thread-preview"]',
-        );
-
-        expect(preview).toBeTruthy();
-
-        for (const card of preview?.children ?? []) {
-            expect(card.className).not.toMatch(/\babsolute\b/);
-            expect(card.className).not.toMatch(/\binset-x-0\b/);
+        for (const el of container.querySelectorAll<HTMLElement>('*')) {
+            expect(el.style.backgroundImage).toBe('');
         }
     });
 
-    it('stacks the previews in a spaced column', () => {
-        const { container } = render(<Hero threads={PREVIEW} />);
+    it('is a hairline-bordered band, not centred over a filled backdrop', () => {
+        const { container } = render(<Hero threads={THREADS} />);
 
-        const preview = container.querySelector(
-            '[data-slot="hero-thread-preview"]',
+        const hero = container.querySelector('[data-slot="hero"]');
+
+        expect(hero?.className).toMatch(/border-b/);
+        expect(hero?.className).not.toMatch(/bg-(primary|surface-elevated)/);
+    });
+
+    /** Two rails, and every thread the hero was given lands in one of them. */
+    it('splits its threads across two rails travelling in opposition', () => {
+        const { container } = render(<Hero threads={THREADS} />);
+
+        const rails = container.querySelectorAll(
+            '[data-slot="thread-marquee"]',
         );
 
-        expect(preview?.className).toMatch(/\bflex-col\b/);
-        expect(preview?.className).toMatch(/\bgap-/);
+        expect(rails).toHaveLength(2);
+
+        for (const thread of THREADS) {
+            expect(screen.getAllByText(thread.title).length).toBeGreaterThan(0);
+        }
+    });
+
+    /**
+     * Two rails at the same speed in opposite directions read as one
+     * mechanism. The point of the pair is that they drift, so the durations
+     * must not match.
+     */
+    it('runs the two rails at different speeds', () => {
+        const { container } = render(<Hero threads={THREADS} />);
+
+        const durations = [
+            ...container.querySelectorAll<HTMLElement>(
+                '[data-slot="thread-marquee-track"]',
+            ),
+        ].map((track) => track.style.animationDuration);
+
+        expect(durations).toHaveLength(2);
+        expect(durations[0]).not.toBe(durations[1]);
+        expect(durations.every((d) => d !== '')).toBe(true);
+    });
+
+    /**
+     * The rails are decoration made of real content, and the content is
+     * rendered twice to make the loop seamless. Exposed, that is a wall of
+     * duplicated titles between a visitor and the only button on the page.
+     */
+    it('keeps both rails out of the accessibility tree and the tab order', () => {
+        const { container } = render(<Hero threads={THREADS} />);
+
+        for (const rail of container.querySelectorAll(
+            '[data-slot="thread-marquee"]',
+        )) {
+            expect(rail).toHaveAttribute('aria-hidden', 'true');
+            expect(rail.hasAttribute('inert')).toBe(true);
+        }
+    });
+
+    /** The rails have no room on a phone, and texture must not precede the pitch. */
+    it('hides the rails below the large breakpoint', () => {
+        const { container } = render(<Hero threads={THREADS} />);
+
+        for (const rail of container.querySelectorAll(
+            '[data-slot="thread-marquee"]',
+        )) {
+            expect(rail.className).toMatch(/\bhidden\b/);
+            expect(rail.className).toMatch(/lg:block/);
+        }
+    });
+
+    /**
+     * Before the first sync there are no threads. The pitch has to stand on
+     * its own rather than the band collapsing or rendering empty rails.
+     */
+    it('still renders the pitch when there are no threads to show', () => {
+        const { container } = render(<Hero threads={[]} />);
+
+        expect(visibleText(screen.getByRole('heading', { level: 1 }))).toBe(
+            HEADLINE,
+        );
+        expect(
+            screen.getByRole('link', { name: 'Browse without an account' }),
+        ).toBeInTheDocument();
+        expect(
+            container.querySelectorAll('[data-slot="thread-marquee"]'),
+        ).toHaveLength(0);
+    });
+
+    /**
+     * The rails are not `ThreadCard`s. A card brings a share button and a
+     * bookmark button, and sixteen of them sliding past the pitch would put
+     * thirty-two controls behind an `inert` wrapper.
+     */
+    it('renders no thread cards or controls in the rails', () => {
+        const { container } = render(<Hero threads={THREADS} />);
+
+        expect(
+            container.querySelector('[data-slot="thread-card"]'),
+        ).not.toBeInTheDocument();
+        expect(screen.queryAllByRole('button')).toHaveLength(0);
     });
 });

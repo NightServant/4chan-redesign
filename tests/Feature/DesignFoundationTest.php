@@ -52,8 +52,39 @@ it('compiles the Clover light token scope', function (): void {
     expect($css)
         ->toMatch('/--bg:\s*oklch\(97\./')
         ->toMatch('/--surface:\s*oklch\(99\./')
-        ->toMatch('/--primary:\s*oklch\(64\./')
+        ->toMatch('/--primary:\s*oklch\(52%/')
         ->toMatch('/--text-primary:\s*oklch\(18\./');
+});
+
+/**
+ * The light theme puts a near-white label on a dark green fill, and it has to
+ * stay that way round.
+ *
+ * It used to be the reverse: the brand green at 64.67% lightness carrying a
+ * near-black green label. That measured 6.20:1, a clean WCAG AA pass, and was
+ * still reported as unreadable. Both colours sat at hue ~152, so the pair had
+ * no chromatic separation at all and differed only in lightness, which a
+ * contrast ratio cannot see.
+ *
+ * The same token was worse elsewhere. `--primary` is also the colour of green
+ * *text*, and at 64.67% that was 2.94:1 against the page background: an
+ * outright AA failure on every active nav item and quotelink.
+ *
+ * Asserted as the shape of the fix rather than by recomputing contrast, which
+ * would mean an OKLCH to sRGB conversion living in the test suite. Dark enough
+ * to carry white, light enough to still read as green: anything outside that
+ * band puts one of the two failures back.
+ */
+it('keeps the light theme green dark enough to label in white', function (): void {
+    [$css] = compiledStylesheet();
+
+    expect($css)
+        /* The fill, in the light scope only: the dark theme keeps the brand
+           green at 73% and labels it in near-black, which is correct there. */
+        ->toMatch('/--primary:\s*oklch\((4[6-9]|5[0-5])/')
+        /* And the label on it, which must be near-white rather than the
+           near-black green it was. */
+        ->toMatch('/--text-on-primary:\s*oklch\(9[5-9]/');
 });
 
 /**

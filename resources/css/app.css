@@ -62,21 +62,42 @@
     --text-primary: oklch(18.28% 0.0123 166.9);
     --text-muted: oklch(44.45% 0.0189 154);
     --text-faint: oklch(55.44% 0.017 157.9);
-    --text-on-primary: oklch(17.12% 0.0256 156.5);
-    --text-accent: oklch(56.26% 0.1349 152.4);
+    /* White on green, not green on green.
+       
+       This was `oklch(17.12% ...)`, a near-black green, and it measured
+       6.20:1 against the button fill: a clean WCAG AA pass. It still read as
+       unreadable, and the report was right. Both colours sat at hue ~152, so
+       the pair had no chromatic separation at all and differed only in
+       lightness. A contrast ratio models luminance and is blind to that.
+       
+       The fix is separation the formula cannot see: a near-white label. It
+       measures lower, 4.96:1, and reads far better. */
+    --text-on-primary: oklch(99.4% 0.004 150);
+
+    /* Was 56.26%, which measured 4.15:1 on the page background and failed AA
+       outright. Quotelinks are the main thing wearing it. */
+    --text-accent: oklch(52% 0.1349 152.4);
 
     /* Lines */
     --border-hairline: oklch(91.59% 0.0093 150.7);
     --border-strong: oklch(84.17% 0.0145 155.5);
 
     /* Action */
-    --primary: oklch(64.67% 0.1552 151.9);
-    --primary-hover: oklch(58.92% 0.1417 151.7);
-    --primary-pressed: oklch(56.26% 0.1349 152.4);
-    --primary-soft: oklch(64.67% 0.1552 151.9 / 0.1);
-    --primary-soft-strong: oklch(64.67% 0.1552 151.9 / 0.18);
-    --primary-line: oklch(64.67% 0.1552 151.9 / 0.34);
-    --focus-ring: oklch(64.67% 0.1552 151.9 / 0.45);
+    /* Darker than the dark theme's green, which is the point.
+       
+       The brand green is `#34C76F` and it lives in the dark theme, where it
+       was authored. Carrying that exact value into a light theme put green
+       text at 2.94:1 on the page background, well under AA, so every active
+       nav item and quotelink was failing. Dropping to 52% lightness fixes the
+       text and the button fill together, and hover and press go darker still,
+       so both gain contrast rather than losing it. */
+    --primary: oklch(52% 0.1552 151.9);
+    --primary-hover: oklch(46.25% 0.1417 151.7);
+    --primary-pressed: oklch(43.59% 0.1349 152.4);
+    --primary-soft: oklch(52% 0.1552 151.9 / 0.1);
+    --primary-soft-strong: oklch(52% 0.1552 151.9 / 0.18);
+    --primary-line: oklch(52% 0.1552 151.9 / 0.34);
+    --focus-ring: oklch(52% 0.1552 151.9 / 0.45);
 
     /* Semantic states */
     --danger: oklch(56.06% 0.1812 27.8);
@@ -232,6 +253,29 @@
 
     --ease-standard: cubic-bezier(0.2, 0, 0, 1);
     --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+    /* The hero's two thread columns. Linear on purpose: an eased marquee
+       visibly slows at the loop seam, which is the one moment the illusion
+       has to survive. Duration is set per instance, because a column's
+       correct speed depends on how tall its content is, not on the design
+       system.
+
+       The track holds two identical copies of the list and travels exactly
+       -50%, so the moment it wraps, copy two is where copy one began and the
+       seam is not visible.
+
+       The 90s here is only a floor; each rail overrides it inline, because
+       the right speed depends on how tall that rail's content is. */
+    --animate-thread-marquee: thread-marquee 90s linear infinite;
+
+    @keyframes thread-marquee {
+        from {
+            transform: translate3d(0, 0, 0);
+        }
+        to {
+            transform: translate3d(0, -50%, 0);
+        }
+    }
 
     /* Presses compress rather than lift; modals arrive from just under full
        size so the scrim reads as depth instead of a flash. */
