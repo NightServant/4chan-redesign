@@ -113,4 +113,23 @@ describe('PatternField', () => {
 
         useReducedMotion.mockReturnValue(false);
     });
+
+    /**
+     * `overflow-hidden` would contain the layer just as well and would make
+     * the element a scroll container, which silently breaks `position: sticky`
+     * on anything inside it. The app shell wraps every screen in this, and the
+     * feed's rail is sticky, so the difference is the feature.
+     */
+    it('clips without becoming a scroll container', () => {
+        const { container } = render(
+            <PatternField>
+                <p>content</p>
+            </PatternField>,
+        );
+
+        const field = container.querySelector('[data-slot="pattern-field"]');
+
+        expect(field?.className).toMatch(/overflow-clip/);
+        expect(field?.className).not.toMatch(/overflow-hidden/);
+    });
 });

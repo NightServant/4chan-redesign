@@ -62,6 +62,16 @@ The identity is one green on a near-black field. Space Grotesk carries the wordm
 
 Green marks state and action. It is never a page background and never a large fill.
 
+### Surfaces
+
+Backgrounds were flat: no gradient, pattern, texture or grain anywhere. That rule is now amended, and the amendment is narrow. What is allowed is **structure** &mdash; a dot matrix on the layout's own module, drawn with a hard-stop gradient that paints a dot and stops. What the rule was written against, the colour wash and the soft ramp behind a heading, is still out, and so are texture and grain.
+
+One matrix, one colour, everywhere: the homepage header, every band, the footer, the signed-in app shell, and the form half of the auth screens. A second colour was tried and removed. It had to be loud to be seen at all at this dot size, and loud is exactly what made the text harder to read.
+
+`PatternField` owns it. The pattern sits on its own layer and drifts against the content as a band passes, because a background painted on the element holding the text scrolls locked to that text and reads as noise under it. The travel is dropped for anyone who asked for less motion; the pattern is not.
+
+Content columns are ruled on all four sides, and adjacent bands share their horizontal rules, so a stack of them draws one continuous frame rather than a row of boxes with doubled edges between.
+
 ### Color palette
 
 ![Clover brand palette: dark and light scopes, one green on fog-tinted neutrals](docs/brand-palette.svg)
@@ -167,7 +177,9 @@ Work is sequenced into gated tasks. Each is built, reviewed, merged to `main` as
 | 13b | Features as tabs; footer cut to what Clover has, with the pages written | [Merged](https://github.com/NightServant/4chan-redesign/pull/31) |
 | 13c | Patterns in the design system, parallax bands, ticker-speed marquees, trending as a ticker | [Merged](https://github.com/NightServant/4chan-redesign/pull/32) |
 | 13d | One pattern throughout, ruled columns, legible boxed marquee rows | [Merged](https://github.com/NightServant/4chan-redesign/pull/33) |
-| 13e | Dots alternate green and grey; hero rails ruled both sides | Open |
+| 13e | Dots alternate green and grey; hero rails ruled both sides | [Merged](https://github.com/NightServant/4chan-redesign/pull/34) |
+| 13f | Second dot colour dropped; one colour on the paper | [Merged](https://github.com/NightServant/4chan-redesign/pull/35) |
+| 13g | Paper extended to the app shell and the auth form side | Open |
 
 The app is navigable end to end: homepage, feed, board, thread, reply. Every link resolves, and everything an account does persists.
 
