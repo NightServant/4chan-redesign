@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { makeBoard, makeThread, makeTrendingTag } from '@/fixtures/factories';
+import { HOME_SECTION_IDS } from '@/lib/home-sections';
 import Welcome from '@/pages/welcome';
 import type { User } from '@/types/auth';
 
@@ -172,5 +173,40 @@ describe('Welcome', () => {
         );
 
         expect(authored).not.toMatch(/—|–|--/);
+    });
+
+    /**
+     * The margins number each band "02 / 05" from `HOME_SECTION_IDS`, which is
+     * a list written by hand beside a page assembled by hand. Nothing else
+     * connects the two, so a band added, removed or renamed leaves the margins
+     * counting a page that no longer exists: an id off the list gets no folio
+     * at all, and an id on the list with no band inflates every total beneath
+     * it. Checked in both directions here because this is the only file that
+     * can see the whole page at once.
+     */
+    it('numbers exactly the bands the page actually stacks', () => {
+        const { container } = render(
+            <Welcome boards={BOARDS} threads={THREADS} trending={TRENDING} />,
+        );
+
+        const onThePage = [...container.querySelectorAll('main section[id]')]
+            .map((section) => section.id)
+            .filter((id) => id !== '');
+
+        expect(onThePage).toEqual([...HOME_SECTION_IDS]);
+    });
+
+    it('draws a margin either side of every band it numbers', () => {
+        const { container } = render(
+            <Welcome boards={BOARDS} threads={THREADS} trending={TRENDING} />,
+        );
+
+        for (const id of HOME_SECTION_IDS) {
+            const band = container.querySelector(`main section#${id}`);
+
+            expect(
+                band?.querySelectorAll('[data-slot="section-gutter"]'),
+            ).toHaveLength(2);
+        }
     });
 });
