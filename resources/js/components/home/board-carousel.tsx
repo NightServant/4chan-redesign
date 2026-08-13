@@ -107,10 +107,6 @@ function BoardCarousel({ boards }: BoardCarouselProps) {
     return (
         <Section
             id="boards"
-            /* Dots against the hero's ruled grid directly above. Alternating
-               the two patterns is what stops a long page reading as one
-               printed sheet; see `welcome.tsx` for the order. */
-            pattern="dots"
             depth={50}
             label="Popular boards"
             title="The boards carrying the most threads"

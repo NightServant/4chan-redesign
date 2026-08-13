@@ -48,7 +48,6 @@ function Trending({ threads, trending }: TrendingProps) {
     return (
         <Section
             id="trending"
-            pattern="grid"
             depth={72}
             label="Trending discussions"
             title="What is being bumped today"

@@ -167,6 +167,48 @@ describe('ThreadMarquee', () => {
         expect(track?.className).toMatch(/animation-play-state:paused/);
     });
 
+    /**
+     * The rail was masked at both ends so it read as continuing past its edge.
+     * The cost was that rows entering and leaving were half-legible for most
+     * of the time they were on screen, on a rail whose entire purpose is
+     * showing real thread titles.
+     */
+    it('fades nothing, so every row on screen is legible', () => {
+        const { container } = render(<ThreadMarquee threads={THREADS} />);
+
+        const rail = container.querySelector<HTMLElement>(
+            '[data-slot="thread-marquee"]',
+        );
+
+        expect(rail?.style.maskImage ?? '').toBe('');
+        expect(rail?.style.webkitMaskImage ?? '').toBe('');
+    });
+
+    it('boxes every row rather than ruling between them', () => {
+        const { container } = render(<ThreadMarquee threads={THREADS} />);
+
+        const rows = container.querySelectorAll<HTMLElement>(
+            '[data-slot="thread-marquee-track"] > div > div',
+        );
+
+        expect(rows.length).toBeGreaterThan(0);
+
+        for (const row of rows) {
+            expect(row.className).toMatch(/border-b/);
+            expect(row.className).toMatch(/border-t/);
+        }
+    });
+
+    /** The title is the row, so it carries the page's text colour, not a muted one. */
+    it('renders titles at full strength', () => {
+        render(<ThreadMarquee threads={THREADS} />);
+
+        const title = screen.getAllByText(THREADS[0].title)[0];
+
+        expect(title.className).toMatch(/text-foreground/);
+        expect(title.className).not.toMatch(/text-muted-foreground|text-faint/);
+    });
+
     it('renders nothing at all before the first sync', () => {
         const { container } = render(<ThreadMarquee threads={[]} />);
 

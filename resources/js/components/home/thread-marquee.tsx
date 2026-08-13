@@ -58,12 +58,15 @@ const ASSUMED_TRAVEL = 900;
 
 function MarqueeRow({ thread, axis }: { thread: Thread; axis: 'x' | 'y' }) {
     return (
+        /* Every row is boxed rather than separated by a single rule. A rail of
+           ruled rows reads as a list; a rail of boxes reads as a strip of
+           cells, which is the register the rest of the page is now in. */
         <div
             className={cn(
-                'flex flex-col gap-1.5 px-4 py-4',
+                'flex flex-col gap-1.5 border-b border-border px-4 py-4',
                 axis === 'y'
-                    ? 'border-t border-border'
-                    : 'w-[320px] shrink-0 border-l border-border',
+                    ? 'border-t'
+                    : 'w-[320px] shrink-0 border-t border-l',
             )}
         >
             <div className="flex items-center gap-2">
@@ -75,11 +78,14 @@ function MarqueeRow({ thread, axis }: { thread: Thread; axis: 'x' | 'y' }) {
                 </span>
             </div>
 
-            <p className="line-clamp-2 text-body-sm leading-snug text-pretty text-muted-foreground">
+            {/* The title is the row. It was muted, which on a masked rail put
+                low-contrast text behind a fade and made the one thing worth
+                reading the hardest thing to read. */}
+            <p className="line-clamp-2 text-body-sm leading-snug font-medium text-pretty text-foreground">
                 {thread.title}
             </p>
 
-            <MachineValue className="text-faint">
+            <MachineValue className="text-muted-foreground">
                 {thread.replies} replies
             </MachineValue>
         </div>
@@ -137,15 +143,17 @@ function ThreadMarquee({
             data-slot="thread-marquee"
             aria-hidden="true"
             inert
+            /* No mask.
+               
+               It faded both ends so the rail read as continuing past its edge,
+               and the cost was that the rows entering and leaving were
+               half-legible for most of the time they were on screen. On a rail
+               whose whole purpose is showing real thread titles, that made the
+               content unreadable to buy an effect. A hard edge is also the
+               honest one here: the rest of the page is ruled boxes, and a
+               clipped row reads as a cell passing a window rather than as a
+               clipping bug. */
             className={cn('relative overflow-hidden', className)}
-            style={{
-                /* An alpha mask on content, not a painted background. Without
-                   it the rail is guillotined at both ends, which reads as a
-                   clipping bug rather than as something continuing past the
-                   edge. */
-                maskImage: `linear-gradient(to ${axis === 'y' ? 'bottom' : 'right'}, transparent, #000 12%, #000 88%, transparent)`,
-                WebkitMaskImage: `linear-gradient(to ${axis === 'y' ? 'bottom' : 'right'}, transparent, #000 12%, #000 88%, transparent)`,
-            }}
         >
             <div
                 data-slot="thread-marquee-track"

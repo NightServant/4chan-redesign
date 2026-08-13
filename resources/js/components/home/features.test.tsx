@@ -136,6 +136,25 @@ describe('Features', () => {
         ).toMatch(/md:grid-cols-2\b/);
     });
 
+    /**
+     * A rule between the claims and their answer, not a gap. Whitespace reads
+     * as two lists that happen to be adjacent; this pair is one control and
+     * its output. Carried by the list's own right edge so a single line falls
+     * between the columns rather than two meeting in the gutter.
+     */
+    it('divides the claims from their answer with a rule', () => {
+        const { container } = render(<Features />);
+
+        const list = container.querySelector<HTMLElement>(
+            '[data-slot="tabs-list"]',
+        );
+
+        expect(list?.className).toMatch(/md:border-r/);
+        expect(
+            container.querySelector('[data-slot="tabs"]')?.className,
+        ).toMatch(/md:gap-0/);
+    });
+
     it('contains no em dashes anywhere in its rendered text', () => {
         const { container } = render(<Features />);
 

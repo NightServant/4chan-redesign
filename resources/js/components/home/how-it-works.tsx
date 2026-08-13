@@ -30,7 +30,6 @@ function HowItWorks() {
     return (
         <Section
             id="how"
-            pattern="grid"
             depth={60}
             label="How Clover works"
             title="Three steps, no onboarding tour"

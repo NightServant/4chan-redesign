@@ -269,15 +269,16 @@
     | or grain anywhere. That rule is amended rather than abandoned: what is
     | allowed now is *structure*, and only structure.
     |
-    | A grid and a dot matrix are drawings of the layout module, not decoration
-    | applied over it. Both are built from hard-stop gradients, which paint a
-    | line and then stop; the thing the old rule was written against is the
-    | colour wash, the soft ramp behind a hero, and that is still out. So are
-    | texture, grain and anything organic.
+    | A dot matrix is a drawing of the layout module, not decoration applied
+    | over it. It is built from a hard-stop gradient, which paints a dot and
+    | then stops; the thing the old rule was written against is the colour
+    | wash, the soft ramp behind a hero, and that is still out. So are texture,
+    | grain and anything organic.
     |
-    | The module is 64px, which is the column rhythm the page already uses, so
-    | the grid a reader sees is the grid the layout is actually on. That is the
-    | whole argument for showing it.
+    | There was a ruled grid alongside this. It went: two patterns alternating
+    | down a page is two systems, and the page reads as one surface with one
+    | matrix on it. The dots are also the quieter of the two, which matters now
+    | that every band, the header and the footer all carry it.
     |
     */
     --pattern-size: 64px;
@@ -468,20 +469,6 @@
 | module without redeclaring the whole background.
 |
 */
-@utility bg-grid {
-    background-image:
-        repeating-linear-gradient(
-            to right,
-            var(--pattern-line) 0 1px,
-            transparent 1px var(--pattern-size)
-        ),
-        repeating-linear-gradient(
-            to bottom,
-            var(--pattern-line) 0 1px,
-            transparent 1px var(--pattern-size)
-        );
-}
-
 @utility bg-dots {
     background-image: radial-gradient(
         var(--pattern-line) var(--pattern-dot),

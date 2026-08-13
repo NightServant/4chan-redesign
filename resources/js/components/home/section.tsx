@@ -13,17 +13,17 @@ import { cn } from '@/lib/utils';
  * into unrelated slabs; a single surface with rules reads as one document.
  *
  * That surface is drawn paper now rather than a flat fill: every band sits on
- * the same 64px module the layout is built on, and each band's paper drifts at
- * its own rate as it passes. Alternating the ruled grid with the dot matrix
- * band by band is what keeps a long page from reading as one printed sheet,
- * and it does it without alternating *fills*, which is the thing the rule
- * above was written against.
+ * the same module the layout is built on, and each band's paper drifts at its
+ * own rate as it passes. One matrix throughout, header and footer included,
+ * so the paper runs unbroken down the page.
+ *
+ * The content column is ruled on all four sides. Bands share their horizontal
+ * rules with their neighbours, so a stack of them draws a single continuous
+ * frame rather than a row of separate boxes with doubled edges between them.
  */
 type SectionProps = {
     /** Anchor target, so the page can be linked into. */
     id: string;
-    /** Which paper this band is drawn on. Alternated by the page. */
-    pattern?: 'grid' | 'dots';
     /** How far the paper travels as the band passes. See `PatternField`. */
     depth?: number;
     /** Tracked uppercase kicker above the heading. */
@@ -37,7 +37,6 @@ type SectionProps = {
 
 function Section({
     id,
-    pattern = 'grid',
     depth = 60,
     label,
     title,
@@ -53,8 +52,8 @@ function Section({
             aria-labelledby={headingId}
             className={cn('border-t border-border', className)}
         >
-            <PatternField pattern={pattern} depth={depth}>
-                <div className="mx-auto flex max-w-[1180px] flex-col gap-6 px-6 py-14">
+            <PatternField depth={depth}>
+                <div className="mx-auto flex max-w-[1180px] flex-col gap-6 border-x border-border px-6 py-14">
                     <div className="flex flex-wrap items-end justify-between gap-5">
                         <div className="flex flex-col gap-2">
                             <SectionLabel>{label}</SectionLabel>

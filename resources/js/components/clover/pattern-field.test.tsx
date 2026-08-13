@@ -46,17 +46,15 @@ describe('PatternField', () => {
         expect(paper(container)?.className).toMatch(/pointer-events-none/);
     });
 
-    it('draws the pattern it was asked for', () => {
-        const { container, rerender } = render(
-            <PatternField pattern="grid">
-                <p>content</p>
-            </PatternField>,
-        );
-
-        expect(paper(container)?.className).toMatch(/bg-grid/);
-
-        rerender(
-            <PatternField pattern="dots">
+    /**
+     * One pattern, everywhere. There was a ruled grid alternating with this
+     * matrix band by band, which made the page two systems rather than one
+     * surface. The grid is gone, utility and all, so this asserts the absence
+     * as well as the presence.
+     */
+    it('draws the dot matrix and nothing else', () => {
+        const { container } = render(
+            <PatternField>
                 <p>content</p>
             </PatternField>,
         );
@@ -103,7 +101,7 @@ describe('PatternField', () => {
         useReducedMotion.mockReturnValue(true);
 
         const { container } = render(
-            <PatternField pattern="dots">
+            <PatternField>
                 <p>content</p>
             </PatternField>,
         );

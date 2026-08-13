@@ -13,9 +13,14 @@ import { cn } from '@/lib/utils';
  *
  * Clover's backgrounds were flat, and the rule that made them flat was written
  * against colour washes: gradients, texture, grain. That rule is amended here
- * rather than abandoned. What this paints is *structure* — the 64px module the
+ * rather than abandoned. What this paints is *structure* — the module the
  * layout is already built on, made visible — and structure is the one thing
  * brutalism actually asks for. A soft ramp behind a heading is still out.
+ *
+ * One pattern, everywhere. There was a ruled grid alternating with this matrix
+ * band by band, which made the page two systems rather than one surface. Every
+ * band now carries the same dots, including the header and the footer, so the
+ * paper runs unbroken from the top of the page to the bottom.
  *
  * ## Why the pattern is its own layer
  *
@@ -45,8 +50,6 @@ import { cn } from '@/lib/utils';
  */
 type PatternFieldProps = {
     children: ReactNode;
-    /** `grid` is ruled paper, `dots` a matrix. Both draw the same module. */
-    pattern?: 'grid' | 'dots';
     /**
      * How far the paper travels across the band, in pixels. Larger reads as
      * further away. Zero pins it, which is what reduced motion resolves to.
@@ -67,7 +70,6 @@ const FEATHER =
 
 function PatternField({
     children,
-    pattern = 'grid',
     depth = 60,
     feather = true,
     className,
@@ -109,10 +111,7 @@ function PatternField({
                         ? { maskImage: FEATHER, WebkitMaskImage: FEATHER }
                         : {}),
                 }}
-                className={cn(
-                    'pointer-events-none absolute inset-x-0 -z-10',
-                    pattern === 'grid' ? 'bg-grid' : 'bg-dots',
-                )}
+                className="pointer-events-none absolute inset-x-0 -z-10 bg-dots"
             />
 
             <div className={contentClassName}>{children}</div>
