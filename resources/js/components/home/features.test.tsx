@@ -51,6 +51,12 @@ describe('Features', () => {
         ).toBeInTheDocument();
     });
 
+    /**
+     * Found rather than got: the answers are swapped through `AnimatePresence`
+     * with `mode="wait"`, so the outgoing one leaves before the incoming one
+     * mounts and the new copy is not in the document on the tick the click
+     * resolves.
+     */
     it('answers the claim that was selected', async () => {
         render(<Features />);
 
@@ -59,7 +65,7 @@ describe('Features', () => {
         );
 
         expect(
-            screen.getByText(
+            await screen.findByText(
                 'No votes, no karma, no reputation. A thread rises because anons replied to it, and you can send one to somebody without an account existing anywhere.',
             ),
         ).toBeInTheDocument();
@@ -100,11 +106,11 @@ describe('Features', () => {
             screen.getByRole('tab', { name: 'Greentext preserved' }),
         );
 
-        expect(
-            screen.getByText(
-                'Markdown, quotes and >greentext work the way they always have.',
-            ).textContent,
-        ).toContain('>greentext');
+        const body = await screen.findByText(
+            'Markdown, quotes and >greentext work the way they always have.',
+        );
+
+        expect(body.textContent).toContain('>greentext');
     });
 
     /**
@@ -117,12 +123,17 @@ describe('Features', () => {
         expect(container.querySelector('[data-slot="card"]')).toBeNull();
     });
 
-    it('lays the claims beside their answers rather than above them', () => {
+    /**
+     * Equal halves, not a narrow rail beside a wide panel. The claims are half
+     * the argument rather than a table of contents for it, and sizing them the
+     * same is what says so.
+     */
+    it('gives the claims and their answers equal halves', () => {
         const { container } = render(<Features />);
 
         expect(
             container.querySelector('[data-slot="tabs"]')?.className,
-        ).toMatch(/md:grid-cols-/);
+        ).toMatch(/md:grid-cols-2\b/);
     });
 
     it('contains no em dashes anywhere in its rendered text', () => {

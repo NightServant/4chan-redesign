@@ -47,16 +47,65 @@ describe('ThreadMarquee', () => {
         expect(rail?.hasAttribute('inert')).toBe(true);
     });
 
-    it('carries the duration it was given rather than the stylesheet default', () => {
+    /**
+     * Speed is a rate now, not a duration. It used to take `seconds` for one
+     * full pass, which sounds equivalent and is not: the same duration over
+     * more rows is a faster rail, so adding threads silently changed the speed
+     * of every rail showing them. The duration is derived from the measured
+     * content, so it always carries one.
+     */
+    it('derives a duration from the rate it was given', () => {
         const { container } = render(
-            <ThreadMarquee threads={THREADS} seconds={42} />,
+            <ThreadMarquee threads={THREADS} pixelsPerSecond={90} />,
         );
 
         const track = container.querySelector<HTMLElement>(
             '[data-slot="thread-marquee-track"]',
         );
 
-        expect(track?.style.animationDuration).toBe('42s');
+        expect(track?.style.animationDuration).toMatch(/^[\d.]+s$/);
+    });
+
+    /**
+     * jsdom lays nothing out, so the measured content is 0 and the component
+     * falls back to an assumed distance. Halving the rate must still double
+     * the duration, which is the relationship the whole change is about.
+     */
+    it('runs twice as long at half the rate', () => {
+        const durationAt = (rate: number): number => {
+            const { container, unmount } = render(
+                <ThreadMarquee threads={THREADS} pixelsPerSecond={rate} />,
+            );
+
+            const track = container.querySelector<HTMLElement>(
+                '[data-slot="thread-marquee-track"]',
+            );
+            const seconds = Number.parseFloat(
+                track?.style.animationDuration ?? '0',
+            );
+
+            unmount();
+
+            return seconds;
+        };
+
+        expect(durationAt(50)).toBeCloseTo(durationAt(100) * 2, 1);
+    });
+
+    /** A ticker travels sideways, and needs its own keyframes to do it. */
+    it('travels along the axis it was given', () => {
+        const { container } = render(
+            <ThreadMarquee threads={THREADS} axis="x" />,
+        );
+
+        const track = container.querySelector<HTMLElement>(
+            '[data-slot="thread-marquee-track"]',
+        );
+
+        expect(track?.className).toMatch(/animate-thread-marquee-x/);
+        /* Lookahead rather than a word boundary: `\b` sits happily between
+           the `e` and the `-`, so it matches the horizontal class too. */
+        expect(track?.className).not.toMatch(/animate-thread-marquee(?!-x)/);
     });
 
     /**
@@ -66,7 +115,7 @@ describe('ThreadMarquee', () => {
      */
     it('does not rely on a custom property to carry its duration', () => {
         const { container } = render(
-            <ThreadMarquee threads={THREADS} seconds={42} />,
+            <ThreadMarquee threads={THREADS} pixelsPerSecond={90} />,
         );
 
         const track = container.querySelector<HTMLElement>(
@@ -77,9 +126,9 @@ describe('ThreadMarquee', () => {
         expect(track?.style.animationDuration).not.toBe('');
     });
 
-    it('reverses rather than reordering when sent downward', () => {
+    it('reverses rather than reordering when sent backwards', () => {
         const { container } = render(
-            <ThreadMarquee threads={THREADS} direction="down" />,
+            <ThreadMarquee threads={THREADS} direction="reverse" />,
         );
 
         const track = container.querySelector<HTMLElement>(

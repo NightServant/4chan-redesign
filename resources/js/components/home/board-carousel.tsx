@@ -28,7 +28,7 @@ import type { Board } from '@/types/clover';
  *
  * ## Scrolling
  *
- * A native scroll container with snap points, not a JavaScript carousel. The
+ * A native scroll container, not a JavaScript carousel. The
  * cells are links, so tabbing through them scrolls the rail without any of
  * this code running, and a trackpad or a touchscreen works because the browser
  * already knows how. The buttons are a convenience on top of a thing that
@@ -107,6 +107,11 @@ function BoardCarousel({ boards }: BoardCarouselProps) {
     return (
         <Section
             id="boards"
+            /* Dots against the hero's ruled grid directly above. Alternating
+               the two patterns is what stops a long page reading as one
+               printed sheet; see `welcome.tsx` for the order. */
+            pattern="dots"
+            depth={50}
             label="Popular boards"
             title="The boards carrying the most threads"
             action={
@@ -143,11 +148,16 @@ function BoardCarousel({ boards }: BoardCarouselProps) {
                     ref={rail}
                     onScroll={syncEdges}
                     data-slot="board-rail"
-                    /* Proximity, not mandatory. The cells do not divide evenly
-                       into the rail, so the last resting place is mid-cell;
-                       mandatory snapping insists on alignment there and fights
-                       both the arrows and a trackpad flick. */
-                    className="flex snap-x snap-proximity [scrollbar-width:none] gap-3 overflow-x-auto [&::-webkit-scrollbar]:hidden"
+                    /* No snapping at all.
+                       
+                       It was mandatory, then proximity, and both fought the
+                       reader: a flick that should coast is caught and pulled
+                       to an alignment nobody asked for, and mandatory snapping
+                       cancelled the arrows outright at the end of the rail.
+                       The arrows already move by whole cells, so the tidy
+                       resting positions snapping was there to provide come
+                       from the thing a reader actually presses. */
+                    className="flex [scrollbar-width:none] gap-3 overflow-x-auto [&::-webkit-scrollbar]:hidden"
                 >
                     {boards.map((board) => (
                         <Link
@@ -160,7 +170,7 @@ function BoardCarousel({ boards }: BoardCarouselProps) {
                                 board.slug.replaceAll('/', ''),
                             )}
                             aria-label={`${board.name}, ${board.slug}`}
-                            className="w-[260px] shrink-0 snap-start rounded-xl"
+                            className="w-[260px] shrink-0 rounded-xl"
                         >
                             <Card
                                 hoverLift
