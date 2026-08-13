@@ -3,32 +3,21 @@ import { useId } from 'react';
 import { MachineValue } from '@/components/clover/machine-value';
 import { SectionLabel } from '@/components/clover/section-label';
 import { Wordmark } from '@/components/clover/wordmark';
-import {
-    communities,
-    contact,
-    contribute,
-    dmca,
-    faq,
-    janitors,
-    privacy,
-    report,
-    rules,
-    search,
-    status,
-    terms,
-} from '@/routes';
+import { communities, faq, privacy, rules, terms } from '@/routes';
 
 /**
- * Every destination here resolves to a real page. Most of those pages say only
- * that they have not been written yet, which is the honest state of things.
+ * Five destinations, down from twelve.
  *
- * The alternatives were worse. `href="#"` and a preventDefault'd anchor both
- * dress an inert entry as a working link. A `disabled` button is honest about
- * being unavailable, but it is also the wrong semantic (these are
- * destinations, not controls) and the browser drops it from the tab order, so
- * twelve of them would erase the footer's structure for anyone navigating by
- * keyboard or screen reader. A real link to a page that admits it is empty
- * costs one route and lies to nobody.
+ * The twelve all resolved, and all but one resolved to a page saying it had
+ * not been written. That was honest, and it was still the wrong answer: a
+ * footer is a map of the product, and this one advertised a janitor queue, a
+ * report flow, a contribution guide, a status page, a DMCA process and a
+ * contact address for a read-only mirror that has none of those things. Being
+ * upfront that a page is empty does not help when the page should not exist.
+ *
+ * What is left is what Clover can actually answer for: what the boards are,
+ * how the site behaves, what it does with an account, and what it does not
+ * collect. Those get written rather than stubbed.
  */
 type LinkGroup = {
     heading: string;
@@ -40,18 +29,8 @@ const LINK_GROUPS: readonly LinkGroup[] = [
         heading: 'Product',
         items: [
             { label: 'Boards', href: communities().url },
-            { label: 'Search', href: search().url },
-            { label: 'Janitor queue', href: janitors().url },
-            { label: 'Status', href: status().url },
-        ],
-    },
-    {
-        heading: 'Community',
-        items: [
             { label: 'Rules', href: rules().url },
             { label: 'FAQ', href: faq().url },
-            { label: 'Report a post', href: report().url },
-            { label: 'Contribute', href: contribute().url },
         ],
     },
     {
@@ -59,8 +38,6 @@ const LINK_GROUPS: readonly LinkGroup[] = [
         items: [
             { label: 'Terms', href: terms().url },
             { label: 'Privacy', href: privacy().url },
-            { label: 'DMCA', href: dmca().url },
-            { label: 'Contact', href: contact().url },
         ],
     },
 ];
@@ -98,8 +75,14 @@ function SiteFooter() {
             >
                 <div className="flex flex-col gap-2">
                     <Wordmark />
+                    {/* The year is read, not written in.
+                       
+                        It said 2024, which was wrong the moment 2025 arrived
+                        and would be wrong again every January. A hardcoded
+                        year is a bug with a scheduled start date. */}
                     <MachineValue>
-                        Anonymous discussion, since 2024.
+                        &copy; {new Date().getFullYear()} Clover. Anonymous
+                        discussion.
                     </MachineValue>
                 </div>
 

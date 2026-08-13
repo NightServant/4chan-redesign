@@ -75,26 +75,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 /**
- * Utility pages linked from the sidebar footer and the homepage footer. None
- * are written yet, so each resolves to a plain "not written yet" screen.
+ * Clover's standing pages.
  *
- * They exist because the alternative is worse. Task 4 linked four of these and
- * shipped four live 404s; disabling the links instead would hide them from
- * screen-reader navigation entirely and make the footer read as broken. An
- * honest placeholder is the only option that neither lies nor breaks.
+ * There were twelve. Eleven resolved to a screen saying they had not been
+ * written, which was honest and still wrong: the footer is a map of the
+ * product, and it was advertising a janitor queue, a report flow, a
+ * contribution guide, a status page, a DMCA process and a contact address for
+ * a read-only mirror that has none of them. Those six were removed rather than
+ * written, because being upfront that a page is empty does not help when the
+ * page should not exist.
+ *
+ * The four that describe things Clover actually does now carry real copy.
+ *
+ * `search` keeps the placeholder. It is the one destination here with a real
+ * feature behind it that has not been built yet, so it stays honest about
+ * being unfinished rather than being deleted.
  */
 collect([
     'rules' => 'Rules',
     'faq' => 'FAQ',
-    'status' => 'Status',
     'terms' => 'Terms',
     'privacy' => 'Privacy',
-    'dmca' => 'DMCA',
-    'contact' => 'Contact',
     'search' => 'Search',
-    'janitors' => 'Janitor queue',
-    'report' => 'Report a post',
-    'contribute' => 'Contribute',
 ])->each(function (string $title, string $uri): void {
     Route::inertia($uri, 'information', ['title' => $title])->name($uri);
 });
