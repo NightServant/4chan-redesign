@@ -9,6 +9,7 @@ const TECH_BOARD: Board = {
     slug: '/g/',
     name: 'Technology',
     threads: '41,208',
+    nsfw: false,
     subscribed: false,
 };
 
@@ -106,6 +107,7 @@ describe('BoardHeader', () => {
                     slug: '/x/',
                     name: 'Paranormal',
                     threads: '7,442',
+                    nsfw: false,
                     subscribed: false,
                     description: 'Paranormal - Ghosts, cryptids, and dreams.',
                 }}
@@ -134,6 +136,7 @@ describe('BoardHeader', () => {
                     slug: '/x/',
                     name: 'Paranormal',
                     threads: '7,442',
+                    nsfw: false,
                     subscribed: false,
                 }}
             />,

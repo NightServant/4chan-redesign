@@ -96,9 +96,21 @@ function intrinsicBox(media: Attachment): {
  * one scaled to the column width lands under the cap and is untouched. Opening
  * the image shows it whole either way.
  */
+/**
+ * `object-contain`, not `object-cover`.
+ *
+ * `cover` fills the box and crops whatever does not fit, which on a board
+ * where a good share of attachments are screenshots, comics and tall infographics
+ * meant the top and bottom of the actual content were cut off. The point of an
+ * attachment is the attachment.
+ *
+ * The height cap stays: a 5000px tall image would otherwise push every other
+ * thread off the screen. Contained rather than cropped, a tall image is shown
+ * whole and small, which is the honest presentation and still opens full size.
+ */
 const VARIANT_CLASSES: Record<PostImageVariant, string> = {
-    card: 'h-auto max-h-[460px] w-full object-cover',
-    post: 'h-auto max-h-[640px] w-full object-cover',
+    card: 'h-auto max-h-[520px] w-full object-contain',
+    post: 'h-auto max-h-[720px] w-full object-contain',
 };
 
 type PostImageProps = {

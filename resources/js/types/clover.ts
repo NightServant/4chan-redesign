@@ -17,6 +17,8 @@
 export type BoardSlug = `/${string}/`;
 
 export interface Board {
+    /** Whether 4chan marks this board not worksafe. See `Thread.nsfw`. */
+    nsfw: boolean;
     /** This application's own id, which the subscribe route takes. */
     id: number;
     slug: BoardSlug;
@@ -101,6 +103,14 @@ export interface Thread {
     time: string;
     title: string;
     excerpt?: string;
+    /**
+     * Whether the board this sits on is one 4chan marks not worksafe.
+     *
+     * Marked, not hidden. Hiding is the `worksafe` preference's job and it
+     * happens on the server; this exists so a thread that has been shown can
+     * still say what it is before somebody opens it in an office.
+     */
+    nsfw: boolean;
     replies: number;
     /**
      * Attached images on the thread. Pre-formatted, e.g. `48`.

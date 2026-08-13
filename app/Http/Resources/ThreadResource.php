@@ -72,6 +72,9 @@ final class ThreadResource extends JsonResource
                 fn (): ?string => $this->excerpt($thread, $originalPost),
             ),
 
+            /** Inherited from the board. A thread is not marked in itself. */
+            'nsfw' => ! $thread->board->worksafe,
+
             'replies' => $thread->replies_count,
             'images' => number_format($thread->images_count),
 

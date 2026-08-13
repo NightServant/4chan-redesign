@@ -132,3 +132,37 @@ it('keeps hidden boards off the homepage', function (): void {
             ->where('boards.0.slug', '/g/'),
     );
 });
+
+/**
+ * The mark, as distinct from the gate.
+ *
+ * Hiding is `worksafe`'s job and it happens in the query. This is the other
+ * half: an anon who has opted into these boards still has to be told which is
+ * which before they open one somewhere public, so the flag travels with every
+ * board and every thread rather than being inferred in the browser.
+ */
+it('marks a not-worksafe board and its threads on the wire', function (): void {
+    /* A slug from `clover.fallback_boards`: the board route is constrained to
+       known slugs, and a fresh test database has no cached list yet. */
+    $adult = Board::factory()->slug('x')->state(['worksafe' => false])->create();
+    Thread::factory()->for($adult)->create();
+
+    $user = User::factory()->create(['shows_mature_boards' => true]);
+
+    $this->actingAs($user)->get('/x')->assertInertia(
+        fn ($page) => $page
+            ->where('board.nsfw', true)
+            ->where('threads.0.nsfw', true),
+    );
+});
+
+it('does not mark a worksafe board', function (): void {
+    $board = Board::factory()->slug('g')->create();
+    Thread::factory()->for($board)->create();
+
+    $this->get('/g')->assertInertia(
+        fn ($page) => $page
+            ->where('board.nsfw', false)
+            ->where('threads.0.nsfw', false),
+    );
+});

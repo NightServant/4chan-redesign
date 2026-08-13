@@ -61,19 +61,19 @@ describe('PostImage', () => {
 
         const { unmount } = render(<PostImage media={media} variant="card" />);
 
-        expect(screen.getByRole('img')).toHaveClass('max-h-[460px]');
+        expect(screen.getByRole('img')).toHaveClass('max-h-[520px]');
 
         unmount();
 
         render(<PostImage media={media} variant="post" />);
 
-        expect(screen.getByRole('img')).toHaveClass('max-h-[640px]');
+        expect(screen.getByRole('img')).toHaveClass('max-h-[720px]');
     });
 
     it('defaults to the card variant, the tighter cap', () => {
         render(<PostImage media={makeAttachment()} />);
 
-        expect(screen.getByRole('img')).toHaveClass('max-h-[460px]');
+        expect(screen.getByRole('img')).toHaveClass('max-h-[520px]');
     });
 
     /**

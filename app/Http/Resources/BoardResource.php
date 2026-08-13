@@ -50,6 +50,14 @@ class BoardResource extends JsonResource
             'threads' => number_format(self::threadCount($board)),
 
             /**
+             * 4chan's own `ws_board`, inverted. Sent so the interface can mark
+             * a board rather than merely hide one: an anon who has opted into
+             * these boards still deserves to be told which is which before
+             * they open it somewhere public.
+             */
+            'nsfw' => ! $board->worksafe,
+
+            /**
              * Whether this anon follows the board. Was a hardcoded false while
              * the Join buttons were local component state that forgot itself
              * on reload; there is a table behind it now.

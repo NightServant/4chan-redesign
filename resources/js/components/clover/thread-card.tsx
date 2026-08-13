@@ -6,12 +6,26 @@ import { MachineValue } from '@/components/clover/machine-value';
 import { PostAttachment } from '@/components/clover/post-image';
 import { ShareControl } from '@/components/clover/share-control';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { Thread } from '@/types/clover';
 
 /**
  * One thread as it appears in a feed.
+ *
+ * ## Not a card any more
+ *
+ * It was a bordered, rounded, lifting `Card`. A feed of thirty of those is
+ * thirty boxes, and the box is the loudest thing on each of them: the border
+ * competes with the thread's own attachment, the padding pushes the next
+ * thread off the screen, and the lift on hover animates furniture rather than
+ * content. Rows on a hairline are denser, quieter, and match the ruled
+ * register the rest of the site moved to.
+ *
+ * The excerpt went with it. It was the first 240 characters of the opening
+ * post, printed under a title that is very often the first line of that same
+ * post, so the card frequently said the same thing twice at two sizes. What a
+ * reader needs from a row is which board, what it is called, and how busy it
+ * is.
  *
  * The card reads as clickable everywhere, but the accessible target is the
  * title link alone. Nesting the share and bookmark buttons inside that link
@@ -48,15 +62,16 @@ function ThreadCard({
     const titleHref = href ?? `${thread.board}${thread.no}`;
 
     return (
-        <Card
+        <div
             data-slot="thread-card"
             className={cn(
-                'relative gap-3 py-4 transition-shadow duration-[var(--duration-hover)] ease-standard hover:shadow-lift',
+                'relative flex flex-col gap-2 border-b border-border py-4',
+                'transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover',
                 className,
             )}
             {...props}
         >
-            <div className="flex items-center gap-2 px-5">
+            <div className="flex flex-wrap items-center gap-2 px-5">
                 <BoardAvatar slug={thread.board} size={20} decorative />
                 <MachineValue className="text-foreground">
                     {thread.board}
@@ -68,6 +83,14 @@ function ThreadCard({
                     &middot;
                 </span>
                 <span className="text-caption text-faint">{thread.time}</span>
+
+                {/* The mark, beside the board it came from rather than over
+                    the attachment: an anon needs to know what a row is before
+                    they decide to look at it, and a label on the image is
+                    already too late. Named in words, not signalled by colour,
+                    so it survives greyscale and a screen reader. */}
+                {thread.nsfw ? <Badge tone="danger">NSFW</Badge> : null}
+
                 {thread.pinned ? (
                     <Badge tone="primary" className="ml-auto">
                         Pinned
@@ -75,7 +98,7 @@ function ThreadCard({
                 ) : null}
             </div>
 
-            <h3 className="px-5 font-display text-h3 font-semibold text-foreground">
+            <h3 className="px-5 font-display text-[17px] leading-snug font-semibold text-balance text-foreground">
                 <Link
                     href={titleHref}
                     className="static after:absolute after:inset-0 after:content-['']"
@@ -84,15 +107,9 @@ function ThreadCard({
                 </Link>
             </h3>
 
-            {thread.excerpt ? (
-                <p className="line-clamp-2 px-5 text-body-sm text-pretty text-muted-foreground">
-                    {thread.excerpt}
-                </p>
-            ) : null}
-
-            {/* Thumbnail only. A feed of thirty cards fetching originals
-                would pull tens of megabytes for images most anons scroll
-                past; the full file loads when one is opened. */}
+            {/* Thumbnail only. A feed of thirty rows fetching originals would
+                pull tens of megabytes for images most anons scroll past; the
+                full file loads when one is opened. */}
             {thread.media ? (
                 <div className="relative px-5">
                     <PostAttachment media={thread.media} />
@@ -136,7 +153,7 @@ function ThreadCard({
                     <Bookmark aria-hidden="true" className="size-4" />
                 </button>
             </div>
-        </Card>
+        </div>
     );
 }
 
