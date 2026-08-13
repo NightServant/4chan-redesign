@@ -1,5 +1,4 @@
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { HistoryCard } from '@/components/history/history-card';
@@ -51,10 +50,10 @@ const HISTORY = [
 ];
 const [unfinished, finished] = HISTORY;
 
-function renderCard(entry: HistoryEntry, onRemove = () => {}) {
+function renderCard(entry: HistoryEntry) {
     return render(
         <TooltipProvider>
-            <HistoryCard entry={entry} onRemove={onRemove} />
+            <HistoryCard entry={entry} />
         </TooltipProvider>,
     );
 }
@@ -84,46 +83,6 @@ describe('HistoryCard', () => {
         ).toHaveAttribute('href', '/g/58210441');
     });
 
-    it('exposes read progress to assistive technology and states it in words', () => {
-        renderCard(unfinished);
-
-        expect(screen.getByRole('progressbar')).toHaveAttribute(
-            'aria-valuenow',
-            '68',
-        );
-        expect(screen.getByText('68% read')).toBeInTheDocument();
-    });
-
-    it('says "Read" rather than a percentage once a thread is finished', () => {
-        renderCard(finished);
-
-        expect(screen.getByText('Read')).toBeInTheDocument();
-        expect(screen.queryByText('100% read')).not.toBeInTheDocument();
-    });
-
-    it('removes the entry when the labelled remove control is pressed', async () => {
-        const user = userEvent.setup();
-        const onRemove = vi.fn();
-        renderCard(unfinished, onRemove);
-
-        await user.click(
-            screen.getByRole('button', { name: 'Remove from history' }),
-        );
-
-        expect(onRemove).toHaveBeenCalledOnce();
-    });
-
-    it('removes the entry from the keyboard', async () => {
-        const user = userEvent.setup();
-        const onRemove = vi.fn();
-        renderCard(unfinished, onRemove);
-
-        screen.getByRole('button', { name: 'Remove from history' }).focus();
-        await user.keyboard('{Enter}');
-
-        expect(onRemove).toHaveBeenCalledOnce();
-    });
-
     /**
      * This asserted a labelled placeholder, which was right while media was
      * metadata with no file behind it. There is a file now, so the row shows
@@ -142,5 +101,43 @@ describe('HistoryCard', () => {
         renderCard(finished);
 
         expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    });
+
+    /**
+     * A history of threads should look like the threads it is a history of,
+     * so the row matches the feed's: a hairline, no card, and the hover on the
+     * title alone.
+     */
+    it('is a row on a hairline, not a card', () => {
+        const { container } = render(<HistoryCard entry={HISTORY[0]} />);
+
+        expect(container.querySelector('[data-slot="card"]')).toBeNull();
+        expect(
+            container.querySelector('[data-slot="history-row"]')?.className,
+        ).toMatch(/border-b/);
+    });
+
+    /**
+     * The bar was always at zero. Reading progress is never measured — nothing
+     * on the thread page reports how far down an anon got — so every row
+     * reported `0% read` under a bar that never moved.
+     */
+    it('reports no reading progress, which was never measured', () => {
+        render(<HistoryCard entry={HISTORY[0]} />);
+
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+        expect(screen.queryByText(/% read/)).not.toBeInTheDocument();
+    });
+
+    /**
+     * The page has a Clear all. A row of bins invites curating a list that is
+     * only a record of what was opened.
+     */
+    it('offers no per-row delete', () => {
+        render(<HistoryCard entry={HISTORY[0]} />);
+
+        expect(
+            screen.queryByRole('button', { name: /remove/i }),
+        ).not.toBeInTheDocument();
     });
 });

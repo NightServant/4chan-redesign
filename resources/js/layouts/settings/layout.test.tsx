@@ -48,7 +48,7 @@ describe('SettingsLayout', () => {
         expect(headings[0]).toHaveTextContent('Settings');
     });
 
-    it('renders the three settings destinations in a labelled nav', () => {
+    it('renders the two settings destinations in a labelled nav', () => {
         render(
             <SettingsLayout>
                 <p>Content</p>
@@ -61,13 +61,11 @@ describe('SettingsLayout', () => {
         expect(links.map((link) => link.textContent)).toEqual([
             'Profile',
             'Security',
-            'Appearance',
         ]);
         expect(links.map((link) => link.getAttribute('href'))).toEqual([
             '/settings/profile',
             '/settings/security',
-            '/settings/appearance',
-        ]);
+                    ]);
     });
 
     it('marks only the current destination with aria-current', () => {
@@ -88,7 +86,7 @@ describe('SettingsLayout', () => {
     });
 
     it('moves the active state when the url changes', () => {
-        mockUrl('/settings/appearance');
+        mockUrl('/settings/security');
 
         render(
             <SettingsLayout>
@@ -99,7 +97,7 @@ describe('SettingsLayout', () => {
         const nav = screen.getByRole('navigation', { name: 'Settings' });
 
         expect(
-            within(nav).getByRole('link', { name: 'Appearance' }),
+            within(nav).getByRole('link', { name: 'Security' }),
         ).toHaveAttribute('aria-current', 'page');
         expect(
             within(nav).getByRole('link', { name: 'Profile' }),
@@ -125,7 +123,7 @@ describe('SettingsLayout', () => {
 
         const nav = screen.getByRole('navigation', { name: 'Settings' });
 
-        expect(container.querySelectorAll('nav svg')).toHaveLength(3);
+        expect(container.querySelectorAll('nav svg')).toHaveLength(2);
         expect(
             within(nav)
                 .getAllByRole('link')

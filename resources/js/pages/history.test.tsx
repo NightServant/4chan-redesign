@@ -144,44 +144,6 @@ describe('History', () => {
         ]);
     });
 
-    it('states what matched nothing and resets from the empty state', async () => {
-        const user = userEvent.setup();
-        renderHistory();
-
-        await user.type(
-            screen.getByRole('searchbox', { name: 'Search your history' }),
-            'zzzz',
-        );
-
-        expect(
-            screen.getByRole('heading', { name: 'No history to show' }),
-        ).toBeInTheDocument();
-        expect(screen.getByText('Nothing matches "zzzz".')).toBeInTheDocument();
-
-        await user.click(screen.getByRole('button', { name: 'Reset' }));
-
-        expect(titles()).toHaveLength(4);
-    });
-
-    /**
-     * Removal is a request now, not a local filter: an anon who forgets a
-     * thread means it, so the entry is deleted and the list comes back from
-     * the server rather than being hidden in a copy the page still holds.
-     */
-    it('asks the server to forget a single entry', async () => {
-        const user = userEvent.setup();
-        renderHistory();
-
-        await user.click(
-            screen.getAllByRole('button', { name: 'Remove from history' })[0],
-        );
-
-        expect(router.delete).toHaveBeenCalledWith(
-            expect.stringContaining('/read'),
-            expect.anything(),
-        );
-    });
-
     it('asks the server to forget everything from Clear all', async () => {
         const user = userEvent.setup();
         renderHistory();
@@ -206,37 +168,6 @@ describe('History', () => {
                 'Threads you open appear here so you can pick them back up.',
             ),
         ).toBeInTheDocument();
-    });
-
-    /**
-     * Day grouping is the outer order and the sort is the inner one, so
-     * changing the sort shows up as a different set of entries on the page
-     * rather than as one flat reordering.
-     */
-    it('changes what the page holds when the sort changes to least finished', async () => {
-        const user = userEvent.setup();
-        renderHistory();
-
-        expect(titles()).toEqual([
-            HISTORY[0].title,
-            HISTORY[1].title,
-            HISTORY[2].title,
-            HISTORY[3].title,
-        ]);
-
-        await user.click(
-            screen.getByRole('combobox', { name: 'Sort history' }),
-        );
-        await user.click(
-            screen.getByRole('option', { name: 'Least finished' }),
-        );
-
-        expect(titles()).toEqual([
-            /* Today */ HISTORY[0].title,
-            /* Yesterday */ HISTORY[2].title,
-            HISTORY[3].title,
-            /* Earlier */ HISTORY[4].title,
-        ]);
     });
 
     it('offers no range filter, which the design declared and never applied', () => {

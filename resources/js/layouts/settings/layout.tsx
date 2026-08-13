@@ -1,12 +1,11 @@
 import { Link } from '@inertiajs/react';
 import type { LucideIcon } from 'lucide-react';
-import { Palette, ShieldCheck, User } from 'lucide-react';
+import { ShieldCheck, User } from 'lucide-react';
 import type { PropsWithChildren } from 'react';
 import { PageHeader } from '@/components/clover/page-header';
 import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn, toUrl } from '@/lib/utils';
-import { edit as editAppearance } from '@/routes/appearance';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 
@@ -29,7 +28,6 @@ type SettingsNavItem = {
 const settingsNavItems: SettingsNavItem[] = [
     { title: 'Profile', href: editProfile(), icon: User },
     { title: 'Security', href: editSecurity(), icon: ShieldCheck },
-    { title: 'Appearance', href: editAppearance(), icon: Palette },
 ];
 
 /**
@@ -53,7 +51,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
         <div className="flex flex-col gap-8 px-4 py-6 lg:px-6">
             <PageHeader
                 title="Settings"
-                description="Your account, security and appearance."
+                description="Your account and its security."
             />
 
             <div className="flex flex-col gap-6 lg:flex-row lg:gap-10">
