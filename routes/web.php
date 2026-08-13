@@ -10,6 +10,7 @@ use App\Http\Controllers\FeedController;
 use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ReplyController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ThreadController;
 use App\Http\Controllers\ThreadCreationController;
 use App\Http\Controllers\ThreadReadController;
@@ -34,6 +35,16 @@ Route::get('latest', FeedController::class)->defaults('sort', 'latest')->name('l
  * whether the site is worth an account has to be able to see what is on it.
  */
 Route::get('communities', CommunityController::class)->name('communities');
+
+/**
+ * Search, over this application's own database rather than 4chan: there is no
+ * search endpoint upstream and a browser could not call one if there were.
+ *
+ * Public, like the boards it searches. `suggest` is registered first and more
+ * specifically, so it is never swallowed by the page route.
+ */
+Route::get('search/suggest', [SearchController::class, 'suggest'])->name('search.suggest');
+Route::get('search', SearchController::class)->name('search');
 
 Route::middleware('auth')->group(function () {
     Route::get('account', AccountController::class)->name('account');
@@ -87,16 +98,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
  *
  * The four that describe things Clover actually does now carry real copy.
  *
- * `search` keeps the placeholder. It is the one destination here with a real
- * feature behind it that has not been built yet, so it stays honest about
- * being unfinished rather than being deleted.
+ * `search` used to keep a placeholder here. It has a real page now, above.
  */
 collect([
     'rules' => 'Rules',
     'faq' => 'FAQ',
     'terms' => 'Terms',
     'privacy' => 'Privacy',
-    'search' => 'Search',
 ])->each(function (string $title, string $uri): void {
     Route::inertia($uri, 'information', ['title' => $title])->name($uri);
 });

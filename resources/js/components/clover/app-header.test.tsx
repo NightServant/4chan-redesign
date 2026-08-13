@@ -261,12 +261,14 @@ describe('AppHeader', () => {
     it('renders the search field capped at 520px, not full bleed', () => {
         render(<AppHeader />);
 
-        const search = screen.getByRole('button', {
+        /* The field is a combobox now, not a button, and it renders its own
+           positioning wrapper for the dropdown, so the constraint is two
+           levels up rather than one. */
+        const search = screen.getByRole('combobox', {
             name: /search boards and threads/i,
         });
-        const wrapper = search.parentElement;
 
-        expect(wrapper).toHaveClass('max-w-[520px]');
+        expect(search.closest('.max-w-\\[520px\\]')).not.toBeNull();
     });
 
     it('is a sticky bar sitting above content, not fixed', () => {
