@@ -1,121 +1,213 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import type { ReactNode } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SearchField } from '@/components/clover/search-field';
 
-describe('SearchField', () => {
-    it('is a button, not a live text input', () => {
-        render(<SearchField onClick={() => {}} />);
+const { router } = vi.hoisted(() => ({ router: { visit: vi.fn() } }));
 
-        const trigger = screen.getByRole('button', {
-            name: 'Search boards and threads',
-        });
+vi.mock('@inertiajs/react', () => ({
+    router,
+    Link: ({
+        href,
+        children,
+        ...props
+    }: { href: string; children: ReactNode } & Record<string, unknown>) => (
+        <a href={href} {...props}>
+            {children}
+        </a>
+    ),
+}));
 
-        expect(trigger.tagName).toBe('BUTTON');
-        expect(trigger).toHaveAttribute('type', 'button');
-        expect(screen.queryByRole('textbox')).toBeNull();
-        expect(screen.queryByRole('searchbox')).toBeNull();
+const RESULTS = {
+    query: 'g',
+    boards: [
+        { slug: '/g/', name: 'Technology', threads: '379', subscribed: false },
+    ],
+    threads: [
+        {
+            id: 1,
+            no: 58210441,
+            board: '/g/',
+            boardName: 'Technology',
+            time: '4 min ago',
+            title: 'RISC-V laptops as daily drivers',
+            replies: 318,
+            images: '48',
+            media: null,
+            pinned: false,
+            bookmarked: false,
+        },
+    ],
+};
+
+function mockFetch(payload: unknown = RESULTS) {
+    const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(payload),
     });
 
-    it('accepts a custom placeholder as its accessible name', () => {
-        render(<SearchField onClick={() => {}} placeholder="Search /g/" />);
+    vi.stubGlobal('fetch', fetchMock);
+
+    return fetchMock;
+}
+
+beforeEach(() => {
+    vi.useRealTimers();
+    router.visit.mockClear();
+});
+
+afterEach(() => {
+    vi.unstubAllGlobals();
+});
+
+describe('SearchField', () => {
+    /**
+     * It was a button dressed as a field, opening a palette that nothing
+     * mounted: pressing it did nothing at all. A real combobox is the fix, so
+     * the type is the thing to assert.
+     */
+    it('is a real combobox, not a button', () => {
+        mockFetch();
+
+        render(<SearchField />);
+
+        expect(screen.getByRole('combobox')).toBeInTheDocument();
+        expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    });
+
+    it('opens the dropdown on focus and asks the server for suggestions', async () => {
+        const fetchMock = mockFetch();
+
+        render(<SearchField />);
+
+        await userEvent.click(screen.getByRole('combobox'));
+
+        await waitFor(() =>
+            expect(fetchMock).toHaveBeenCalledWith(
+                '/search/suggest?q=',
+                expect.anything(),
+            ),
+        );
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
+    });
+
+    it('lists matching boards and threads, each linked at itself', async () => {
+        mockFetch();
+
+        render(<SearchField />);
+
+        await userEvent.type(screen.getByRole('combobox'), 'g');
+
+        expect(await screen.findByText('Technology')).toBeInTheDocument();
+        expect(
+            screen.getByRole('option', { name: /Technology/ }),
+        ).toHaveAttribute('href', '/g');
+        expect(
+            screen.getByRole('option', { name: /RISC-V laptops/ }),
+        ).toHaveAttribute('href', '/g/58210441');
+    });
+
+    /** The query is escaped, so a slug with slashes cannot break the URL. */
+    it('encodes the query it sends', async () => {
+        const fetchMock = mockFetch();
+
+        render(<SearchField />);
+
+        await userEvent.type(screen.getByRole('combobox'), '100%');
+
+        await waitFor(() =>
+            expect(fetchMock).toHaveBeenLastCalledWith(
+                '/search/suggest?q=100%25',
+                expect.anything(),
+            ),
+        );
+    });
+
+    /**
+     * Typing is not navigation, so the dropdown must not push history. Enter
+     * is navigation, so that one goes through Inertia.
+     */
+    it('navigates only on Enter, never while typing', async () => {
+        mockFetch();
+
+        render(<SearchField />);
+
+        await userEvent.type(screen.getByRole('combobox'), 'risc');
+        expect(router.visit).not.toHaveBeenCalled();
+
+        await userEvent.keyboard('{Enter}');
+        expect(router.visit).toHaveBeenCalledWith('/search?q=risc');
+    });
+
+    it('does not navigate on Enter with an empty query', async () => {
+        mockFetch();
+
+        render(<SearchField />);
+
+        await userEvent.click(screen.getByRole('combobox'));
+        await userEvent.keyboard('{Enter}');
+
+        expect(router.visit).not.toHaveBeenCalled();
+    });
+
+    it('says so plainly when nothing matches', async () => {
+        mockFetch({ query: 'zzz', boards: [], threads: [] });
+
+        render(<SearchField />);
+
+        await userEvent.type(screen.getByRole('combobox'), 'zzz');
 
         expect(
-            screen.getByRole('button', { name: 'Search /g/' }),
+            await screen.findByText('Nothing matches "zzz".'),
         ).toBeInTheDocument();
     });
 
-    it('opens the palette on click', async () => {
-        const user = userEvent.setup();
-        const onClick = vi.fn();
-        render(<SearchField onClick={onClick} />);
+    it('closes on Escape', async () => {
+        mockFetch();
 
-        await user.click(screen.getByRole('button'));
+        render(<SearchField />);
 
-        expect(onClick).toHaveBeenCalledTimes(1);
+        await userEvent.click(screen.getByRole('combobox'));
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+        await userEvent.keyboard('{Escape}');
+        expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
     });
 
-    it('is reachable and operable from the keyboard', async () => {
-        const user = userEvent.setup();
-        const onClick = vi.fn();
-        render(<SearchField onClick={onClick} />);
+    /** The field has advertised this shortcut since it was a button that ignored it. */
+    it('focuses on the shortcut it advertises', async () => {
+        mockFetch();
 
-        await user.tab();
+        render(<SearchField />);
 
-        const trigger = screen.getByRole('button');
+        await userEvent.keyboard('{Meta>}k{/Meta}');
 
-        expect(trigger).toHaveFocus();
-
-        await user.keyboard('{Enter}');
-
-        expect(onClick).toHaveBeenCalledTimes(1);
-    });
-
-    it('advertises the Command-K shortcut as typography, not an icon', () => {
-        render(<SearchField onClick={() => {}} />);
-
-        const trigger = screen.getByRole('button');
-
-        expect(trigger).toHaveAttribute('aria-keyshortcuts', 'Meta+K');
-
-        const hint = screen.getByText('⌘K');
-
-        expect(hint.tagName).toBe('SPAN');
-        expect(hint).toHaveClass('tabular-nums');
-        expect(hint).toHaveAttribute('aria-hidden', 'true');
-        expect(hint.querySelector('svg')).toBeNull();
-        expect(hint.className).not.toContain('font-mono');
-    });
-
-    it('renders a decorative search icon that is hidden from assistive tech', () => {
-        render(<SearchField onClick={() => {}} />);
-
-        const icon = screen.getByRole('button').querySelector('svg');
-
-        expect(icon).not.toBeNull();
-        expect(icon).toHaveAttribute('aria-hidden', 'true');
-    });
-
-    it('keeps a visible focus ring and never removes the outline', () => {
-        render(<SearchField onClick={() => {}} />);
-
-        const trigger = screen.getByRole('button');
-
-        expect(trigger).toHaveClass(
-            'focus-visible:outline-2',
-            'focus-visible:outline-offset-2',
-            'focus-visible:outline-ring',
-        );
-        expect(trigger.className).not.toContain('outline-none');
-    });
-
-    it('uses the shared control metrics and merges consumer classes', () => {
-        render(<SearchField onClick={() => {}} className="w-80" />);
-
-        const trigger = screen.getByRole('button');
-
-        expect(trigger).toHaveClass(
-            'h-9.5',
-            'rounded-md',
-            'border-border',
-            'bg-surface',
-            'w-80',
+        expect(screen.getByRole('combobox')).toHaveFocus();
+        expect(screen.getByRole('combobox')).toHaveAttribute(
+            'aria-keyshortcuts',
+            'Meta+K',
         );
     });
 
-    it('renders disabled at 60% opacity and does not open', async () => {
-        const user = userEvent.setup();
-        const onClick = vi.fn();
-        render(<SearchField onClick={onClick} disabled />);
+    /**
+     * A slow answer for `ge` must not land after a fast one for `gen` and
+     * overwrite it. The request in flight is aborted on every keystroke.
+     */
+    it('aborts the request in flight when another keystroke arrives', async () => {
+        const fetchMock = mockFetch();
 
-        const trigger = screen.getByRole('button');
-        await user.click(trigger);
+        render(<SearchField />);
 
-        expect(trigger).toBeDisabled();
-        expect(onClick).not.toHaveBeenCalled();
-        expect(trigger).toHaveClass(
-            'disabled:opacity-60',
-            'disabled:cursor-not-allowed',
+        await userEvent.type(screen.getByRole('combobox'), 'gen');
+
+        await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+
+        const signals = fetchMock.mock.calls.map((call) => call[1].signal);
+
+        expect(signals.length).toBeGreaterThan(0);
+        expect(signals.every((signal) => signal instanceof AbortSignal)).toBe(
+            true,
         );
     });
 });
