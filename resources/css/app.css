@@ -86,10 +86,6 @@
        the layout is drawn on, and it stops being paper the moment it competes
        with a real rule. */
     --pattern-line: oklch(18.28% 0.0123 166.9 / 0.09);
-    /* Every other dot. Green is the brand colour and the rule is that it is
-       never a large fill; a 1.5px dot at a tenth opacity is the opposite of
-       one, and it tints the paper without ever becoming a surface. */
-    --pattern-accent: oklch(52% 0.1552 151.9 / 0.16);
 
     /* Action */
     /* Darker than the dark theme's green, which is the point.
@@ -146,7 +142,6 @@
     /* Lighter than the light theme's, not darker. The grid is drawn *onto*
        near-black here, so it has to be an emission rather than a shadow. */
     --pattern-line: oklch(96.7% 0.0051 145.5 / 0.07);
-    --pattern-accent: oklch(73.37% 0.1751 152.1 / 0.16);
 
     /* Action */
     --primary: oklch(73.37% 0.1751 152.1);
@@ -280,10 +275,10 @@
     | wash, the soft ramp behind a hero, and that is still out. So are texture,
     | grain and anything organic.
     |
-    | There was a ruled grid alongside this. It went: two patterns alternating
-    | down a page is two systems, and the page reads as one surface with one
-    | matrix on it. The dots are also the quieter of the two, which matters now
-    | that every band, the header and the footer all carry it.
+    | There was a ruled grid alongside this, and later a second dot colour
+    | alternating with this one. Both went, and for the same reason: the paper
+    | is meant to be read through, and every variation added to it was one more
+    | thing competing with the text standing on it. One dot, one colour.
     |
     */
     --pattern-size: 64px;
@@ -475,35 +470,9 @@
 |
 */
 @utility bg-dots {
-    /* Four gradients, two colours, checkerboarded.
-       
-       Each gradient tiles at twice the module and is offset half a module, so
-       the two colours interleave rather than sitting in rows: a dot's four
-       neighbours are always the other colour. One gradient per colour would
-       give stripes, and two would give diagonals; four is what produces an
-       actual alternation. */
-    background-image:
-        radial-gradient(
-            var(--pattern-accent) var(--pattern-dot),
-            transparent var(--pattern-dot)
-        ),
-        radial-gradient(
-            var(--pattern-accent) var(--pattern-dot),
-            transparent var(--pattern-dot)
-        ),
-        radial-gradient(
-            var(--pattern-line) var(--pattern-dot),
-            transparent var(--pattern-dot)
-        ),
-        radial-gradient(
-            var(--pattern-line) var(--pattern-dot),
-            transparent var(--pattern-dot)
-        );
-    background-size: calc(var(--pattern-size-dense) * 2)
-        calc(var(--pattern-size-dense) * 2);
-    background-position:
-        0 0,
-        var(--pattern-size-dense) var(--pattern-size-dense),
-        var(--pattern-size-dense) 0,
-        0 var(--pattern-size-dense);
+    background-image: radial-gradient(
+        var(--pattern-line) var(--pattern-dot),
+        transparent var(--pattern-dot)
+    );
+    background-size: var(--pattern-size-dense) var(--pattern-size-dense);
 }
