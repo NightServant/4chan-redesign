@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Http\Resources\BoardResource;
 use App\Models\Board;
 use App\Support\RecentActivity;
+use App\Support\ThreadNotifications;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -21,6 +22,15 @@ class HandleInertiaRequests extends Middleware
 
     /** How many boards the sidebar's "Boards you use" list shows. */
     private const SIDEBAR_BOARDS = 6;
+
+    /**
+     * How many notifications the header carries.
+     *
+     * The menu previews three and the badge counts what it holds, so this is
+     * the ceiling the badge can report: past ten it reads "9+" rather than
+     * pretending to an exact figure it did not query for.
+     */
+    private const HEADER_NOTIFICATIONS = 10;
 
     /**
      * Determines the current asset version.
@@ -58,16 +68,35 @@ class HandleInertiaRequests extends Middleware
             'showsMatureBoards' => (bool) $request->user()?->shows_mature_boards,
 
             /**
-             * The sidebar's board list.
+             * What this anon has been doing. Shared because two surfaces read
+             * it — the feed rail and the account overview — and two copies of
+             * the derivation drift. Empty for a signed-out anon, who has done
+             * nothing here.
              *
-             * What this anon has been doing. Shared because three surfaces
-             * read it — the header's notification menu, the feed rail and the
-             * account overview — and three copies of the derivation drift.
-             * Empty for a signed-out anon, who has done nothing here.
+             * The header's bell used to read this too, under a "Notifications"
+             * label, which made it a list of the reader's own actions
+             * announced back to them. Notifications are their own thing now,
+             * below.
              */
             'recentActivity' => RecentActivity::for(
                 $request->user(),
                 (bool) $request->user()?->shows_mature_boards,
+            ),
+
+            /**
+             * New replies in threads this anon is in, for the header's bell.
+             *
+             * Shared rather than passed per page because the header renders on
+             * every screen: threading this through eleven controllers to feed
+             * one menu means the first page that forgets it silently reports
+             * nothing new. Capped at what the menu previews plus a little, so
+             * a badge reading "9+" costs one bounded query rather than a full
+             * scan on every request.
+             */
+            'threadNotifications' => ThreadNotifications::for(
+                $request->user(),
+                (bool) $request->user()?->shows_mature_boards,
+                self::HEADER_NOTIFICATIONS,
             ),
 
             /**

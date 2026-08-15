@@ -1,7 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import {
     EyeIcon,
-    ArrowBigUpIcon,
     BellIcon,
     BookmarkIcon,
     LogOutIcon,
@@ -11,8 +10,7 @@ import {
     SunIcon,
     UserIcon,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { AnonAvatar } from '@/components/clover/anon-avatar';
 import { NotificationItem } from '@/components/clover/notification-item';
 import { PatternField } from '@/components/clover/pattern-field';
@@ -29,7 +27,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAppearance } from '@/hooks/use-appearance';
 import { ACCOUNT_MENU, PRIMARY_NAV } from '@/lib/navigation';
-import { cn } from '@/lib/utils';
+import { cn, plural } from '@/lib/utils';
 import { account, login, logout, register } from '@/routes';
 import { update as boardPreference } from '@/routes/board-preference';
 import { edit as editSettings } from '@/routes/settings';
@@ -46,16 +44,13 @@ import type { CloverNavItem } from '@/types/navigation';
 const NOTIFICATION_PREVIEW_COUNT = 3;
 
 /**
- * `ActivityEntry` carries Lucide icon names as plain strings so the payload stays
- * framework-agnostic. This is the one place that turns a name back into a
- * component; anything not in this fixture falls back to the bell, since a
- * notification row with no icon reads as broken.
+ * Which of an anon's own actions put a thread on the list. Two reasons, both
+ * closed sets from the server, so this is a lookup rather than a fallback
+ * chain: an unmatched icon name cannot happen.
  */
-const ACTIVITY_ICONS: Record<string, LucideIcon> = {
-    'message-square': MessageSquareIcon,
-    'arrow-big-up': ArrowBigUpIcon,
-    shield: ShieldIcon,
-    bookmark: BookmarkIcon,
+const NOTIFICATION_ICONS: Record<string, ReactNode> = {
+    saved: <BookmarkIcon />,
+    posted: <MessageSquareIcon />,
 };
 
 function findNavItem(title: string): CloverNavItem | undefined {
@@ -76,7 +71,7 @@ type AppHeaderProps = Omit<ComponentProps<'header'>, 'children'> & {
 };
 
 function AppHeader({ className, ...props }: AppHeaderProps) {
-    const { auth, recentActivity } = usePage().props;
+    const { auth, threadNotifications } = usePage().props;
     const user = auth.user;
     const showsMatureBoards = Boolean(user?.shows_mature_boards);
 
@@ -101,11 +96,14 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
     const historyItem = findNavItem('History');
     const notificationsItem = findNavItem('Notifications');
 
-    const notificationPreview = recentActivity.slice(
+    const notificationPreview = threadNotifications.slice(
         0,
         NOTIFICATION_PREVIEW_COUNT,
     );
-    const unreadCount = notificationPreview.length;
+
+    /* Everything the server sent, not everything the menu shows. The badge
+       used to count the preview, which made it a constant. */
+    const unreadCount = threadNotifications.length;
 
     return (
         <header
@@ -136,13 +134,27 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                                         variant="ghost"
                                         size="icon"
                                         className="relative"
-                                        aria-label={`Notifications, ${unreadCount} unread`}
+                                        aria-label={
+                                            unreadCount === 0
+                                                ? 'Notifications, nothing new'
+                                                : `Notifications, ${unreadCount} new`
+                                        }
                                     >
                                         <BellIcon aria-hidden="true" />
-                                        <span
-                                            aria-hidden="true"
-                                            className="absolute top-2 right-2 size-1.5 rounded-full bg-primary"
-                                        />
+                                        {/* Painted only when there is
+                                            something to paint. It used to be
+                                            unconditional, over a count that
+                                            was however many rows the menu
+                                            happened to preview -- so a brand
+                                            new account with no history at all
+                                            wore an unread dot. A badge that is
+                                            always on is not a badge. */}
+                                        {unreadCount > 0 && (
+                                            <span
+                                                aria-hidden="true"
+                                                className="absolute top-2 right-2 size-1.5 rounded-full bg-primary"
+                                            />
+                                        )}
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent
@@ -152,21 +164,37 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                                     <DropdownMenuLabel>
                                         Notifications
                                     </DropdownMenuLabel>
-                                    {notificationPreview.map((entry, index) => {
-                                        const Icon =
-                                            ACTIVITY_ICONS[entry.icon] ??
-                                            BellIcon;
 
-                                        return (
-                                            <NotificationItem
-                                                key={`${entry.time}-${index}`}
-                                                leading={<Icon />}
-                                                title={entry.text}
-                                                meta={entry.time}
-                                                unread
-                                            />
-                                        );
-                                    })}
+                                    {/* This menu used to preview
+                                        `recentActivity` -- "You replied in
+                                        /g/" -- which is a list of the reader's
+                                        own actions announced back to them
+                                        under a label promising news. What it
+                                        shows now is what arrived in threads
+                                        they are in while they were away. */}
+                                    {notificationPreview.length === 0 ? (
+                                        <p className="px-2 py-3 text-body-sm text-muted-foreground">
+                                            Nothing new in the threads you saved
+                                            or posted in.
+                                        </p>
+                                    ) : (
+                                        notificationPreview.map(
+                                            (notification) => (
+                                                <NotificationItem
+                                                    key={notification.threadId}
+                                                    leading={
+                                                        NOTIFICATION_ICONS[
+                                                            notification.reason
+                                                        ]
+                                                    }
+                                                    href={`${notification.board}${notification.no}`}
+                                                    title={`${plural(notification.replies, 'new reply', 'new replies')} in ${notification.board}`}
+                                                    meta={`${notification.title} · ${notification.time}`}
+                                                    unread
+                                                />
+                                            ),
+                                        )
+                                    )}
                                     <DropdownMenuSeparator />
                                     {notificationsItem && (
                                         <DropdownMenuItem asChild>

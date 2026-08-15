@@ -43,12 +43,21 @@ export function toUrl(url: NonNullable<InertiaLinkProps['href']>): string {
 /**
  * `3 boards`, `1 board`. For the counts in page descriptions.
  *
- * Naive `-s` suffixing, which is all this needs: every noun it is called with
- * is one Clover writes itself (board, conversation, saved thread), so an
- * irregular plural can only appear here by someone adding one deliberately.
- * A full pluralisation library for that would be a dependency bought to solve
- * a problem the copy does not have.
+ * Naive `-s` suffixing by default, which is all most of these need: the nouns
+ * are ones Clover writes itself — board, saved thread — and a pluralisation
+ * library for those would be a dependency bought to solve a problem the copy
+ * does not have.
+ *
+ * `plural` is there because the naive rule is wrong the moment a noun does not
+ * take a bare `-s`, and it fails silently when it is: the notifications screen
+ * shipped `3 new replys` for exactly as long as it took to read one. A caller
+ * whose noun is irregular passes the plural rather than working around this
+ * function.
  */
-export function plural(count: number, noun: string): string {
-    return `${count} ${noun}${count === 1 ? '' : 's'}`;
+export function plural(count: number, noun: string, plural?: string): string {
+    if (count === 1) {
+        return `${count} ${noun}`;
+    }
+
+    return `${count} ${plural ?? `${noun}s`}`;
 }

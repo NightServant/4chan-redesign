@@ -11,9 +11,8 @@ import {
     vi,
 } from 'vitest';
 import { AppHeader } from '@/components/clover/app-header';
-import { makeActivity } from '@/fixtures/factories';
 import type { User } from '@/types/auth';
-import type { ActivityEntry, Board } from '@/types/clover';
+import type { ActivityEntry, Board, ThreadNotification } from '@/types/clover';
 
 /**
  * The real `Link`/`usePage` require an Inertia page context that only exists
@@ -23,25 +22,50 @@ import type { ActivityEntry, Board } from '@/types/clover';
  * `usePage` reads a mutable fixture reset in `beforeEach`.
  */
 /**
- * Four entries, because the header previews three and names its button with
- * the count it is showing — the fourth is what proves the preview stops.
+ * Four notifications, because the header previews three — the fourth is what
+ * proves the preview stops while the badge still counts it.
+ *
+ * These used to be `recentActivity`: "You replied in /g/", the reader's own
+ * actions announced back to them under a label promising news. The menu shows
+ * what arrived in threads they are in now.
  */
-const ACTIVITY = [
-    makeActivity({ text: 'You replied in /g/', time: '2 min ago' }),
-    makeActivity({
-        icon: 'bookmark',
-        text: 'You saved a thread in /x/',
+const NOTIFICATIONS: ThreadNotification[] = [
+    {
+        threadId: 1,
+        no: 58210441,
+        board: '/g/',
+        title: 'Anons are still arguing about init systems',
+        replies: 3,
+        reason: 'saved',
+        time: '2 min ago',
+    },
+    {
+        threadId: 2,
+        no: 58210442,
+        board: '/x/',
+        title: 'Something in the walls',
+        replies: 1,
+        reason: 'posted',
         time: '1 hr ago',
-    }),
-    makeActivity({
-        text: 'You started a thread in /biz/',
+    },
+    {
+        threadId: 3,
+        no: 58210443,
+        board: '/biz/',
+        title: 'Mainline kernel support or vendor tree',
+        replies: 12,
+        reason: 'saved',
         time: '3 hr ago',
-    }),
-    makeActivity({
-        icon: 'bookmark',
-        text: 'You saved a thread in /fit/',
+    },
+    {
+        threadId: 4,
+        no: 58210444,
+        board: '/fit/',
+        title: 'Overhead press form check',
+        replies: 2,
+        reason: 'posted',
         time: '5 hr ago',
-    }),
+    },
 ];
 
 const mockPage: {
@@ -49,6 +73,7 @@ const mockPage: {
         auth: { user: User | null };
         sidebarOpen: boolean;
         recentActivity: ActivityEntry[];
+        threadNotifications: ThreadNotification[];
         sidebarBoards: Board[];
     };
     url: string;
@@ -56,7 +81,8 @@ const mockPage: {
     props: {
         auth: { user: null },
         sidebarOpen: true,
-        recentActivity: ACTIVITY,
+        recentActivity: [],
+        threadNotifications: NOTIFICATIONS,
         sidebarBoards: [],
     },
     url: '/',
@@ -117,7 +143,8 @@ beforeEach(() => {
     mockPage.props = {
         auth: { user: null },
         sidebarOpen: true,
-        recentActivity: ACTIVITY,
+        recentActivity: [],
+        threadNotifications: NOTIFICATIONS,
         sidebarBoards: [],
     };
     mockPage.url = '/';
@@ -201,31 +228,78 @@ describe('AppHeader', () => {
         expect(signOut.tagName).toBe('BUTTON');
     });
 
-    it('names the notifications button with the unread count, not colour alone', () => {
+    /**
+     * The count is everything the server sent, not everything the menu shows.
+     * It used to be the preview's own length, which made it the constant 3 for
+     * every account that had ever done anything.
+     */
+    it('names the notifications button with the count, not colour alone', () => {
         mockPage.props.auth.user = SIGNED_IN_USER;
 
         render(<AppHeader />);
 
         expect(
-            screen.getByRole('button', { name: 'Notifications, 3 unread' }),
+            screen.getByRole('button', { name: 'Notifications, 4 new' }),
         ).toBeInTheDocument();
     });
 
-    it('opens the notifications menu on click, listing the first three activity entries and a link to see all', async () => {
+    /**
+     * A brand new account has nothing in its threads, and used to wear an
+     * unread dot anyway: the dot was painted unconditionally. Asserted through
+     * the accessible name, because the dot itself is `aria-hidden` — colour is
+     * never the only carrier.
+     */
+    it('says nothing is new when nothing is, and paints no dot', () => {
+        mockPage.props.auth.user = SIGNED_IN_USER;
+        mockPage.props.threadNotifications = [];
+
+        const { container } = render(<AppHeader />);
+
+        expect(
+            screen.getByRole('button', { name: 'Notifications, nothing new' }),
+        ).toBeInTheDocument();
+        expect(container.querySelector('.bg-primary.rounded-full')).toBeNull();
+    });
+
+    it('says so in the menu when there is nothing new', async () => {
+        const user = userEvent.setup();
+        mockPage.props.auth.user = SIGNED_IN_USER;
+        mockPage.props.threadNotifications = [];
+
+        render(<AppHeader />);
+
+        await user.click(
+            screen.getByRole('button', { name: 'Notifications, nothing new' }),
+        );
+
+        expect(
+            await screen.findByText(/nothing new in the threads you/i),
+        ).toBeInTheDocument();
+    });
+
+    it('previews the first three and links each at its thread', async () => {
         const user = userEvent.setup();
         mockPage.props.auth.user = SIGNED_IN_USER;
 
         render(<AppHeader />);
 
         await user.click(
-            screen.getByRole('button', { name: 'Notifications, 3 unread' }),
+            screen.getByRole('button', { name: 'Notifications, 4 new' }),
         );
 
-        for (const entry of ACTIVITY.slice(0, 3)) {
-            expect(await screen.findByText(entry.text)).toBeInTheDocument();
-        }
+        expect(
+            await screen.findByText(NOTIFICATIONS[0].title, { exact: false }),
+        ).toBeInTheDocument();
 
-        expect(screen.queryByText(ACTIVITY[3].text)).not.toBeInTheDocument();
+        /* The fourth is counted by the badge and not drawn by the menu. */
+        expect(
+            screen.queryByText(NOTIFICATIONS[3].title, { exact: false }),
+        ).not.toBeInTheDocument();
+
+        const rows = screen.getAllByRole('link', { name: /new repl/i });
+
+        expect(rows).toHaveLength(3);
+        expect(rows[0]).toHaveAttribute('href', '/g/58210441');
 
         const seeAll = screen.getByRole('menuitem', {
             name: /see all notifications/i,
