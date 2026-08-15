@@ -1,8 +1,9 @@
-import { Head, router } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import { Eraser, History as HistoryIcon, Search } from 'lucide-react';
 import { useState } from 'react';
 import { EmptyState } from '@/components/clover/empty-state';
 import { PageHeader } from '@/components/clover/page-header';
+import { PageMeta } from '@/components/clover/page-meta';
 import { Pagination } from '@/components/clover/pagination';
 import { SectionLabel } from '@/components/clover/section-label';
 import { HistoryCard } from '@/components/history/history-card';
@@ -113,7 +114,10 @@ export default function History({ entries }: HistoryProps) {
 
     return (
         <>
-            <Head title="History" />
+            <PageMeta
+                title="History"
+                description="Threads you opened, most recent first."
+            />
 
             <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-[18px] px-6 py-6">
                 <PageHeader

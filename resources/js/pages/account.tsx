@@ -1,10 +1,11 @@
-import { Head, Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { Bookmark, ImageIcon, MessageSquare, PencilLine } from 'lucide-react';
 import { AccountOverview } from '@/components/account/account-overview';
 import { ProfileCommentList } from '@/components/account/profile-comment-list';
 import { ProfileHeader } from '@/components/account/profile-header';
 import { EmptyState } from '@/components/clover/empty-state';
 import { MediaPlaceholder } from '@/components/clover/media-placeholder';
+import { PageMeta } from '@/components/clover/page-meta';
 import { ThreadCard } from '@/components/clover/thread-card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -60,7 +61,10 @@ export default function Account({
 }: AccountProps) {
     return (
         <>
-            <Head title="Account" />
+            <PageMeta
+                title="Account"
+                description="Your posts, replies, saved threads and the boards you follow, counted from your own record."
+            />
 
             <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-5 px-6 py-6">
                 <ProfileHeader profile={profile} stats={stats} />

@@ -1,9 +1,10 @@
-import { Head, Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { BellIcon, BookmarkIcon, MessageSquareIcon } from 'lucide-react';
 import { EmptyState } from '@/components/clover/empty-state';
 import { MachineValue } from '@/components/clover/machine-value';
 import { NotificationItem } from '@/components/clover/notification-item';
 import { PageHeader } from '@/components/clover/page-header';
+import { PageMeta } from '@/components/clover/page-meta';
 import { Button } from '@/components/ui/button';
 import { plural } from '@/lib/utils';
 import { popular } from '@/routes';
@@ -52,7 +53,10 @@ const REASON_ICON: Record<ThreadNotification['reason'], typeof BellIcon> = {
 export default function Notifications({ notifications }: NotificationsProps) {
     return (
         <>
-            <Head title="Notifications" />
+            <PageMeta
+                title="Notifications"
+                description="New replies in the threads you saved or posted in."
+            />
 
             <div className="mx-auto flex w-full max-w-[760px] flex-col gap-[18px] px-6 py-6">
                 <PageHeader

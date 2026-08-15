@@ -54,6 +54,15 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+
+            /**
+             * The origin every `og:url` and `og:image` is built against.
+             *
+             * From the server rather than from `window.location`, which does
+             * not exist while Inertia renders a page on the server -- and a
+             * relative `og:url` is not a URL to anything.
+             */
+            'appUrl' => rtrim((string) config('app.url'), '/'),
             'auth' => [
                 'user' => $request->user(),
             ],

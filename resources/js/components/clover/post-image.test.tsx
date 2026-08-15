@@ -20,7 +20,9 @@ describe('PostImage', () => {
 
             render(<PostImage media={media} variant={variant} />);
 
-            const image = screen.getByRole('img', { name: media.filename });
+            const image = screen.getByRole('img', {
+                name: `Attached image: ${media.filename}`,
+            });
 
             expect(image).toHaveAttribute('src', media.fullUrl);
             expect(image).not.toHaveAttribute('src', media.thumbnailUrl);
@@ -126,10 +128,16 @@ describe('PostImage', () => {
 
         render(<PostImage media={media} />);
 
-        await user.click(screen.getByRole('button', { name: media.filename }));
+        await user.click(
+            screen.getByRole('button', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        );
 
         const dialog = screen.getByRole('dialog');
-        const full = screen.getAllByRole('img', { name: media.filename });
+        const full = screen.getAllByRole('img', {
+            name: `Attached image: ${media.filename}`,
+        });
 
         expect(dialog).toBeInTheDocument();
         expect(
@@ -149,10 +157,14 @@ describe('PostImage', () => {
 
         render(<PostImage media={media} />);
 
-        await user.click(screen.getByRole('button', { name: media.filename }));
+        await user.click(
+            screen.getByRole('button', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        );
 
         const opened = screen
-            .getAllByRole('img', { name: media.filename })
+            .getAllByRole('img', { name: `Attached image: ${media.filename}` })
             .find((image) => image.getAttribute('src') === media.fullUrl);
 
         expect(opened).toHaveClass('h-auto');
@@ -166,7 +178,11 @@ describe('PostImage', () => {
 
         render(<PostImage media={media} />);
 
-        await user.click(screen.getByRole('button', { name: media.filename }));
+        await user.click(
+            screen.getByRole('button', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        );
 
         expect(screen.getByRole('dialog')).toHaveClass('w-fit');
     });
@@ -180,7 +196,9 @@ describe('PostImage', () => {
         await user.tab();
 
         expect(
-            screen.getByRole('button', { name: media.filename }),
+            screen.getByRole('button', {
+                name: `Attached image: ${media.filename}`,
+            }),
         ).toHaveFocus();
 
         await user.keyboard('{Enter}');
@@ -211,7 +229,9 @@ describe('PostImage', () => {
                 await user.click(screen.getByRole('button', { name: action }));
 
                 expect(
-                    screen.getByRole('img', { name: media.filename }),
+                    screen.getByRole('img', {
+                        name: `Attached image: ${media.filename}`,
+                    }),
                 ).toHaveAttribute('src', media.fullUrl);
             },
         );
@@ -274,7 +294,11 @@ describe('PostImage', () => {
 
         render(<PostImage media={media} />);
 
-        fireEvent.error(screen.getByRole('img', { name: media.filename }));
+        fireEvent.error(
+            screen.getByRole('img', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        );
 
         expect(
             screen.getByLabelText(`Attachment: ${media.label}`),
@@ -295,7 +319,9 @@ describe('PostAttachment', () => {
         render(<PostAttachment media={media} />);
 
         expect(
-            screen.getByRole('img', { name: media.filename }),
+            screen.getByRole('img', {
+                name: `Attached image: ${media.filename}`,
+            }),
         ).toBeInTheDocument();
     });
 });

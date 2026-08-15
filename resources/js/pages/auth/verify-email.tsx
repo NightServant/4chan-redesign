@@ -1,6 +1,7 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form } from '@inertiajs/react';
 import { AuthLink } from '@/components/auth/auth-link';
 import { AuthStatus } from '@/components/auth/auth-status';
+import { PageMeta } from '@/components/clover/page-meta';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { logout } from '@/routes';
@@ -9,7 +10,10 @@ import { send } from '@/routes/verification';
 export default function VerifyEmail({ status }: { status?: string }) {
     return (
         <>
-            <Head title="Email verification" />
+            <PageMeta
+                title="Email verification"
+                description="Confirm the email address on your Clover account."
+            />
 
             {status === 'verification-link-sent' && (
                 <AuthStatus>

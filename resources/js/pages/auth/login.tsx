@@ -1,9 +1,10 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form } from '@inertiajs/react';
 import { AtSign } from 'lucide-react';
 import { AuthInput, AuthPasswordInput } from '@/components/auth/auth-input';
 import { AuthLink } from '@/components/auth/auth-link';
 import { AuthStatus } from '@/components/auth/auth-status';
 import { FormField } from '@/components/clover/form-field';
+import { PageMeta } from '@/components/clover/page-meta';
 import PasskeyVerify from '@/components/passkey-verify';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -21,7 +22,10 @@ type Props = {
 export default function Login({ status, canResetPassword }: Props) {
     return (
         <>
-            <Head title="Sign in" />
+            <PageMeta
+                title="Sign in"
+                description="Sign in to Clover to save threads, follow boards and reply. Reading needs no account."
+            />
 
             {status && <AuthStatus>{status}</AuthStatus>}
 

@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import {
     CircleAlert,
     Clock,
@@ -11,6 +11,7 @@ import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { EmptyState } from '@/components/clover/empty-state';
 import { MachineValue } from '@/components/clover/machine-value';
+import { PageMeta } from '@/components/clover/page-meta';
 import { Button } from '@/components/ui/button';
 import { home } from '@/routes';
 
@@ -104,7 +105,7 @@ export default function ErrorPage({ status }: { status: number }) {
 
     return (
         <>
-            <Head title={copy.title} />
+            <PageMeta title={copy.title} description={copy.body} />
 
             <div className="mx-auto flex w-full max-w-[720px] flex-col items-center gap-1 px-6 py-16">
                 {/* The status number doubles as the screen's only h1: it is

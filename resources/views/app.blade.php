@@ -30,6 +30,32 @@
             }
         </style>
 
+        {{--
+            The social card, and a description, rendered by the server.
+
+            Inertia's <Head> writes these from the page component, which means
+            they exist only once JavaScript has run. Every social crawler there
+            is -- Slack, Facebook, X, LinkedIn -- fetches the HTML and reads it
+            without executing anything, so a link to Clover previewed as a bare
+            URL with no image and no text. `PageMeta` still refines these per
+            page for browsers and for SSR; what is here is the floor, and it is
+            the part a crawler actually sees.
+
+            `head-key` matches the names `PageMeta` uses, so Inertia replaces
+            these rather than appending a second copy of each.
+        --}}
+        <meta head-key="description" name="description" content="{{ config('clover.meta_description') }}">
+        <meta head-key="og:site_name" property="og:site_name" content="{{ config('app.name') }}">
+        <meta head-key="og:type" property="og:type" content="website">
+        <meta head-key="og:title" property="og:title" content="{{ config('app.name') }}">
+        <meta head-key="og:description" property="og:description" content="{{ config('clover.meta_description') }}">
+        <meta head-key="og:url" property="og:url" content="{{ url()->current() }}">
+        <meta head-key="og:image" property="og:image" content="{{ url('/og.png') }}">
+        <meta head-key="twitter:card" name="twitter:card" content="summary_large_image">
+        <meta head-key="twitter:title" name="twitter:title" content="{{ config('app.name') }}">
+        <meta head-key="twitter:description" name="twitter:description" content="{{ config('clover.meta_description') }}">
+        <meta head-key="twitter:image" name="twitter:image" content="{{ url('/og.png') }}">
+
         <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">

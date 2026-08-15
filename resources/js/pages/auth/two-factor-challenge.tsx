@@ -1,9 +1,10 @@
-import { Form, Head, setLayoutProps } from '@inertiajs/react';
+import { Form, setLayoutProps } from '@inertiajs/react';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
 import { KeyRound } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { AuthInput } from '@/components/auth/auth-input';
 import { FormField } from '@/components/clover/form-field';
+import { PageMeta } from '@/components/clover/page-meta';
 import { Button } from '@/components/ui/button';
 import {
     InputOTP,
@@ -53,7 +54,10 @@ export default function TwoFactorChallenge() {
 
     return (
         <>
-            <Head title="Two-factor authentication" />
+            <PageMeta
+                title="Two-factor authentication"
+                description="Enter the code from your authenticator app, or a recovery code."
+            />
 
             <Form
                 {...store.form()}

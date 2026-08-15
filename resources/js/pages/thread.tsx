@@ -1,14 +1,16 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { Archive, ArrowLeft } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AuthGate } from '@/components/clover/auth-gate';
 import { CommentTree } from '@/components/clover/comment-tree';
 import { EmptyState } from '@/components/clover/empty-state';
 import { MachineValue } from '@/components/clover/machine-value';
+import { PageMeta } from '@/components/clover/page-meta';
 import { SectionLabel } from '@/components/clover/section-label';
 import { OriginalPost } from '@/components/thread/original-post';
 import { ReplyComposer } from '@/components/thread/reply-composer';
 import { Button } from '@/components/ui/button';
+import { plural } from '@/lib/utils';
 import { board } from '@/routes';
 import { store as storeReply } from '@/routes/replies';
 import {
@@ -130,7 +132,10 @@ export default function Thread({
     if (!thread) {
         return (
             <>
-                <Head title="Thread not found" />
+                <PageMeta
+                    title="Thread not found"
+                    description="This thread is no longer on Clover. 4chan prunes threads off the end of a board and Clover does not keep what it has dropped."
+                />
 
                 <div className="mx-auto max-w-[760px] px-6 py-8">
                     {/* Naming the post number matters: an anon arriving from
@@ -156,7 +161,11 @@ export default function Thread({
 
     return (
         <>
-            <Head title={thread.title} />
+            <PageMeta
+                type="article"
+                title={thread.title}
+                description={`${plural(thread.replies, 'reply', 'replies')} on ${thread.board}. Read it on Clover without an account.`}
+            />
 
             <div className="mx-auto flex max-w-[760px] flex-col gap-6 px-6 py-8">
                 <Link

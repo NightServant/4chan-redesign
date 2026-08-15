@@ -154,4 +154,21 @@ return [
 
     'fallback_boards' => ['g', 'wg', 'biz', 'x', 'fit', 'co', 'b'],
 
+    /*
+    |---------------------------------------------------------------------------
+    | Social description
+    |---------------------------------------------------------------------------
+    |
+    | What a link to Clover says when it is pasted somewhere that unfurls it.
+    |
+    | Rendered by the root Blade view rather than by `PageMeta`, because every
+    | social crawler reads the HTML without executing any JavaScript: tags
+    | written by Inertia's `<Head>` do not exist yet when Slack or X looks at
+    | the page. `PageMeta` refines this per screen for browsers and for SSR;
+    | this is the floor, and it is the part a crawler actually sees.
+    |
+    */
+
+    'meta_description' => 'Clover mirrors 4chan\'s boards in an interface built for reading. No profiles, no algorithm, no ads, and reading needs no account.',
+
 ];

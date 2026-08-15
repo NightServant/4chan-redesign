@@ -93,7 +93,7 @@ describe('HistoryCard', () => {
         renderCard(unfinished);
 
         expect(
-            screen.getByRole('img', { name: 'thumb.png' }),
+            screen.getByRole('img', { name: 'Attached image: thumb.png' }),
         ).toBeInTheDocument();
     });
 

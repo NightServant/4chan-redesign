@@ -108,6 +108,24 @@ function intrinsicBox(media: Attachment): {
  * thread off the screen. Contained rather than cropped, a tall image is shown
  * whole and small, which is the honest presentation and still opens full size.
  */
+/**
+ * The accessible name for an attachment.
+ *
+ * It was the bare filename, which on 4chan is very often `1712345678901.jpg` —
+ * a timestamp read out digit by digit, telling a screen-reader user nothing
+ * about what the element is or why it is there. Naming the role first fixes
+ * that: "Attached image" is the useful part, the filename is the identifying
+ * part, and it is still the only text the source actually gives us.
+ *
+ * No description of the *contents* is generated. Clover does not know what is
+ * in the picture, and an alt attribute that guesses is worse than one that is
+ * merely terse — the rule that keeps invented figures off the boards applies
+ * to invented descriptions too.
+ */
+function altFor(media: Attachment): string {
+    return `Attached image: ${media.filename}`;
+}
+
 const VARIANT_CLASSES: Record<PostImageVariant, string> = {
     card: 'h-auto max-h-[520px] w-full object-contain',
     post: 'h-auto max-h-[720px] w-full object-contain',
@@ -200,7 +218,7 @@ function PostImage({ media, variant = 'card', className }: PostImageProps) {
             >
                 <img
                     src={media.fullUrl}
-                    alt={media.filename}
+                    alt={altFor(media)}
                     width={box.width}
                     height={box.height}
                     loading="lazy"
@@ -227,7 +245,7 @@ function PostImage({ media, variant = 'card', className }: PostImageProps) {
 
                     <img
                         src={media.fullUrl}
-                        alt={media.filename}
+                        alt={altFor(media)}
                         width={media.width ?? undefined}
                         height={media.height ?? undefined}
                         referrerPolicy="no-referrer"

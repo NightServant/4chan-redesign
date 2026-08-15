@@ -1,9 +1,5 @@
 import type { Auth } from '@/types/auth';
-import type {
-    ActivityEntry,
-    Board,
-    ThreadNotification,
-} from '@/types/clover';
+import type { ActivityEntry, Board, ThreadNotification } from '@/types/clover';
 
 declare module 'react' {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -29,6 +25,8 @@ declare module '@inertiajs/core' {
              * This anon's own recent activity. Empty when signed out, which
              * is true rather than a fallback.
              */
+            /** Origin for absolute URLs in `PageMeta`. No trailing slash. */
+            appUrl: string;
             recentActivity: ActivityEntry[];
             /** New replies in threads this anon is in. See `ThreadNotifications`. */
             threadNotifications: ThreadNotification[];

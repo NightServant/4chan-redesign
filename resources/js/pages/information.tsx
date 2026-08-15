@@ -1,6 +1,6 @@
-import { Head } from '@inertiajs/react';
 import { FileTextIcon } from 'lucide-react';
 import { EmptyState } from '@/components/clover/empty-state';
+import { PageMeta } from '@/components/clover/page-meta';
 import { SectionLabel } from '@/components/clover/section-label';
 import { INFORMATION } from '@/content/information';
 
@@ -27,7 +27,10 @@ export default function Information({ title }: { title: string }) {
     if (page === undefined) {
         return (
             <>
-                <Head title={title} />
+                <PageMeta
+                    title={title}
+                    description="This page belongs in the product but has not been written yet."
+                />
                 <EmptyState
                     icon={<FileTextIcon />}
                     title={title}
@@ -39,7 +42,7 @@ export default function Information({ title }: { title: string }) {
 
     return (
         <>
-            <Head title={title} />
+            <PageMeta title={title} description={page.summary} />
 
             <article className="mx-auto flex w-full max-w-[720px] flex-col gap-8 px-6 py-12">
                 <header className="flex flex-col gap-3">
