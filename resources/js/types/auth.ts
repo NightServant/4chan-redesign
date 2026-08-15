@@ -1,6 +1,10 @@
 export type User = {
     id: number;
-    name: string;
+    /**
+     * `name` is gone. Registration asked for a full name on a site whose
+     * premise is that it does not know who you are, and the column has been
+     * dropped. An anon is named by the handle they choose, on their profile.
+     */
     email: string;
     avatar?: string;
     email_verified_at: string | null;

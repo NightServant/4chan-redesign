@@ -232,7 +232,7 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        aria-label={`Account menu for ${user.name}`}
+                                        aria-label="Account menu"
                                     >
                                         <AnonAvatar seed={String(user.id)} />
                                     </Button>
@@ -241,10 +241,12 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                                     align="end"
                                     className="w-[240px]"
                                 >
-                                    <DropdownMenuLabel>
-                                        {user.name}
-                                    </DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
+                                    {/* No name at the top of this menu. It
+                                        printed the full name an anon typed at
+                                        registration, in the chrome of every
+                                        screen, on a site whose whole claim is
+                                        that it does not know who you are. The
+                                        field is gone; so is the row. */}
                                     <DropdownMenuItem asChild>
                                         <Link href={account()}>
                                             <UserIcon aria-hidden="true" />

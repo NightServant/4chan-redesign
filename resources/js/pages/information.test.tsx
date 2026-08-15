@@ -80,11 +80,36 @@ describe('Information', () => {
         ).toBeInTheDocument();
     });
 
-    it('states that Clover stores identifiers rather than files', () => {
+    /**
+     * The claim has to stay true as the product changes, which is the cost of
+     * writing a real page instead of a placeholder. Clover held no files at
+     * all until replies could carry an image; the copy says both halves now,
+     * and this asserts both, because half of it silently going stale is
+     * exactly how a privacy page becomes a lie.
+     */
+    it('states that mirrored files are pointed at, not copied', () => {
         render(<Information title="Terms" />);
 
         expect(
-            screen.getByText(/holds the identifier of a file, not the file/),
+            screen.getByText(/holds the identifier of the file, not the file/),
+        ).toBeInTheDocument();
+    });
+
+    it('states that an image attached to your own reply is stored here', () => {
+        render(<Information title="Terms" />);
+
+        expect(
+            screen.getByText(
+                /attached to a reply written on Clover is stored here/,
+            ),
+        ).toBeInTheDocument();
+    });
+
+    it('says the same thing on the privacy page', () => {
+        render(<Information title="Privacy" />);
+
+        expect(
+            screen.getByText(/served by Clover and 4chan never sees it/),
         ).toBeInTheDocument();
     });
 

@@ -1,6 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Bookmark, ImageIcon, MessageSquare, PencilLine } from 'lucide-react';
-import { AccountOverview } from '@/components/account/account-overview';
+import { Bookmark, ImageIcon, MessageSquare } from 'lucide-react';
 import { ProfileCommentList } from '@/components/account/profile-comment-list';
 import { ProfileHeader } from '@/components/account/profile-header';
 import { EmptyState } from '@/components/clover/empty-state';
@@ -11,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { bookmarks } from '@/routes';
 import type {
-    ActivityEntry,
     Profile,
     ProfileComment,
     ProfileStat,
@@ -27,9 +25,19 @@ import type {
  * editors for one set of fields is a defect, so "Edit profile" in the header
  * points at the real one instead.
  */
+/**
+ * Three tabs, not five.
+ *
+ * "Overview" and "Posts" went. Overview was a summary of the tabs beside it —
+ * a recent-activity list and a "top thread" panel that read "No threads yet"
+ * on any account that had not started one, which is every account, because
+ * Clover accepts no new threads. Posts listed the same threads that panel was
+ * empty about.
+ *
+ * What is left is what an anon actually has here: what they wrote, what they
+ * attached to it, and what they saved.
+ */
 const TABS = [
-    { value: 'overview', label: 'Overview' },
-    { value: 'posts', label: 'Posts' },
     { value: 'comments', label: 'Comments' },
     { value: 'media', label: 'Media' },
     { value: 'saved', label: 'Saved' },
@@ -45,9 +53,6 @@ type AccountProps = {
     media: string[];
     /** Threads they saved, as full cards. */
     saved: Thread[];
-    /** Threads this anon started. */
-    started: Thread[];
-    activity: ActivityEntry[];
 };
 
 export default function Account({
@@ -56,8 +61,6 @@ export default function Account({
     comments,
     media,
     saved,
-    started,
-    activity,
 }: AccountProps) {
     return (
         <>
@@ -69,7 +72,7 @@ export default function Account({
             <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-5 px-6 py-6">
                 <ProfileHeader profile={profile} stats={stats} />
 
-                <Tabs defaultValue="overview">
+                <Tabs defaultValue="comments">
                     <TabsList aria-label="Profile sections">
                         {TABS.map((tab) => (
                             <TabsTrigger key={tab.value} value={tab.value}>
@@ -77,32 +80,6 @@ export default function Account({
                             </TabsTrigger>
                         ))}
                     </TabsList>
-
-                    <TabsContent value="overview">
-                        <AccountOverview activity={activity} />
-                    </TabsContent>
-
-                    {/* Threads this anon started, which is now a real thing
-                        they can do. Empty until they do it, rather than a list
-                        of ingested threads presented as theirs. */}
-                    <TabsContent value="posts">
-                        {started.length === 0 ? (
-                            <EmptyState
-                                icon={<PencilLine />}
-                                title="No posts yet"
-                                body="Threads you start appear here in bump order."
-                            />
-                        ) : (
-                            <div className="flex flex-col gap-4">
-                                {started.map((thread) => (
-                                    <ThreadCard
-                                        key={thread.no}
-                                        thread={thread}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </TabsContent>
 
                     <TabsContent value="comments">
                         {comments.length === 0 ? (

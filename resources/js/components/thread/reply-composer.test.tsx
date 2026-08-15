@@ -58,7 +58,7 @@ describe('ReplyComposer', () => {
         await user.click(screen.getByRole('button', { name: 'Post reply' }));
 
         expect(onReply).toHaveBeenCalledTimes(1);
-        expect(onReply).toHaveBeenCalledWith('Checked, and it holds up.');
+        expect(onReply).toHaveBeenCalledWith('Checked, and it holds up.', null);
         expect(field).toHaveValue('');
     });
 
@@ -182,6 +182,15 @@ describe('ReplyComposer', () => {
         expect(screen.getByLabelText('Reply to this thread')).toHaveFocus();
 
         await user.keyboard('Checked, and it holds up.');
+
+        /* Attach image, then Post reply. The file input itself is out of the
+           tab order on purpose: `sr-only` paints no focus ring, so tabbing to
+           it would land a keyboard user on something they cannot see. */
+        await user.tab();
+        expect(
+            screen.getByRole('button', { name: 'Attach image' }),
+        ).toHaveFocus();
+
         await user.tab();
         expect(
             screen.getByRole('button', { name: 'Post reply' }),
@@ -189,7 +198,7 @@ describe('ReplyComposer', () => {
 
         await user.keyboard('{Enter}');
 
-        expect(onReply).toHaveBeenCalledWith('Checked, and it holds up.');
+        expect(onReply).toHaveBeenCalledWith('Checked, and it holds up.', null);
     });
 
     it('seeds the anon mark from the thread number', () => {
@@ -198,5 +207,88 @@ describe('ReplyComposer', () => {
         expect(
             container.querySelector('[data-slot="anon-avatar"]'),
         ).toBeInTheDocument();
+    });
+
+    /**
+     * Attaching an image, which is the whole point of an image board and was
+     * the one thing a reply here could not do.
+     */
+    it('hands the attached file up with the body', async () => {
+        const user = userEvent.setup();
+        const onReply = vi.fn();
+        render(<ReplyComposer threadNo={58210441} onReply={onReply} />);
+
+        const file = new File(['bytes'], 'x230.png', { type: 'image/png' });
+
+        await user.upload(screen.getByTestId('reply-media'), file);
+        await user.type(
+            screen.getByLabelText('Reply to this thread'),
+            'Here it is.',
+        );
+        await user.click(screen.getByRole('button', { name: 'Post reply' }));
+
+        expect(onReply).toHaveBeenCalledWith('Here it is.', file);
+    });
+
+    /**
+     * A reply that is only a picture is the most ordinary thing on an image
+     * board, and the server accepts one. A Post button disabled for a case the
+     * request would have honoured is the same defect as one that does nothing.
+     */
+    it('can post an image with no words', async () => {
+        const user = userEvent.setup();
+        const onReply = vi.fn();
+        render(<ReplyComposer threadNo={58210441} onReply={onReply} />);
+
+        expect(
+            screen.getByRole('button', { name: 'Post reply' }),
+        ).toBeDisabled();
+
+        const file = new File(['bytes'], 'quiet.png', { type: 'image/png' });
+        await user.upload(screen.getByTestId('reply-media'), file);
+
+        expect(
+            screen.getByRole('button', { name: 'Post reply' }),
+        ).toBeEnabled();
+
+        await user.click(screen.getByRole('button', { name: 'Post reply' }));
+
+        expect(onReply).toHaveBeenCalledWith('', file);
+    });
+
+    it('previews the attachment and can drop it again', async () => {
+        const user = userEvent.setup();
+        render(<ReplyComposer threadNo={58210441} />);
+
+        const file = new File(['bytes'], 'x230.png', { type: 'image/png' });
+        await user.upload(screen.getByTestId('reply-media'), file);
+
+        expect(
+            screen.getByRole('img', { name: 'Attached image: x230.png' }),
+        ).toBeInTheDocument();
+
+        await user.click(
+            screen.getByRole('button', { name: 'Remove attachment' }),
+        );
+
+        expect(
+            screen.queryByRole('img', { name: /attached image/i }),
+        ).not.toBeInTheDocument();
+        expect(
+            screen.getByRole('button', { name: 'Post reply' }),
+        ).toBeDisabled();
+    });
+
+    /**
+     * The picker has to offer what the validator accepts. A file dialog
+     * listing formats the request will reject is a dialog that lies.
+     */
+    it('offers only the formats the server takes', () => {
+        render(<ReplyComposer threadNo={58210441} />);
+
+        expect(screen.getByTestId('reply-media')).toHaveAttribute(
+            'accept',
+            'image/jpeg,image/png,image/gif,image/webp',
+        );
     });
 });

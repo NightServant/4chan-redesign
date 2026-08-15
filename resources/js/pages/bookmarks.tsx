@@ -1,9 +1,8 @@
 import { Link, router } from '@inertiajs/react';
-import { BookmarkIcon, BookmarkXIcon, SearchXIcon } from 'lucide-react';
+import { BookmarkIcon, SearchXIcon } from 'lucide-react';
 import { useState } from 'react';
 import { EmptyState } from '@/components/clover/empty-state';
 import { FormField } from '@/components/clover/form-field';
-import { MachineValue } from '@/components/clover/machine-value';
 import { PageHeader } from '@/components/clover/page-header';
 import { PageMeta } from '@/components/clover/page-meta';
 import { SectionLabel } from '@/components/clover/section-label';
@@ -17,12 +16,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { plural } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { destroy as bookmarkDestroy } from '@/routes/threads/bookmark';
@@ -160,75 +153,50 @@ export default function Bookmarks({ bookmarks: saved }: BookmarksProps) {
                         }
                     />
                 ) : (
-                    /* One provider for the row of remove buttons. `app.tsx`
-                       supplies one too, but keeping it here means the page
-                       does not depend on ambient context to be renderable,
-                       the way `AppSidebar` already does. */
-                    <TooltipProvider>
-                        <ul
-                            aria-label="Saved threads"
-                            className="flex flex-col gap-6"
-                        >
-                            {visible.map((bookmark) => (
-                                <li
-                                    key={bookmark.thread.no}
-                                    className="flex flex-col gap-2"
-                                >
-                                    <ThreadCard thread={bookmark.thread} />
+                    <ul
+                        aria-label="Saved threads"
+                        className="flex flex-col gap-6"
+                    >
+                        {visible.map((bookmark) => (
+                            <li
+                                key={bookmark.thread.no}
+                                className="flex flex-col gap-2"
+                            >
+                                {/* The card's own bookmark button is
+                                        the remove control, and it is filled
+                                        and green here because every thread on
+                                        this page is saved.
 
-                                    {bookmark.note ? (
-                                        <div className="flex flex-col gap-1 border-l-2 border-primary-line pl-3">
-                                            <SectionLabel>
-                                                Your note
-                                            </SectionLabel>
-                                            <p className="text-body-sm text-pretty text-muted-foreground">
-                                                {bookmark.note}
-                                            </p>
-                                        </div>
-                                    ) : null}
+                                        There used to be a second row under
+                                        each card carrying "Saved 8 min ago"
+                                        and a bin. The timestamp answered a
+                                        question nobody asks of their own
+                                        reading list, and the bin was a second
+                                        control for what the card was already
+                                        offering -- two ways to unsave one
+                                        thread, one of which showed no state. */}
+                                <ThreadCard
+                                    thread={bookmark.thread}
+                                    onBookmark={() =>
+                                        router.delete(
+                                            bookmarkDestroy(bookmark.thread.id)
+                                                .url,
+                                            { preserveScroll: true },
+                                        )
+                                    }
+                                />
 
-                                    <div className="flex items-center justify-between gap-3">
-                                        <MachineValue>
-                                            {bookmark.savedAt}
-                                        </MachineValue>
-
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    aria-label={`Remove bookmark: ${bookmark.thread.title}`}
-                                                    /* Deleted, not hidden.
-                                                       An anon who removes a
-                                                       bookmark means it, and
-                                                       the list reloads from
-                                                       the server rather than
-                                                       filtering a copy it
-                                                       still holds. */
-                                                    onClick={() =>
-                                                        router.delete(
-                                                            bookmarkDestroy(
-                                                                bookmark.thread
-                                                                    .id,
-                                                            ).url,
-                                                            {
-                                                                preserveScroll: true,
-                                                            },
-                                                        )
-                                                    }
-                                                >
-                                                    <BookmarkXIcon aria-hidden="true" />
-                                                </Button>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                                Remove bookmark
-                                            </TooltipContent>
-                                        </Tooltip>
+                                {bookmark.note ? (
+                                    <div className="flex flex-col gap-1 border-l-2 border-primary-line pl-3">
+                                        <SectionLabel>Your note</SectionLabel>
+                                        <p className="text-body-sm text-pretty text-muted-foreground">
+                                            {bookmark.note}
+                                        </p>
                                     </div>
-                                </li>
-                            ))}
-                        </ul>
-                    </TooltipProvider>
+                                ) : null}
+                            </li>
+                        ))}
+                    </ul>
                 )}
             </div>
         </>

@@ -136,7 +136,17 @@ describe('Rail', () => {
 
         expect(panel).toHaveTextContent('11,301');
         expect(panel).toHaveTextContent('77');
-        expect(panel).toHaveTextContent('2 hr ago');
+    });
+
+    /**
+     * The sync time answers a question about Clover's plumbing rather than
+     * about the feed beside it, and a reader who wants it has a page that is
+     * entirely about it. Asserted as an absence so it does not drift back.
+     */
+    it('does not report the sync time beside a feed', () => {
+        render(<Rail library={LIBRARY} threads={THREADS} />);
+
+        expect(screen.queryByText(/last synced/i)).not.toBeInTheDocument();
     });
 
     /** Derived from the threads on screen, so it cannot be empty when they are not. */

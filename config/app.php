@@ -13,7 +13,12 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    /*
+     * The fallback matters as much as the value. `APP_NAME` went unset for the
+     * whole project, so `Laravel` was not a default -- it was the answer, and
+     * it was in the title of every tab and every unfurled link.
+     */
+    'name' => env('APP_NAME', 'Clover'),
 
     /*
     |--------------------------------------------------------------------------

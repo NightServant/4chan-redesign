@@ -27,8 +27,18 @@ import { Head, usePage } from '@inertiajs/react';
  * whichever it likes. Every tag here carries one.
  */
 type PageMetaProps = {
-    /** Shown in the tab, and as the headline of every link preview. */
+    /** The headline of every link preview, and the tab unless `tab` says otherwise. */
     title: string;
+    /**
+     * What the browser tab says, when that is not the title.
+     *
+     * One page needs this. The homepage's title is its thesis — "Anonymous
+     * discussion, organised by board" — which is the right headline for a link
+     * preview and the wrong thing in a tab, where a browser shows about twenty
+     * characters and the reader is looking for which site this is. It says
+     * "Clover" there.
+     */
+    tab?: string;
     /**
      * One or two sentences on what this screen is. Written for someone who has
      * not seen it, because that is who reads it — in a search result, or under
@@ -52,7 +62,12 @@ const OG_IMAGE = '/og.png';
 
 const SITE_NAME = 'Clover';
 
-function PageMeta({ title, description, type = 'website' }: PageMetaProps) {
+function PageMeta({
+    title,
+    tab,
+    description,
+    type = 'website',
+}: PageMetaProps) {
     const page = usePage<{ appUrl: string }>();
 
     /* Absolute, because a relative `og:url` is not a URL to anything. The
@@ -61,7 +76,7 @@ function PageMeta({ title, description, type = 'website' }: PageMetaProps) {
     const url = `${page.props.appUrl}${page.url}`;
 
     return (
-        <Head title={title}>
+        <Head title={tab ?? title}>
             <meta
                 head-key="description"
                 name="description"

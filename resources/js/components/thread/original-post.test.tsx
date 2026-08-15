@@ -40,13 +40,6 @@ const THREAD = makeThread({
 const PINNED_THREAD = makeThread({ pinned: true });
 const MEDIA_THREAD = makeThread({ media: makeAttachment() });
 
-function stubClipboard() {
-    Object.defineProperty(navigator, 'clipboard', {
-        value: { writeText: vi.fn().mockResolvedValue(undefined) },
-        configurable: true,
-    });
-}
-
 afterEach(() => {
     vi.restoreAllMocks();
 });
@@ -184,18 +177,16 @@ describe('OriginalPost', () => {
         ).toHaveAttribute('aria-pressed', 'true');
     });
 
-    it('copies the current URL to the clipboard when Share is pressed', async () => {
-        const user = userEvent.setup();
-        stubClipboard();
-
+    /**
+     * One share control, not two. This footer carried a hand-rolled Share
+     * button as well as `ShareControl`, so an opened thread showed the word
+     * "Share" twice on one row, at both ends of it.
+     */
+    it('offers exactly one share control', () => {
         render(<OriginalPost thread={THREAD} />);
 
-        await user.click(
-            screen.getByRole('button', { name: 'Copy link to this thread' }),
-        );
-
-        expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-            window.location.href,
+        expect(screen.getAllByRole('button', { name: /share/i })).toHaveLength(
+            1,
         );
     });
 

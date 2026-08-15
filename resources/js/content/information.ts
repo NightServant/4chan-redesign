@@ -5,7 +5,9 @@
  * as words. Everything here is a statement about how this application actually
  * behaves, and several of the claims are checkable in the code: Clover writes
  * nothing upstream because 4chan's API accepts `GET`, `HEAD` and `OPTIONS`
- * only; it stores no files because attachments are hotlinked from 4chan's CDN;
+ * only; it stores no mirrored files, because those are hotlinked from 4chan's
+ * CDN, and the only file it does hold is an image an anon attached to a reply
+ * written here;
  * a post carries no identity because `posts.user_id` is never rendered to
  * anyone but its author.
  *
@@ -87,7 +89,8 @@ export const INFORMATION: Record<string, InformationPage> = {
             {
                 heading: 'Where are the images stored?',
                 body: [
-                    'On 4chan. Clover stores the identifier of a file, never the file, and your browser fetches the image from 4chan’s servers directly. Nothing is uploaded to Clover and nothing is copied off 4chan.',
+                    'Mirrored images stay on 4chan. Clover stores the identifier of the file, never the file, and your browser fetches it from 4chan’s servers directly — nothing is copied off 4chan.',
+                    'An image you attach to a reply you write here is the one exception, and it is stored on Clover, because 4chan has never seen it and cannot serve it. It is the only file Clover holds.',
                 ],
             },
             {
@@ -113,7 +116,7 @@ export const INFORMATION: Record<string, InformationPage> = {
                 heading: 'Content that is not ours',
                 body: [
                     'Threads and posts mirrored from 4chan belong to whoever wrote them and are subject to 4chan’s own rules. Clover neither claims them nor vouches for them.',
-                    'Attachments are served from 4chan’s servers rather than copied here. Clover holds the identifier of a file, not the file.',
+                    'Mirrored attachments are served from 4chan’s servers rather than copied here: Clover holds the identifier of the file, not the file. An image attached to a reply written on Clover is stored here, because there is nowhere else it could come from.',
                 ],
             },
             {
@@ -157,7 +160,8 @@ export const INFORMATION: Record<string, InformationPage> = {
             {
                 heading: 'Images and your browser',
                 body: [
-                    'Attachments load from 4chan’s content servers rather than from Clover, so 4chan sees those requests the same way it would if you visited it directly. That is how hotlinking works everywhere, and it is worth knowing rather than burying.',
+                    'Mirrored attachments load from 4chan’s content servers rather than from Clover, so 4chan sees those requests the same way it would if you visited it directly. That is how hotlinking works everywhere, and it is worth knowing rather than burying.',
+                    'An image you attach to your own reply is served by Clover and 4chan never sees it. It is deleted with the account that posted it.',
                 ],
             },
             {

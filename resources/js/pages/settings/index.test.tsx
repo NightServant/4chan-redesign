@@ -70,7 +70,6 @@ vi.mock('@/components/manage-passkeys', () => ({
 
 const USER: User = {
     id: 1,
-    name: 'Anon',
     email: 'anon@example.com',
     email_verified_at: '2026-01-01T00:00:00Z',
     created_at: '2026-01-01T00:00:00Z',
@@ -143,19 +142,25 @@ describe('Settings', () => {
     it('labels the account controls and seeds them from the anon', () => {
         renderSettings();
 
-        expect(screen.getByLabelText('Account name')).toHaveValue('Anon');
         expect(screen.getByLabelText('Email address')).toHaveValue(
             'anon@example.com',
         );
     });
 
+    /**
+     * Accounts no longer hold a name. The column is dropped: registration
+     * asked for a full name on a site whose premise is that it does not know
+     * who you are, and it was the heading on a public profile until 17c.
+     */
+    it('asks for no name, because an account no longer has one', () => {
+        renderSettings();
+
+        expect(screen.queryByLabelText(/name/i)).not.toBeInTheDocument();
+    });
+
     it('keeps the name attributes the profile request is built from', () => {
         renderSettings();
 
-        expect(screen.getByLabelText('Account name')).toHaveAttribute(
-            'name',
-            'name',
-        );
         expect(screen.getByLabelText('Email address')).toHaveAttribute(
             'name',
             'email',

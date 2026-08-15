@@ -46,3 +46,16 @@ test('the social card exists at the size every network crops to', function () {
     expect($width)->toBe(1200);
     expect($height)->toBe(630);
 });
+
+/**
+ * The tab used to read "… - Laravel" on every page, because `VITE_APP_NAME`
+ * was never set and `Laravel` was the fallback. The first-paint title comes
+ * from Blade, so this asserts the served HTML rather than the React callback.
+ */
+test('no page names Laravel in its tab', function (string $path) {
+    expect($this->get($path)->getContent())->not->toContain('<title>Laravel</title>');
+})->with(['/', '/popular', '/communities', '/status', '/rules']);
+
+test('the served title is the product name', function () {
+    expect($this->get('/')->getContent())->toContain('<title>Clover</title>');
+});

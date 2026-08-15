@@ -1,6 +1,6 @@
-import { TriangleAlert } from 'lucide-react';
-import { useId, useState } from 'react';
-import type { FormEvent } from 'react';
+import { ImagePlus, TriangleAlert, X } from 'lucide-react';
+import { useEffect, useId, useRef, useState } from 'react';
+import type { ChangeEvent, FormEvent } from 'react';
 import { AnonAvatar } from '@/components/clover/anon-avatar';
 import { FormField } from '@/components/clover/form-field';
 import { MachineValue } from '@/components/clover/machine-value';
@@ -19,10 +19,19 @@ export interface ReplyComposerProps {
      * shared fallback for callers with no board in hand.
      */
     maxCommentChars?: number;
-    /** Fires with the typed body when a reply is posted. */
-    onReply?: (body: string) => void;
+    /** Fires with the typed body and any attached image when a reply is posted. */
+    onReply?: (body: string, media: File | null) => void;
+    /**
+     * What the server will accept, so the picker offers the same set the
+     * validator does. A file dialog listing formats the request will reject is
+     * a dialog that lies.
+     */
+    accept?: string;
     className?: string;
 }
+
+/** Mirrors `clover.attachments.mimes`. */
+const DEFAULT_ACCEPT = 'image/jpeg,image/png,image/gif,image/webp';
 
 /**
  * The inline form at the foot of a thread.
@@ -36,16 +45,81 @@ export function ReplyComposer({
     threadNo,
     maxCommentChars = POST_MAX_LENGTH,
     onReply,
+    accept = DEFAULT_ACCEPT,
     className,
 }: ReplyComposerProps) {
     const [body, setBody] = useState('');
+    /**
+     * The file and its preview URL together, because they are created and
+     * destroyed together.
+     *
+     * The first version held the file in state and derived the URL in an
+     * effect, which is a `setState` inside an effect — a cascading render, and
+     * the lint rule that flags it is right. Making the URL at the moment the
+     * file is chosen means one state update per pick and one obvious place to
+     * revoke the previous one.
+     */
+    const [attachment, setAttachment] = useState<{
+        file: File;
+        url: string;
+    } | null>(null);
+    const fileInput = useRef<HTMLInputElement>(null);
     const baseId = useId();
     const hintId = `${baseId}-hint`;
     const counterId = `${baseId}-counter`;
+    const mediaId = `${baseId}-media`;
 
     const trimmed = body.trim();
     const overLimit = body.length > maxCommentChars;
-    const canSubmit = trimmed.length > 0 && !overLimit;
+
+    /* An image on its own is a post. A reply that is only a picture is the
+       most ordinary thing on an image board, and requiring a body to go with
+       it would be Clover inventing a rule 4chan does not have. */
+    const canSubmit = (trimmed.length > 0 || attachment !== null) && !overLimit;
+
+    /**
+     * An object URL is a leak until it is revoked: the browser holds the file
+     * alive behind it for the lifetime of the document. Every path that
+     * replaces one revokes it, and this covers the last one, on unmount.
+     */
+    useEffect(() => {
+        return () => {
+            if (attachment !== null) {
+                URL.revokeObjectURL(attachment.url);
+            }
+        };
+    }, [attachment]);
+
+    function handleFile(event: ChangeEvent<HTMLInputElement>): void {
+        const file = event.target.files?.[0] ?? null;
+
+        setAttachment((previous) => {
+            if (previous !== null) {
+                URL.revokeObjectURL(previous.url);
+            }
+
+            return file === null
+                ? null
+                : { file, url: URL.createObjectURL(file) };
+        });
+    }
+
+    function clearMedia(): void {
+        setAttachment((previous) => {
+            if (previous !== null) {
+                URL.revokeObjectURL(previous.url);
+            }
+
+            return null;
+        });
+
+        /* The input keeps its value after a clear, so picking the same file
+           again would fire no change event and the attachment would not come
+           back. */
+        if (fileInput.current) {
+            fileInput.current.value = '';
+        }
+    }
 
     function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -54,12 +128,13 @@ export function ReplyComposer({
             return;
         }
 
-        // There is no backend: posting is simulated by handing the body to
-        // the caller and clearing the field locally. Nothing is persisted,
-        // and no reply is appended to the tree here, that belongs to the
-        // page and there is nothing on the server to reconcile it against.
-        onReply?.(trimmed);
+        /* The body and the file go up together; the page owns the request.
+           The tree is not appended to here — the server has the reply and the
+           page reloads its props, which is the only version of the thread
+           worth rendering. */
+        onReply?.(trimmed, attachment?.file ?? null);
         setBody('');
+        clearMedia();
     }
 
     return (
@@ -105,15 +180,79 @@ export function ReplyComposer({
                     ) : null}
                 </div>
 
+                {/* The attachment, shown at the size it will post at rather
+                    than as a filename an anon has to take on trust. */}
+                {attachment !== null ? (
+                    <div className="flex items-start gap-3 rounded-lg border border-border p-3">
+                        <img
+                            src={attachment.url}
+                            alt={`Attached image: ${attachment.file.name}`}
+                            className="max-h-32 rounded-md border border-border"
+                        />
+
+                        <div className="flex min-w-0 flex-1 flex-col gap-1">
+                            <span className="truncate text-body-sm text-foreground">
+                                {attachment.file.name}
+                            </span>
+                            <MachineValue>
+                                {Math.round(attachment.file.size / 1024)} KB
+                            </MachineValue>
+                        </div>
+
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Remove attachment"
+                            onClick={clearMedia}
+                        >
+                            <X aria-hidden="true" />
+                        </Button>
+                    </div>
+                ) : null}
+
                 <div className="flex items-center justify-between gap-3">
                     <p id={hintId} className="text-meta text-faint">
                         Start a line with &gt; for greentext, or &gt;&gt;
                         followed by a number to reference a post.
                     </p>
 
-                    <Button type="submit" disabled={!canSubmit}>
-                        Post reply
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        {/* The input is the mechanism, the button is the
+                            control.
+
+                            A `sr-only` input is focusable but paints no focus
+                            ring, so tabbing to it lands a keyboard user on
+                            something they cannot see. It is taken out of the
+                            tab order and the button beside it does the
+                            opening, which keeps the visible focus ring on the
+                            visible thing. Nothing is lost by hiding it from
+                            assistive tech: the request is built in JavaScript
+                            from `files[0]`, not from a native form post. */}
+                        <input
+                            ref={fileInput}
+                            id={mediaId}
+                            data-testid="reply-media"
+                            type="file"
+                            accept={accept}
+                            onChange={handleFile}
+                            tabIndex={-1}
+                            aria-hidden="true"
+                            className="sr-only"
+                        />
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => fileInput.current?.click()}
+                        >
+                            <ImagePlus aria-hidden="true" />
+                            Attach image
+                        </Button>
+
+                        <Button type="submit" disabled={!canSubmit}>
+                            Post reply
+                        </Button>
+                    </div>
                 </div>
             </div>
         </form>

@@ -41,8 +41,6 @@ class AccountController extends Controller
 
     private const SAVED = 6;
 
-    private const ACTIVITY = 6;
-
     public function __invoke(Request $request): Response
     {
         $user = $request->user();
@@ -64,8 +62,6 @@ class AccountController extends Controller
             'comments' => $this->comments($user, $showsMature),
             'media' => $this->media($user, $showsMature),
             'saved' => ThreadResource::collection($this->saved($request, $showsMature)),
-            'started' => ThreadResource::collection($this->started($request, $showsMature)),
-            'activity' => $this->activity($user, $showsMature),
         ]);
     }
 
@@ -146,17 +142,23 @@ class AccountController extends Controller
     /**
      * Attachments on this anon's own posts.
      *
-     * Their own uploads, which on a local post is nothing yet — Clover accepts
-     * no files, so this is empty until it does. Empty rather than borrowed:
-     * filling it with attachments from threads they merely read would claim
-     * they posted them.
+     * Their own uploads, and only theirs. Empty rather than borrowed: filling
+     * it with attachments from threads they merely read would claim they
+     * posted them.
+     *
+     * This used to filter on `media_tim`, which is 4chan's id for a file on
+     * 4chan's CDN — a column no post written here will ever have. So the tab
+     * was empty by construction, and stayed empty the moment replies could
+     * carry an image. `media_path` is what a local upload sets.
      *
      * @return array<int, string>
      */
     private function media(User $user, bool $showsMature): array
     {
         return $this->ownPosts($user, $showsMature)
-            ->whereNotNull('media_tim')
+            ->where(fn (Builder $query) => $query
+                ->whereNotNull('media_path')
+                ->orWhereNotNull('media_tim'))
             ->orderByDesc('posted_at')
             ->limit(self::MEDIA)
             ->get()
@@ -180,74 +182,6 @@ class AccountController extends Controller
             ->orderByDesc('bumped_at')
             ->limit(self::SAVED)
             ->get();
-    }
-
-    /**
-     * Threads this anon started here.
-     *
-     * @return Collection<int, Thread>
-     */
-    private function started(Request $request, bool $showsMature): Collection
-    {
-        return Thread::query()
-            ->onVisibleBoard($showsMature)
-            ->whereIn(
-                'id',
-                Post::query()
-                    ->where('user_id', $request->user()->id)
-                    ->where('is_op', true)
-                    ->select('thread_id'),
-            )
-            ->with(['board', 'originalPost', 'bookmarks'])
-            ->orderByDesc('bumped_at')
-            ->limit(self::SAVED)
-            ->get();
-    }
-
-    /**
-     * What this anon has been doing, derived rather than announced.
-     *
-     * The fixture mixed things done *to* them with things they did — "Anonymous
-     * replied to your post", "Your report was actioned". Neither has a source:
-     * there is no reporting system, and a reply is not addressed to an account.
-     * What is real is their own record, so that is what this shows.
-     *
-     * @return array<int, array<string, string>>
-     */
-    private function activity(User $user, bool $showsMature): array
-    {
-        $replies = $this->ownPosts($user, $showsMature)
-            ->orderByDesc('posted_at')
-            ->limit(self::ACTIVITY)
-            ->get()
-            ->map(fn (Post $post): array => [
-                'icon' => 'message-square',
-                'text' => $post->is_op
-                    ? "You started a thread in {$post->thread->board->displaySlug()}"
-                    : "You replied in {$post->thread->board->displaySlug()}",
-                'time' => RelativeTime::since($post->posted_at),
-                'at' => $post->posted_at->getTimestamp(),
-            ]);
-
-        $saves = $user->bookmarks()
-            ->with('thread.board')
-            ->orderByDesc('created_at')
-            ->limit(self::ACTIVITY)
-            ->get()
-            ->map(fn ($bookmark): array => [
-                'icon' => 'bookmark',
-                'text' => "You saved a thread in {$bookmark->thread->board->displaySlug()}",
-                'time' => RelativeTime::since($bookmark->created_at),
-                'at' => $bookmark->created_at?->getTimestamp() ?? 0,
-            ]);
-
-        return $replies->concat($saves)
-            ->sortByDesc('at')
-            ->take(self::ACTIVITY)
-            /* `at` is the sort key, not part of the contract. */
-            ->map(fn (array $entry): array => Arr::except($entry, 'at'))
-            ->values()
-            ->all();
     }
 
     /**

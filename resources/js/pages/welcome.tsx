@@ -58,6 +58,7 @@ export default function Welcome({ boards, threads, trending }: WelcomeProps) {
     return (
         <div className="flex min-h-dvh flex-col bg-bg">
             <PageMeta
+                tab="Clover"
                 title="Anonymous discussion, organised by board"
                 description="Clover mirrors 4chan's boards in an interface built for reading. No profiles, no algorithm, no ads, and reading needs no account."
             />

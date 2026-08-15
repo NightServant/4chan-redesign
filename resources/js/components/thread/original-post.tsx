@@ -1,12 +1,11 @@
 import { Link } from '@inertiajs/react';
-import { Bookmark, ImageIcon, MessageSquare, Share2 } from 'lucide-react';
+import { Bookmark, ImageIcon, MessageSquare } from 'lucide-react';
 import { BoardAvatar } from '@/components/clover/board-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
 import { PostBody } from '@/components/clover/post-body';
 import { PostAttachment } from '@/components/clover/post-image';
 import { ShareControl } from '@/components/clover/share-control';
 import { Badge } from '@/components/ui/badge';
-import { useClipboard } from '@/hooks/use-clipboard';
 import { cn } from '@/lib/utils';
 import { board } from '@/routes';
 import type { Thread } from '@/types/clover';
@@ -50,17 +49,6 @@ function OriginalPost({
     onBookmark,
     className,
 }: OriginalPostProps) {
-    const [, copy] = useClipboard();
-
-    /**
-     * There is no backend and no real share sheet yet, so "share" is the one
-     * footer action that is not simulated: copying the current URL is a
-     * genuine client-only action that needs no server round trip.
-     */
-    function handleShare() {
-        void copy(window.location.href);
-    }
-
     return (
         <article
             aria-labelledby="original-post-title"
@@ -125,6 +113,15 @@ function OriginalPost({
                     builds it, rather than whatever is in the address bar — a
                     share should survive being sent from a URL carrying a
                     fragment or a query string. */}
+                {/* One share control, not two.
+                
+                    This footer carried a hand-rolled Share button as well,
+                    down at `ml-auto`, so the opened thread showed the word
+                    "Share" twice on one row -- at both ends of it. The
+                    hand-rolled one went: `ShareControl` is the tested
+                    component, it uses the native share sheet where there is
+                    one, and it falls back to the clipboard where there is
+                    not. */}
                 <ShareControl
                     url={`${thread.board}${thread.no}`}
                     title={thread.title}
@@ -167,15 +164,6 @@ function OriginalPost({
                         aria-hidden="true"
                         className={cn('size-4', bookmarked && 'fill-current')}
                     />
-                </button>
-                <button
-                    type="button"
-                    aria-label="Copy link to this thread"
-                    onClick={handleShare}
-                    className={cn(footerButtonClasses, 'ml-auto')}
-                >
-                    <Share2 aria-hidden="true" className="size-4" />
-                    Share
                 </button>
             </footer>
         </article>
