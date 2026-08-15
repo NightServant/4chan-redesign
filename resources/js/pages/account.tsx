@@ -3,14 +3,15 @@ import { Bookmark, ImageIcon, MessageSquare } from 'lucide-react';
 import { ProfileCommentList } from '@/components/account/profile-comment-list';
 import { ProfileHeader } from '@/components/account/profile-header';
 import { EmptyState } from '@/components/clover/empty-state';
-import { MediaPlaceholder } from '@/components/clover/media-placeholder';
 import { PageMeta } from '@/components/clover/page-meta';
+import { PostAttachment } from '@/components/clover/post-image';
 import { ThreadCard } from '@/components/clover/thread-card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useBookmark } from '@/hooks/use-bookmark';
 import { bookmarks } from '@/routes';
 import type {
+    Attachment,
     Profile,
     ProfileComment,
     ProfileStat,
@@ -50,8 +51,8 @@ type AccountProps = {
     stats: ProfileStat[];
     /** Replies this anon wrote, newest first. */
     comments: ProfileComment[];
-    /** Labels for attachments on their own posts. Empty until Clover accepts files. */
-    media: string[];
+    /** Attachments on their own posts, newest first. */
+    media: Attachment[];
     /** Threads they saved, as full cards. */
     saved: Thread[];
 };
@@ -97,10 +98,12 @@ export default function Account({
                     </TabsContent>
 
                     <TabsContent value="media">
-                        {/* Their own uploads. Clover accepts no files yet, so
-                            this is empty rather than filled with attachments
-                            from threads they merely read — which would claim
-                            they posted them. */}
+                        {/* Their own uploads, shown as the pictures they are.
+                            This rendered a `MediaPlaceholder` per label — a
+                            grey box with a filename in it — because the server
+                            sent label strings rather than attachments. It was
+                            built that way when Clover accepted no files and
+                            stayed that way after replies could carry one. */}
                         {media.length === 0 ? (
                             <EmptyState
                                 icon={<ImageIcon />}
@@ -109,11 +112,10 @@ export default function Account({
                             />
                         ) : (
                             <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
-                                {media.map((label) => (
-                                    <MediaPlaceholder
-                                        key={label}
-                                        label={label}
-                                        height={150}
+                                {media.map((attachment) => (
+                                    <PostAttachment
+                                        key={attachment.fullUrl}
+                                        media={attachment}
                                     />
                                 ))}
                             </div>

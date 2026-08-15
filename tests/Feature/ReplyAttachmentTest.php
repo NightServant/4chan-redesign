@@ -200,3 +200,53 @@ it('needs an account to attach anything', function (): void {
 
     expect(Post::query()->where('is_local', true)->count())->toBe(0);
 });
+
+/**
+ * The Media tab has to show the picture, not a caption describing one.
+ *
+ * It sent an array of label strings — "x230.png · 640x480 · 12 KB" — and the
+ * screen rendered each through `MediaPlaceholder`. So the tab could only ever
+ * show a grey box with a filename in it, whatever an anon had uploaded, and it
+ * was built that way before uploads existed at all.
+ */
+it('sends the attachment itself to the account media tab', function (): void {
+    [$board, $thread, $user] = replyTarget();
+
+    $this->actingAs($user)->post("/{$board->slug}/{$thread->no}/replies", [
+        'body' => 'mine',
+        'media' => UploadedFile::fake()->image('x230.png', 640, 480),
+    ]);
+
+    $this->actingAs($user)
+        ->get('/account')
+        ->assertInertia(fn ($page) => $page
+            ->has('media', 1)
+            ->where('media.0.filename', 'x230.png')
+            ->where('media.0.width', 640)
+            ->has('media.0.fullUrl'),
+        );
+});
+
+/**
+ * The first figure counted threads this anon had started, which is always
+ * zero: Clover accepts no new threads, so nobody has started one. A figure
+ * that can only ever read 0 is not a measurement.
+ */
+it('counts uploads rather than threads nobody can start', function (): void {
+    [$board, $thread, $user] = replyTarget();
+
+    $this->actingAs($user)->post("/{$board->slug}/{$thread->no}/replies", [
+        'body' => 'one',
+        'media' => UploadedFile::fake()->image('a.png'),
+    ]);
+    $this->actingAs($user)->post("/{$board->slug}/{$thread->no}/replies", [
+        'body' => 'two with no picture',
+    ]);
+
+    $this->actingAs($user)
+        ->get('/account')
+        ->assertInertia(fn ($page) => $page
+            ->where('stats.0.label', 'Media')
+            ->where('stats.0.value', '1'),
+        );
+});

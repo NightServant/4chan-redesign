@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\AttachmentResource;
 use App\Http\Resources\RelativeTime;
 use App\Http\Resources\ThreadResource;
 use App\Models\Post;
@@ -60,7 +61,7 @@ class AccountController extends Controller
             ],
             'stats' => $this->stats($user),
             'comments' => $this->comments($user, $showsMature),
-            'media' => $this->media($user, $showsMature),
+            'media' => $this->media($user, $showsMature, $request),
             'saved' => ThreadResource::collection($this->saved($request, $showsMature)),
         ]);
     }
@@ -77,11 +78,22 @@ class AccountController extends Controller
      */
     private function stats(User $user): array
     {
-        $posts = $user->posts()->where('is_op', true)->count();
+        /**
+         * Uploads, not threads started.
+         *
+         * The first figure counted `is_op` posts, which is always zero and
+         * always will be: Clover accepts no new threads, so nobody has started
+         * one. A figure that can only ever read 0 is not a measurement, and it
+         * sat at the top of every profile saying nothing.
+         *
+         * What an anon does have is what they have attached to their replies,
+         * which is the same set the Media tab lists.
+         */
+        $uploads = $user->posts()->whereNotNull('media_path')->count();
         $replies = $user->posts()->where('is_op', false)->count();
 
         return [
-            ['label' => 'Posts', 'value' => number_format($posts)],
+            ['label' => 'Media', 'value' => number_format($uploads)],
             ['label' => 'Comments', 'value' => number_format($replies)],
             ['label' => 'Bookmarks', 'value' => number_format($user->bookmarks()->count())],
         ];
@@ -151,18 +163,25 @@ class AccountController extends Controller
      * was empty by construction, and stayed empty the moment replies could
      * carry an image. `media_path` is what a local upload sets.
      *
-     * @return array<int, string>
+     * It also used to send a list of *label strings* — "x230.png · 640x480 ·
+     * 12 KB" — which the screen rendered as grey placeholders. The tab could
+     * only ever show a caption describing a picture, never the picture, and it
+     * was built that way back when there were no uploads to show. It sends the
+     * attachment now, the same shape every other surface renders.
+     *
+     * @return array<int, array<string, mixed>>
      */
-    private function media(User $user, bool $showsMature): array
+    private function media(User $user, bool $showsMature, Request $request): array
     {
         return $this->ownPosts($user, $showsMature)
             ->where(fn (Builder $query) => $query
                 ->whereNotNull('media_path')
                 ->orWhereNotNull('media_tim'))
+            ->with('thread.board')
             ->orderByDesc('posted_at')
             ->limit(self::MEDIA)
             ->get()
-            ->map(fn (Post $post): ?string => $post->mediaLabel())
+            ->map(fn (Post $post): ?array => AttachmentResource::for($post, $request))
             ->filter()
             ->values()
             ->all();

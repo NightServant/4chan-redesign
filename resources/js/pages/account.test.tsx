@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import {
+    makeAttachment,
     makeProfile,
     makeProfileComment,
     makeStat,
@@ -156,21 +157,36 @@ describe('Account', () => {
         expect(screen.getByText('No media yet')).toBeInTheDocument();
     });
 
-    it('lists an attachment on the anon own post when there is one', async () => {
-        render(
-            <Account
-                {...accountProps()}
-                media={['x230.png · 1440x900 · 412 KB']}
-            />,
+    /**
+     * The tab has to show the picture, not a caption describing one.
+     *
+     * It received a list of label strings and rendered each as a grey
+     * `MediaPlaceholder`, so whatever an anon uploaded, the tab showed a box
+     * with a filename in it. That was built before uploads existed and stayed
+     * that way after they landed.
+     */
+    it('renders the attachment itself, not a caption describing it', async () => {
+        const attachment = makeAttachment({
+            fullUrl: '/storage/attachments/g/abc123.png',
+            filename: 'x230.png',
+        });
+
+        const { container } = render(
+            <Account {...accountProps()} media={[attachment]} />,
         );
 
         await openTab('Media');
 
         expect(
-            screen.getByRole('img', {
-                name: 'Attachment: x230.png · 1440x900 · 412 KB',
+            await screen.findByRole('img', {
+                name: 'Attached image: x230.png',
             }),
-        ).toBeInTheDocument();
+        ).toHaveAttribute('src', '/storage/attachments/g/abc123.png');
+
+        /* And no grey box with a filename written on it. */
+        expect(
+            container.querySelector('[data-slot="media-placeholder"]'),
+        ).toBeNull();
     });
 
     it('shows an empty Saved tab pointing at the real bookmarks screen', async () => {
