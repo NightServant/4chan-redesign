@@ -189,12 +189,17 @@ export interface ThreadNotification {
     time: string;
 }
 
+/**
+ * A thread this anon opened, and when they were last on it.
+ *
+ * It used to be a flattened shape of its own — title, board, post number,
+ * attachment — which is how the history screen ended up drawing a card nothing
+ * else on the site drew. It carries the thread itself now, exactly as the feed
+ * receives it, so both screens render the same component and a field added to
+ * a thread reaches both.
+ */
 export interface HistoryEntry {
-    /** The thread's own id, which the forget route takes. See `Thread.id`. */
-    id: number;
-    no: number;
-    board: BoardSlug;
-    title: string;
+    thread: Thread;
     /** Absolute and pre-formatted, e.g. `Today, 14:02`. */
     when: string;
     /**
@@ -206,9 +211,6 @@ export interface HistoryEntry {
      * to recover it.
      */
     day: 'Today' | 'Yesterday' | 'Earlier';
-    /** Read progress, 0-100. */
-    progress: number;
-    media: Attachment | null;
 }
 
 /**

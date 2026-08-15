@@ -1,53 +1,22 @@
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { Eraser, History as HistoryIcon, Search } from 'lucide-react';
 import { useState } from 'react';
+import { AuthGate } from '@/components/clover/auth-gate';
 import { EmptyState } from '@/components/clover/empty-state';
 import { PageHeader } from '@/components/clover/page-header';
 import { PageMeta } from '@/components/clover/page-meta';
 import { Pagination } from '@/components/clover/pagination';
 import { SectionLabel } from '@/components/clover/section-label';
-import { HistoryCard } from '@/components/history/history-card';
+import { ThreadCard } from '@/components/clover/thread-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { destroy as clearHistory } from '@/routes/history';
-import type { HistoryEntry } from '@/types/clover';
-
-type SortOption = 'recent' | 'unfinished';
-
-const SORT_LABELS: Record<SortOption, string> = {
-    recent: 'Most recent',
-    unfinished: 'Least finished',
-};
+import { bookmark as bookmarkThread } from '@/routes/threads';
+import type { HistoryEntry, Thread } from '@/types/clover';
 
 const GROUPS = ['Today', 'Yesterday', 'Earlier'] as const;
 
-type Group = (typeof GROUPS)[number];
-
-const PAGE_SIZE = 4;
-
-/**
- * `when` is a pre-formatted display string, not a timestamp, so the day is
- * read off its prefix. That is all the fixture carries and all the backend
- * will need to carry: the grouping is a display concern either way.
- */
-/**
- * The day an entry belongs to.
- *
- * Read off `day`, which the server decides. This used to parse the front of
- * `when` for the words `Today,` and `Yesterday,`, which worked only because a
- * fixture wrote them by hand — a real timestamp knows its own day, and the
- * client should not be recovering it from prose.
- */
-function groupOf(entry: HistoryEntry): Group {
-    return entry.day;
-}
+const PAGE_SIZE = 8;
 
 function matches(entry: HistoryEntry, query: string): boolean {
     const needle = query.trim().toLowerCase();
@@ -57,33 +26,36 @@ function matches(entry: HistoryEntry, query: string): boolean {
     }
 
     return (
-        entry.title.toLowerCase().includes(needle) ||
-        entry.board.toLowerCase().includes(needle)
+        entry.thread.title.toLowerCase().includes(needle) ||
+        entry.thread.board.toLowerCase().includes(needle)
     );
 }
 
 /**
- * `recent` keeps fixture order, which already runs newest first. `unfinished`
- * puts the least-read thread on top, which is the one an anon is most likely
- * to be looking for.
- */
-function sortEntries(entries: readonly HistoryEntry[]): HistoryEntry[] {
-    const sorted = [...entries];
-
-    return sorted;
-}
-
-/**
- * Threads this anon opened.
+ * Threads this anon opened, drawn the way the feed draws threads.
  *
- * Removal and "Clear all" are local component state. There is no backend and
- * no device store yet, so nothing here pretends to persist: a reload brings
- * the whole list back, and faking a request would hide that.
+ * ## Why it is the feed's card now
  *
- * The design also declares an "All time / Last 7 days / Last 30 days" range
- * filter and then never applies it to the list. It is not ported. Even wired
- * up correctly it could not discriminate, since every entry falls inside
- * seven days, so all three options would render the same list.
+ * It had a card of its own: a row built from a title, a board and a post
+ * number that the controller had flattened by hand. So a history of threads
+ * looked nothing like the threads it was a history of, and the two drifted —
+ * the feed's row grew a bookmark control, an NSFW mark, and reply and image
+ * counts, and none of it reached here.
+ *
+ * The server sends the same `ThreadResource` the feed gets, so this renders
+ * the same `ThreadCard`, and anything added to a thread arrives on both
+ * screens at once instead of on whichever one somebody remembered.
+ *
+ * What history knows and the feed does not is when this anon was last on a
+ * thread. That is what the card's `meta` slot carries.
+ *
+ * ## What went
+ *
+ * The sort control. It offered "Most recent" and "Least finished", and the
+ * function behind it returned the list unchanged for both — `sortEntries` took
+ * the entries, copied the array and handed it back. "Least finished" could not
+ * have worked in any case: it sorts on reading progress, which was removed in
+ * task 17 because nothing has ever measured it.
  */
 type HistoryProps = {
     /** One entry per thread, most recently read first. */
@@ -92,12 +64,13 @@ type HistoryProps = {
 
 export default function History({ entries }: HistoryProps) {
     const [query, setQuery] = useState('');
-    const [sort, setSort] = useState<SortOption>('recent');
     const [page, setPage] = useState(1);
+    const [gatedAction, setGatedAction] = useState<string | null>(null);
 
-    const matched = sortEntries(
-        entries.filter((entry) => matches(entry, query)),
-    );
+    const { auth } = usePage().props;
+    const signedIn = Boolean(auth.user);
+
+    const matched = entries.filter((entry) => matches(entry, query));
 
     const pageCount = Math.max(1, Math.ceil(matched.length / PAGE_SIZE));
     const current = Math.min(page, pageCount);
@@ -106,7 +79,27 @@ export default function History({ entries }: HistoryProps) {
         current * PAGE_SIZE,
     );
 
-    function clearAll() {
+    /**
+     * The same toggle the feed's rows carry, wired to the same route.
+     *
+     * It arrives with the card rather than being rebuilt here, which is half
+     * the point of sharing the component. A bookmark button that renders on
+     * one screen and does nothing on another is the defect this codebase keeps
+     * finding, and the feed's own button was exactly that for six tasks.
+     */
+    function toggleBookmark(thread: Thread): void {
+        if (!signedIn) {
+            setGatedAction('save a thread');
+
+            return;
+        }
+
+        const request = thread.bookmarked ? router.delete : router.post;
+
+        request(bookmarkThread(thread.id).url, { preserveScroll: true });
+    }
+
+    function clearAll(): void {
         router.delete(clearHistory().url);
     }
 
@@ -116,13 +109,13 @@ export default function History({ entries }: HistoryProps) {
         <>
             <PageMeta
                 title="History"
-                description="Threads you opened, most recent first."
+                description="Threads you opened on Clover, most recent first."
             />
 
             <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-[18px] px-6 py-6">
                 <PageHeader
                     title="History"
-                    description="Threads you opened. Stored on this device only."
+                    description="Threads you opened, most recent first."
                     action={
                         <Button
                             variant="ghost"
@@ -135,45 +128,22 @@ export default function History({ entries }: HistoryProps) {
                     }
                 />
 
-                <div className="flex flex-wrap items-center gap-3">
-                    <div className="relative min-w-60 flex-1">
-                        <Search
-                            aria-hidden="true"
-                            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint"
-                        />
-                        <Input
-                            type="search"
-                            value={query}
-                            onChange={(event) => {
-                                setQuery(event.target.value);
-                                setPage(1);
-                            }}
-                            aria-label="Search your history"
-                            placeholder="Search your history"
-                            className="pl-9"
-                        />
-                    </div>
-
-                    <Select
-                        value={sort}
-                        onValueChange={(value) => {
-                            setSort(value as SortOption);
+                <div className="relative">
+                    <Search
+                        aria-hidden="true"
+                        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint"
+                    />
+                    <Input
+                        type="search"
+                        value={query}
+                        onChange={(event) => {
+                            setQuery(event.target.value);
                             setPage(1);
                         }}
-                    >
-                        <SelectTrigger aria-label="Sort history">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {(Object.keys(SORT_LABELS) as SortOption[]).map(
-                                (option) => (
-                                    <SelectItem key={option} value={option}>
-                                        {SORT_LABELS[option]}
-                                    </SelectItem>
-                                ),
-                            )}
-                        </SelectContent>
-                    </Select>
+                        aria-label="Search your history"
+                        placeholder="Search your history"
+                        className="pl-9"
+                    />
                 </div>
 
                 {visible.length === 0 ? (
@@ -189,11 +159,11 @@ export default function History({ entries }: HistoryProps) {
                 ) : (
                     <div className="flex flex-col gap-5">
                         {GROUPS.map((group) => {
-                            const entries = visible.filter(
-                                (entry) => groupOf(entry) === group,
+                            const inGroup = visible.filter(
+                                (entry) => entry.day === group,
                             );
 
-                            if (entries.length === 0) {
+                            if (inGroup.length === 0) {
                                 return null;
                             }
 
@@ -206,10 +176,14 @@ export default function History({ entries }: HistoryProps) {
                                     <SectionLabel>{group}</SectionLabel>
 
                                     <div className="flex flex-col">
-                                        {entries.map((entry) => (
-                                            <HistoryCard
-                                                key={entry.no}
-                                                entry={entry}
+                                        {inGroup.map((entry) => (
+                                            <ThreadCard
+                                                key={entry.thread.no}
+                                                thread={entry.thread}
+                                                meta={`Read ${entry.when}`}
+                                                onBookmark={() =>
+                                                    toggleBookmark(entry.thread)
+                                                }
                                             />
                                         ))}
                                     </div>
@@ -228,6 +202,16 @@ export default function History({ entries }: HistoryProps) {
                     </div>
                 )}
             </div>
+
+            <AuthGate
+                action={gatedAction ?? 'do that'}
+                open={gatedAction !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setGatedAction(null);
+                    }
+                }}
+            />
         </>
     );
 }
