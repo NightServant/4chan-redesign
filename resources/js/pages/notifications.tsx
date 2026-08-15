@@ -58,7 +58,7 @@ export default function Notifications({ notifications }: NotificationsProps) {
                 description="New replies in the threads you saved or posted in."
             />
 
-            <div className="mx-auto flex w-full max-w-[760px] flex-col gap-[18px] px-6 py-6">
+            <div className="mx-auto flex w-full max-w-(--measure-column) flex-col gap-[18px] px-6 py-6">
                 <PageHeader
                     title="Notifications"
                     description="New replies in threads you saved or posted in."

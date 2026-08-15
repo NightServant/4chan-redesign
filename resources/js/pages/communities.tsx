@@ -30,7 +30,7 @@ export default function Communities({ boards, hiddenCount }: CommunitiesProps) {
                 description="Every board Clover mirrors, with the number of threads on each. Reading needs no account."
             />
 
-            <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 px-6 py-8">
+            <div className="mx-auto flex w-full max-w-(--measure-page) flex-col gap-6 px-6 py-8">
                 <BoardDirectory boards={boards} hiddenCount={hiddenCount} />
             </div>
         </>

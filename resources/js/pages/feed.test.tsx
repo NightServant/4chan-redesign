@@ -128,7 +128,7 @@ describe('Feed', () => {
 
         render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
 
-        expect(screen.getByText(/browsing anonymously/i)).toBeInTheDocument();
+        expect(screen.getByText(/reading anonymously/i)).toBeInTheDocument();
     });
 
     it('hides the anon banner when signed in', () => {
@@ -137,7 +137,7 @@ describe('Feed', () => {
         render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
 
         expect(
-            screen.queryByText(/browsing anonymously/i),
+            screen.queryByText(/reading anonymously/i),
         ).not.toBeInTheDocument();
     });
 

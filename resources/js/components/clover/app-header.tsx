@@ -121,8 +121,8 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                     full-bleed bar. It was capped at 520px against a 760px
                     column, which read as two grids that happened to share a
                     page. */}
-                <div className="mx-auto flex h-16 w-full max-w-[1180px] items-center gap-7 px-6">
-                    <div className="max-w-[760px] min-w-0 flex-1">
+                <div className="mx-auto flex h-16 w-full max-w-(--measure-page) items-center gap-7 px-6">
+                    <div className="max-w-(--measure-column) min-w-0 flex-1">
                         <SearchField />
                     </div>
 

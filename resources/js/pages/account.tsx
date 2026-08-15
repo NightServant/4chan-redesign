@@ -70,10 +70,10 @@ export default function Account({
         <>
             <PageMeta
                 title="Account"
-                description="Your posts, replies, saved threads and the boards you follow, counted from your own record."
+                description="Your replies, the images you attached to them, and the threads you saved."
             />
 
-            <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-5 px-6 py-6">
+            <div className="mx-auto flex w-full max-w-(--measure-page) flex-col gap-5 px-6 py-6">
                 <ProfileHeader profile={profile} stats={stats} />
 
                 <Tabs defaultValue="comments">
@@ -108,7 +108,7 @@ export default function Account({
                             <EmptyState
                                 icon={<ImageIcon />}
                                 title="No media yet"
-                                body="Attachments on your own posts appear here."
+                                body="Images you attach to a reply appear here."
                             />
                         ) : (
                             <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">

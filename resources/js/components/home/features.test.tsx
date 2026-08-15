@@ -7,7 +7,7 @@ const TITLES = [
     'Anonymous by default',
     'Fast on purpose',
     'Nothing to score',
-    'Janitors, not bots',
+    'Nothing goes back',
     'Greentext preserved',
     'Boards, not follows',
 ];
@@ -46,7 +46,7 @@ describe('Features', () => {
         expect(screen.getAllByRole('tabpanel')).toHaveLength(1);
         expect(
             screen.getByText(
-                'Read any board without an account. Posting and commenting need one, and posts are still signed Anonymous.',
+                'Read any board without an account. Replying needs one, and every reply is still signed Anonymous.',
             ),
         ).toBeInTheDocument();
     });

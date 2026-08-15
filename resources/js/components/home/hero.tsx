@@ -105,7 +105,7 @@ function Hero({ threads, className, ...props }: HeroProps) {
                         is no room for a column of ambient text beside the
                         pitch, and stacking them above it would put texture
                         before the argument. */}
-                    <div className="mx-auto grid w-full max-w-[1180px] grid-cols-1 items-stretch gap-0 px-6 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)_minmax(0,260px)] lg:gap-10 lg:px-0">
+                    <div className="mx-auto grid w-full max-w-(--measure-page) grid-cols-1 items-stretch gap-0 px-6 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)_minmax(0,260px)] lg:gap-10 lg:px-0">
                         <ThreadMarquee
                             threads={left}
                             direction="forward"

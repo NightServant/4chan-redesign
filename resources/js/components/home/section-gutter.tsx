@@ -5,7 +5,8 @@ import { cn } from '@/lib/utils';
 /**
  * The margin either side of a homepage band.
  *
- * Every band on this page is a 1180px column centred in the viewport. On a
+ * Every band on this page is a fixed column centred in the viewport -- 1180px,
+ * widening once past 1536px. See --measure-page. On a
  * laptop that is nearly the whole screen; on anything wider it leaves two
  * empty stripes of drawn paper running the height of the page, and the wider
  * the display the more of the page is margin. The complaint was that they read

@@ -67,7 +67,7 @@ const FEATURES: Feature[] = [
     {
         icon: Shield,
         title: 'Anonymous by default',
-        body: 'Read any board without an account. Posting and commenting need one, and posts are still signed Anonymous.',
+        body: 'Read any board without an account. Replying needs one, and every reply is still signed Anonymous.',
     },
     {
         icon: Zap,
@@ -81,8 +81,13 @@ const FEATURES: Feature[] = [
     },
     {
         icon: Users,
-        title: 'Janitors, not bots',
-        body: 'Every report is read by a human janitor with a scoped board list and a public action log.',
+        /* This said "Janitors, not bots": every report read by a human, with a
+           scoped board list and a public action log. There is no report
+           button, no janitor role and no log — three claims about machinery
+           that has never existed. What replaced it is the thing that is
+           actually true and actually unusual. */
+        title: 'Nothing goes back',
+        body: 'Clover only ever reads from 4chan. Nothing you write here is sent there, because the API it reads accepts no writes at all.',
     },
     {
         icon: MessageSquare,

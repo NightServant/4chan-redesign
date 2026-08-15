@@ -70,7 +70,7 @@ function Section({
                         label={label}
                     />
 
-                    <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 border-x border-border px-6 py-14">
+                    <div className="mx-auto flex w-full max-w-(--measure-page) flex-col gap-6 border-x border-border px-6 py-14">
                         <div className="flex flex-wrap items-end justify-between gap-5">
                             <div className="flex flex-col gap-2">
                                 <SectionLabel>{label}</SectionLabel>

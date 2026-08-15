@@ -38,7 +38,7 @@ function TopNav({ className, ...props }: TopNavProps) {
             {...props}
         >
             <PatternField depth={0} feather={false}>
-                <div className="mx-auto flex h-16 max-w-[1180px] items-center justify-between border-x border-border px-6">
+                <div className="mx-auto flex h-16 max-w-(--measure-page) items-center justify-between border-x border-border px-6">
                     <Link href={home()} aria-label="Clover home">
                         <Wordmark />
                     </Link>

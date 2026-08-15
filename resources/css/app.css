@@ -197,6 +197,37 @@
 }
 
 /* ---------------------------------------------------------------------------
+   Measure
+
+   How wide the page is allowed to get, in one place rather than as a literal
+   repeated across a dozen components.
+
+   1180px is the design's column and it is right up to about a 1440px laptop.
+   Past that it stops being a considered measure and starts being a strip down
+   the middle of the screen: on a 2560px ultrawide it left 549px of dead space
+   either side, and on a television more than half the panel was margin.
+
+   So the measure grows once, at 1536px, and stops. It grows by less than the
+   screen does, which is the point — a line of body text is unreadable past
+   roughly ninety characters however much room there is, so the extra width
+   goes to the rail and the gutters rather than to the prose.
+--------------------------------------------------------------------------- */
+
+:root {
+    --measure-page: 1180px;
+    --measure-column: 760px;
+    --measure-rail: 330px;
+}
+
+@media (min-width: 1536px) {
+    :root {
+        --measure-page: 1440px;
+        --measure-column: 840px;
+        --measure-rail: 400px;
+    }
+}
+
+/* ---------------------------------------------------------------------------
    Theme mapping
 --------------------------------------------------------------------------- */
 
