@@ -6,6 +6,7 @@ import { MachineValue } from '@/components/clover/machine-value';
 import { PageMeta } from '@/components/clover/page-meta';
 import { SectionLabel } from '@/components/clover/section-label';
 import { ThreadCard } from '@/components/clover/thread-card';
+import { useBookmark } from '@/hooks/use-bookmark';
 import { board as boardRoute } from '@/routes';
 import type { Board, Thread } from '@/types/clover';
 
@@ -25,6 +26,8 @@ interface SearchProps {
 }
 
 export default function Search({ query, boards, threads }: SearchProps) {
+    const { toggleBookmark, authGate } = useBookmark();
+
     const total = boards.length + threads.length;
 
     return (
@@ -103,12 +106,18 @@ export default function Search({ query, boards, threads }: SearchProps) {
                         <SectionLabel>Threads</SectionLabel>
                         <div className="flex flex-col gap-4">
                             {threads.map((thread) => (
-                                <ThreadCard key={thread.no} thread={thread} />
+                                <ThreadCard
+                                    key={thread.no}
+                                    thread={thread}
+                                    onBookmark={() => toggleBookmark(thread)}
+                                />
                             ))}
                         </div>
                     </section>
                 ) : null}
             </div>
+
+            {authGate}
         </>
     );
 }

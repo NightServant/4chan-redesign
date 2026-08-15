@@ -1,7 +1,5 @@
-import { Link, router, usePage } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { CompassIcon } from 'lucide-react';
-import { useState } from 'react';
-import { AuthGate } from '@/components/clover/auth-gate';
 import { EmptyState } from '@/components/clover/empty-state';
 import { PageHeader } from '@/components/clover/page-header';
 import { PageMeta } from '@/components/clover/page-meta';
@@ -10,8 +8,8 @@ import { AnonBanner } from '@/components/feed/anon-banner';
 import { Rail } from '@/components/feed/rail';
 import type { FeedLibrary } from '@/components/feed/rail';
 import { Button } from '@/components/ui/button';
+import { useBookmark } from '@/hooks/use-bookmark';
 import { communities } from '@/routes';
-import { bookmark as bookmarkThread } from '@/routes/threads';
 import type { Thread } from '@/types/clover';
 
 /**
@@ -70,37 +68,9 @@ type FeedProps = {
 };
 
 export default function Feed({ sort, threads, library }: FeedProps) {
+    const { toggleBookmark, authGate } = useBookmark();
     const { auth } = usePage().props;
     const signedIn = Boolean(auth.user);
-
-    /* Back, and with a caller this time. It was removed when blessings went
-       because blessing was the only thing that opened it; bookmarking is now
-       the thing that does. */
-    const [gatedAction, setGatedAction] = useState<string | null>(null);
-
-    /**
-     * Saving a thread, which is the bug this fixes.
-     *
-     * `ThreadCard` has offered a bookmark button since it was written and no
-     * page ever passed it a handler, so pressing it did nothing at all on
-     * every feed, board and search result. The route and the table have
-     * existed since task 11b; nothing was calling them.
-     *
-     * The request is a toggle and the server owns the answer, so this posts
-     * and lets the reloaded prop set the pressed state rather than guessing
-     * locally and drifting from the database.
-     */
-    function toggleBookmark(thread: Thread) {
-        if (!signedIn) {
-            setGatedAction('save a thread');
-
-            return;
-        }
-
-        const request = thread.bookmarked ? router.delete : router.post;
-
-        request(bookmarkThread(thread.id).url, { preserveScroll: true });
-    }
 
     return (
         <>
@@ -157,15 +127,7 @@ export default function Feed({ sort, threads, library }: FeedProps) {
                 </div>
             </div>
 
-            <AuthGate
-                action={gatedAction ?? 'do that'}
-                open={gatedAction !== null}
-                onOpenChange={(open) => {
-                    if (!open) {
-                        setGatedAction(null);
-                    }
-                }}
-            />
+            {authGate}
         </>
     );
 }

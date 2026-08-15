@@ -50,10 +50,19 @@ test('two-factor and passkey state stay locked until the password is confirmed',
     $this->actingAs($user)
         ->get(route('settings.edit'))
         ->assertOk()
+        /**
+         * Whether two-factor is on is sent either way, and deliberately.
+         *
+         * The screen shows it as a status row rather than a panel, and a row
+         * reporting "Off" because the state was withheld is worse than no row:
+         * it tells an anon their account is unprotected when it is not. It is
+         * one bit about their own account. What stays locked is the panel
+         * *contents* — the passkey list, and the two-factor page itself.
+         */
         ->assertInertia(fn (Assert $page) => $page
             ->where('securityUnlocked', false)
             ->where('passkeys', [])
-            ->missing('twoFactorEnabled'),
+            ->where('twoFactorEnabled', false),
         );
 });
 
@@ -116,7 +125,7 @@ test('settings renders without two factor when the feature is disabled', functio
             ->where('canManagePasskeys', false)
             ->where('passkeys', [])
             ->where('canManageTwoFactor', false)
-            ->missing('twoFactorEnabled')
+            ->where('twoFactorEnabled', false)
             ->missing('requiresConfirmation'),
         );
 });
@@ -145,4 +154,58 @@ test('the two old settings urls redirect to the merged page', function () {
 
     $this->actingAs($user)->get('/settings/profile')->assertRedirect('/settings');
     $this->actingAs($user)->get('/settings/security')->assertRedirect('/settings');
+});
+
+/**
+ * Two-factor has a page of its own.
+ *
+ * The account menu links straight at it, and used to link at
+ * `/settings#two-factor` — a fragment on a page of six panels, which lands an
+ * anon in the middle of a long form and asks them to find the thing they
+ * pressed a button to reach.
+ */
+test('two-factor has its own page behind a password', function () {
+    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('two-factor.edit'))
+        ->assertRedirect(route('password.confirm'));
+
+    $this->actingAs($user)
+        ->withSession(['auth.password_confirmed_at' => time()])
+        ->get(route('two-factor.edit'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('settings/two-factor')
+            ->where('canManageTwoFactor', true)
+            ->has('twoFactorEnabled')
+            ->has('requiresConfirmation'),
+        );
+});
+
+/**
+ * The settings row reports the state whether or not the password has been
+ * confirmed. A row that said "Off" because the state was withheld would tell
+ * an anon their account is unprotected when it is not.
+ */
+test('the settings row reports two-factor as on when it is', function () {
+    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+
+    $user = User::factory()->create([
+        'two_factor_secret' => encrypt('secret'),
+        'two_factor_confirmed_at' => now(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('settings.edit'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('securityUnlocked', false)
+            ->where('twoFactorEnabled', true),
+        );
+});
+
+test('the two-factor page needs an account', function () {
+    $this->get(route('two-factor.edit'))->assertRedirect(route('login'));
 });

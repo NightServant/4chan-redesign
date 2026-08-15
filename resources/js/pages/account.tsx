@@ -8,6 +8,7 @@ import { PageMeta } from '@/components/clover/page-meta';
 import { ThreadCard } from '@/components/clover/thread-card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useBookmark } from '@/hooks/use-bookmark';
 import { bookmarks } from '@/routes';
 import type {
     Profile,
@@ -62,6 +63,8 @@ export default function Account({
     media,
     saved,
 }: AccountProps) {
+    const { toggleBookmark, authGate } = useBookmark();
+
     return (
         <>
             <PageMeta
@@ -137,6 +140,9 @@ export default function Account({
                                     <ThreadCard
                                         key={thread.no}
                                         thread={thread}
+                                        onBookmark={() =>
+                                            toggleBookmark(thread)
+                                        }
                                     />
                                 ))}
                             </div>
@@ -144,6 +150,8 @@ export default function Account({
                     </TabsContent>
                 </Tabs>
             </div>
+
+            {authGate}
         </>
     );
 }

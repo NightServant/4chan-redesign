@@ -169,4 +169,54 @@ describe('ProfileHeader', () => {
             expect(screen.getByText(stat.value)).toBeInTheDocument();
         }
     });
+
+    /**
+     * The block used to open with a 132px empty band — a cover area for an
+     * image Clover has never had and never will — with a ruled overlay drawn
+     * over it that belonged to no other screen on the site.
+     *
+     * Asserted as absences, because a header that merely looks different in a
+     * screenshot is a header somebody can put back by accident.
+     */
+    it('carries no cover band and no second pattern system', () => {
+        const { container } = render(
+            <ProfileHeader profile={PROFILE} stats={PROFILE_STATS} />,
+        );
+
+        expect(container.querySelector('[data-slot="card"]')).toBeNull();
+        expect(container.innerHTML).not.toContain('repeating-linear-gradient');
+        expect(container.innerHTML).not.toContain('h-[132px]');
+    });
+
+    /** The same paper every band on the site sits on. */
+    it('is drawn on the site pattern rather than a slab of its own', () => {
+        const { container } = render(
+            <ProfileHeader profile={PROFILE} stats={PROFILE_STATS} />,
+        );
+
+        expect(
+            container.querySelector('[data-slot="pattern-field-paper"]')
+                ?.className,
+        ).toMatch(/bg-dots/);
+    });
+
+    it('names itself as a region so the page has a labelled top', () => {
+        render(<ProfileHeader profile={PROFILE} stats={PROFILE_STATS} />);
+
+        expect(
+            screen.getByRole('region', { name: 'Profile' }),
+        ).toBeInTheDocument();
+    });
+
+    /** An anon who has written no bio gets no empty paragraph. */
+    it('omits the bio when there is none', () => {
+        render(
+            <ProfileHeader
+                profile={makeProfile({ bio: '' })}
+                stats={PROFILE_STATS}
+            />,
+        );
+
+        expect(screen.queryByText(PROFILE.bio)).not.toBeInTheDocument();
+    });
 });

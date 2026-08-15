@@ -44,20 +44,15 @@ describe('AnonBanner', () => {
         expect(container.textContent).not.toMatch(/—|--/);
     });
 
-    it('points "Log in" at the login route', () => {
+    /**
+     * The header carries both controls on every screen a signed-out anon can
+     * reach, including this one, two inches above the banner. A banner that
+     * repeats the chrome directly beneath it asks the same question twice.
+     */
+    it('offers no sign-in controls the header already carries', () => {
         render(<AnonBanner />);
 
-        expect(screen.getByRole('link', { name: 'Log in' })).toHaveAttribute(
-            'href',
-            '/login',
-        );
-    });
-
-    it('points "Create account" at the register route', () => {
-        render(<AnonBanner />);
-
-        expect(
-            screen.getByRole('link', { name: 'Create account' }),
-        ).toHaveAttribute('href', '/register');
+        expect(screen.queryByRole('link')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button')).not.toBeInTheDocument();
     });
 });
