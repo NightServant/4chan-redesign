@@ -101,14 +101,17 @@ export default function Thread({
      * read. The composer has said so since it was built; this is what finally
      * makes it true rather than a comment.
      */
-    function handleReply(body: string) {
+    function handleReply(body: string, media: File | null) {
         if (!thread) {
             return;
         }
 
+        /* Inertia switches to multipart on its own once a `File` is in the
+           payload, so the attachment needs no special casing here — only that
+           the key is absent rather than null when there is nothing to send. */
         router.post(
             storeReply({ board: boardToken(slug), thread: thread.no }).url,
-            { body },
+            media === null ? { body } : { body, media },
             { preserveScroll: true },
         );
     }

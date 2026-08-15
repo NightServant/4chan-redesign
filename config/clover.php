@@ -169,6 +169,31 @@ return [
     |
     */
 
+    /*
+    |---------------------------------------------------------------------------
+    | Attachments on local replies
+    |---------------------------------------------------------------------------
+    |
+    | A reply written on Clover may carry an image. Everything ingested points
+    | at 4chan's CDN and is never copied; this covers the other direction, and
+    | it is the only case in which Clover holds a file at all.
+    |
+    | Images only, and only formats a browser renders without a plugin. `webm`
+    | and `gif` animations are what 4chan is known for and are deliberately not
+    | here: video needs a player, a poster frame and a size budget this feature
+    | does not have, and accepting an upload Clover cannot display would be
+    | worse than declining it.
+    |
+    */
+
+    'attachments' => [
+        'disk' => env('CLOVER_ATTACHMENT_DISK', 'public'),
+        'directory' => 'attachments',
+        /* Kilobytes, which is what Laravel's `max` rule counts in. */
+        'max_kilobytes' => 4096,
+        'mimes' => ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+    ],
+
     'meta_description' => 'Clover mirrors 4chan\'s boards in an interface built for reading. No profiles, no algorithm, no ads, and reading needs no account.',
 
 ];

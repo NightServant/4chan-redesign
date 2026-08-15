@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * The OP or a reply on a thread.
@@ -28,6 +29,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $media_filename
  * @property string|null $media_extension
  * @property int|null $media_tim
+ * @property string|null $media_path
  * @property int|null $media_width
  * @property int|null $media_height
  * @property int|null $media_thumb_width
@@ -53,6 +55,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'media_filename',
     'media_extension',
     'media_tim',
+    'media_path',
     'media_width',
     'media_height',
     'media_thumb_width',
@@ -85,7 +88,21 @@ class Post extends Model
 
     public function hasMedia(): bool
     {
-        return filled($this->media_filename) && $this->media_tim !== null;
+        return filled($this->media_filename)
+            && ($this->media_tim !== null || $this->media_path !== null);
+    }
+
+    /**
+     * Whether this attachment is a file Clover holds rather than one it points
+     * at.
+     *
+     * Ingested posts carry `media_tim`, 4chan's id for a file on 4chan's CDN.
+     * A reply written here carries `media_path`, because 4chan has never seen
+     * that image and has no id for it. Nothing carries both.
+     */
+    public function hasLocalMedia(): bool
+    {
+        return filled($this->media_filename) && $this->media_path !== null;
     }
 
     /**
@@ -99,6 +116,11 @@ class Post extends Model
     {
         if (! $this->hasMedia()) {
             return null;
+        }
+
+        if ($this->hasLocalMedia()) {
+            return Storage::disk(config('clover.attachments.disk'))
+                ->url((string) $this->media_path);
         }
 
         return sprintf(
@@ -119,6 +141,15 @@ class Post extends Model
     {
         if (! $this->hasMedia()) {
             return null;
+        }
+
+        /* Clover generates no thumbnails, so a local upload's thumbnail is
+           the file. Nothing renders `thumbnailUrl` today — 4chan's own caps a
+           thumbnail at 250px, too small to look at — so this is carried for
+           the same reason the upstream one is, and not resized for a use that
+           does not exist. */
+        if ($this->hasLocalMedia()) {
+            return $this->mediaUrl();
         }
 
         return sprintf(

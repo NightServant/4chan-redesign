@@ -112,7 +112,8 @@ The prototype masks a PNG for the glyph. A raster mask cannot recolour cleanly a
 git clone https://github.com/NightServant/4chan-redesign.git
 cd 4chan-redesign
 
-# 2. Install both dependency trees, copy .env, generate a key, migrate, build
+# 2. Install both dependency trees, copy .env, generate a key, migrate,
+#    link storage for reply attachments, build
 composer setup
 
 # 3. Pull every board and its threads from 4chan (77 requests, about a minute)

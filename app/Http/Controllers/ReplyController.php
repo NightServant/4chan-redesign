@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Models\Board;
 use App\Models\Post;
 use App\Models\Thread;
 use App\Services\LocalPostNumbers;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Replying to a thread.
@@ -42,11 +45,46 @@ class ReplyController extends Controller
              * validating against a constant would reject two thirds of the
              * site's legitimate posts or accept posts a third of it forbids.
              */
-            'body' => ['required', 'string', 'max:'.$model->max_comment_chars],
+            /* Required only when nothing is attached. A reply that is just a
+               picture is the most ordinary thing on an image board, and the
+               composer lets one be sent -- a server that then rejected it
+               would be a Post button that fails for a case the interface
+               explicitly allows. */
+            'body' => [
+                'required_without:media',
+                'nullable',
+                'string',
+                'max:'.$model->max_comment_chars,
+            ],
 
             /** Post numbers this reply answers, rendered as `>>` references. */
             'quotes' => ['array'],
             'quotes.*' => ['integer'],
+
+            /**
+             * The one file Clover ever holds.
+             *
+             * Everything ingested points at 4chan's CDN and is never copied.
+             * This is the other direction: an image an anon attached here,
+             * which 4chan has never seen and has no id for.
+             *
+             * `mimes` is the rule doing the work, and it does more than its
+             * name suggests: it guesses the type from the file's *contents*,
+             * so a zip called `.png` is rejected on what it is rather than on
+             * what it claims. Verified by deleting `image` and watching that
+             * test stay green.
+             *
+             * `image` is kept as a guard on the list rather than on the file:
+             * it is redundant against these five extensions and stops being
+             * redundant the moment somebody widens them.
+             */
+            'media' => [
+                'nullable',
+                'file',
+                'image',
+                'mimes:'.implode(',', (array) config('clover.attachments.mimes')),
+                'max:'.config('clover.attachments.max_kilobytes'),
+            ],
         ]);
 
         $user = $request->user();
@@ -61,7 +99,9 @@ class ReplyController extends Controller
             $target->posts()->pluck('no')->map('intval')->all(),
         ));
 
-        DB::transaction(function () use ($target, $model, $user, $validated, $quotes): void {
+        $media = $this->storeAttachment($request, $model);
+
+        DB::transaction(function () use ($target, $model, $user, $validated, $quotes, $media): void {
             Post::query()->create([
                 'thread_id' => $target->id,
                 'user_id' => $user->id,
@@ -81,9 +121,10 @@ class ReplyController extends Controller
                 'tripcode' => $user->tripcode,
 
                 'capcode' => null,
-                'body' => trim($validated['body']),
+                'body' => trim((string) ($validated['body'] ?? '')),
                 'quotes' => $quotes,
                 'posted_at' => Date::now(),
+                ...$media,
             ]);
 
             /**
@@ -98,5 +139,58 @@ class ReplyController extends Controller
         });
 
         return back();
+    }
+
+    /**
+     * Put an attached image on disk and describe it the way a post expects.
+     *
+     * Returns the media columns, or an empty array when nothing was attached —
+     * which is the common case, and the reason this spreads into the create
+     * rather than being threaded through as nullable arguments.
+     *
+     * The stored name is generated, never the one the browser sent. An
+     * uploaded filename is attacker-controlled text that would otherwise end
+     * up as a path; the original is kept in `media_filename` because that is
+     * what the interface shows and what a screen reader reads, and it is only
+     * ever rendered as text.
+     *
+     * @return array<string, mixed>
+     */
+    private function storeAttachment(Request $request, Board $board): array
+    {
+        $file = $request->file('media');
+
+        if (! $file instanceof UploadedFile) {
+            return [];
+        }
+
+        $path = $file->store(
+            config('clover.attachments.directory').'/'.$board->slug,
+            config('clover.attachments.disk'),
+        );
+
+        if ($path === false) {
+            return [];
+        }
+
+        /* Read from the stored file rather than from the upload: by this point
+           it is what will actually be served, and `getimagesize` on the temp
+           file has already been consumed by the `image` rule. */
+        $dimensions = @getimagesize(
+            Storage::disk(config('clover.attachments.disk'))->path($path)
+        );
+
+        return [
+            'media_path' => $path,
+            'media_filename' => pathinfo(
+                (string) $file->getClientOriginalName(),
+                PATHINFO_FILENAME
+            ),
+            'media_extension' => '.'.$file->getClientOriginalExtension(),
+            'media_width' => $dimensions[0] ?? null,
+            'media_height' => $dimensions[1] ?? null,
+            'media_size' => $file->getSize(),
+            'media_spoiler' => false,
+        ];
     }
 }

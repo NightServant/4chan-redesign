@@ -142,17 +142,23 @@ class AccountController extends Controller
     /**
      * Attachments on this anon's own posts.
      *
-     * Their own uploads, which on a local post is nothing yet — Clover accepts
-     * no files, so this is empty until it does. Empty rather than borrowed:
-     * filling it with attachments from threads they merely read would claim
-     * they posted them.
+     * Their own uploads, and only theirs. Empty rather than borrowed: filling
+     * it with attachments from threads they merely read would claim they
+     * posted them.
+     *
+     * This used to filter on `media_tim`, which is 4chan's id for a file on
+     * 4chan's CDN — a column no post written here will ever have. So the tab
+     * was empty by construction, and stayed empty the moment replies could
+     * carry an image. `media_path` is what a local upload sets.
      *
      * @return array<int, string>
      */
     private function media(User $user, bool $showsMature): array
     {
         return $this->ownPosts($user, $showsMature)
-            ->whereNotNull('media_tim')
+            ->where(fn (Builder $query) => $query
+                ->whereNotNull('media_path')
+                ->orWhereNotNull('media_tim'))
             ->orderByDesc('posted_at')
             ->limit(self::MEDIA)
             ->get()
