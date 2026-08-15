@@ -3,8 +3,12 @@ import { Card } from '@/components/ui/card';
 
 /**
  * Shown at the top of the feed to a signed-out anon. Reading never needs an
- * account; posting and commenting do, so this is where that line gets drawn
- * rather than at the point of a blocked action.
+ * account; replying does, so this is where that line gets drawn rather than at
+ * the point of a blocked action.
+ *
+ * It said "posting and commenting need an account", which promised something
+ * Clover cannot do: a thread cannot be started here at all. Replies can, and
+ * that is what the sentence says now.
  *
  * It carried "Log in" and "Create account" buttons, and the header carries
  * both on every screen a signed-out anon can reach — including this one, two
@@ -24,8 +28,9 @@ function AnonBanner() {
             </span>
 
             <p className="flex-1 text-body-sm text-pretty text-muted-foreground">
-                You are browsing anonymously. Reading is open to everyone,
-                posting and commenting need an account.
+                You are reading anonymously. Anyone can read; replying needs an
+                account. Threads themselves come from 4chan, so new ones start
+                there.
             </p>
         </Card>
     );

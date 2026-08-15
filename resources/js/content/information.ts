@@ -29,7 +29,7 @@ export type InformationPage = {
 export const INFORMATION: Record<string, InformationPage> = {
     Rules: {
         summary:
-            'Four of them, and a janitor reads every report. They apply to what anons post here, not to what Clover mirrors from 4chan.',
+            'Three of them, and they cover what anons write here rather than what Clover mirrors from 4chan.',
         sections: [
             {
                 heading: 'Post on topic for the board you are on',
@@ -50,9 +50,9 @@ export const INFORMATION: Record<string, InformationPage> = {
                 ],
             },
             {
-                heading: 'Reports are read by janitors, not bots',
+                heading: 'There is nobody to report to yet',
                 body: [
-                    'A human reads every report and their actions are logged. There is no automated removal, so nothing disappears without somebody having decided it should.',
+                    'Clover has no report button, no moderator account and nothing that removes a post on its own. The rules above describe what belongs here; enforcing them is not built. This page said a janitor read every report and kept a public log, which was three claims about machinery that has never existed.',
                 ],
             },
         ],
@@ -122,7 +122,7 @@ export const INFORMATION: Record<string, InformationPage> = {
             {
                 heading: 'Content that is yours',
                 body: [
-                    'Anything you write on Clover stays yours. Posting it here grants no ownership and no licence beyond displaying it on this site.',
+                    'Anything you write on Clover stays yours. Writing it here grants no ownership and no licence beyond showing it on this site.',
                 ],
             },
             {

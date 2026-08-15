@@ -79,10 +79,10 @@ export default function Feed({ sort, threads, library }: FeedProps) {
                 description={META_DESCRIPTIONS[sort]}
             />
 
-            <div className="mx-auto flex w-full max-w-[1180px] gap-7 px-6 py-6">
+            <div className="mx-auto flex w-full max-w-(--measure-page) gap-7 px-6 py-6">
                 <div
                     data-slot="feed-column"
-                    className="flex max-w-[760px] min-w-0 flex-1 flex-col gap-5"
+                    className="flex max-w-(--measure-column) min-w-0 flex-1 flex-col gap-5"
                 >
                     <PageHeader
                         title={HEADINGS[sort]}
@@ -122,7 +122,7 @@ export default function Feed({ sort, threads, library }: FeedProps) {
                     </div>
                 </div>
 
-                <div className="hidden w-[330px] shrink-0 lg:block">
+                <div className="hidden w-(--measure-rail) shrink-0 lg:block">
                     <Rail library={library} threads={threads} />
                 </div>
             </div>

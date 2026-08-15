@@ -75,7 +75,7 @@ export default function Bookmarks({ bookmarks: saved }: BookmarksProps) {
                 description="Threads you saved. They stay here until you remove them."
             />
 
-            <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6 px-6 py-8">
+            <div className="mx-auto flex w-full max-w-(--measure-column) flex-col gap-6 px-6 py-8">
                 <PageHeader
                     title="Bookmarks"
                     description={plural(saved.length, 'saved thread')}

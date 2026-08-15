@@ -351,9 +351,14 @@ describe('AppHeader', () => {
             name: /search boards and threads/i,
         });
 
-        expect(search.closest('.max-w-\\[760px\\]')).not.toBeNull();
-        expect(search.closest('.max-w-\\[1180px\\]')).not.toBeNull();
-        expect(search.closest('.max-w-\\[520px\\]')).toBeNull();
+        /* Both measures come from one place now, so the header and the feed
+           cannot drift apart when the page widens on a large display. */
+        expect(
+            search.closest('[class*="max-w-(--measure-column)"]'),
+        ).not.toBeNull();
+        expect(
+            search.closest('[class*="max-w-(--measure-page)"]'),
+        ).not.toBeNull();
     });
 
     /** The paper runs through the chrome as well as the content. */

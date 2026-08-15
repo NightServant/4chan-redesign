@@ -33,7 +33,7 @@ describe('AnonBanner', () => {
 
         expect(
             screen.getByText(
-                'You are browsing anonymously. Reading is open to everyone, posting and commenting need an account.',
+                'You are reading anonymously. Anyone can read; replying needs an account. Threads themselves come from 4chan, so new ones start there.',
             ),
         ).toBeInTheDocument();
     });

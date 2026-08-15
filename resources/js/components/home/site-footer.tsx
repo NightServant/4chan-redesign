@@ -70,7 +70,7 @@ function SiteFooter() {
         <footer className="border-t border-border bg-surface">
             <PatternField depth={30} feather={false}>
                 <div
-                    className="mx-auto grid max-w-[1180px] gap-7 border-x border-border px-6 py-9"
+                    className="mx-auto grid max-w-(--measure-page) gap-7 border-x border-border px-6 py-9"
                     style={{
                         gridTemplateColumns:
                             'repeat(auto-fit, minmax(180px, 1fr))',

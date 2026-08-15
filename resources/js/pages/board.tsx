@@ -75,7 +75,7 @@ export default function Board({ board, threads }: BoardProps) {
                 description={`${board.name} on Clover. ${board.description}`}
             />
 
-            <div className="mx-auto flex max-w-[760px] flex-col gap-6 px-6 py-8">
+            <div className="mx-auto flex max-w-(--measure-column) flex-col gap-6 px-6 py-8">
                 <BoardHeader board={board} />
 
                 <Tabs

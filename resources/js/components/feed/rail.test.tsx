@@ -93,11 +93,13 @@ describe('Rail', () => {
         expect(
             within(rulesRegion).getByText('Spoiler anything that needs it.'),
         ).toBeInTheDocument();
+        /* There was a fourth rule about janitors reading reports. Clover has
+           no report button, no janitor role and no action log, so it described
+           machinery that has never existed. */
         expect(
-            within(rulesRegion).getByText(
-                'Reports are read by janitors, not bots.',
-            ),
-        ).toBeInTheDocument();
+            within(rulesRegion).queryByText(/janitor/i),
+        ).not.toBeInTheDocument();
+        expect(within(rulesRegion).getAllByRole('listitem')).toHaveLength(3);
     });
 
     it('is hidden below lg and only appears as a flex column at lg and up', () => {

@@ -140,7 +140,7 @@ export default function Thread({
                     description="This thread is no longer on Clover. 4chan prunes threads off the end of a board and Clover does not keep what it has dropped."
                 />
 
-                <div className="mx-auto max-w-[760px] px-6 py-8">
+                <div className="mx-auto max-w-(--measure-column) px-6 py-8">
                     {/* Naming the post number matters: an anon arriving from
                         a stale `>>` reference wants to know which one missed,
                         and it is the only thing distinguishing this screen
@@ -170,7 +170,7 @@ export default function Thread({
                 description={`${plural(thread.replies, 'reply', 'replies')} on ${thread.board}. Read it on Clover without an account.`}
             />
 
-            <div className="mx-auto flex max-w-[760px] flex-col gap-6 px-6 py-8">
+            <div className="mx-auto flex max-w-(--measure-column) flex-col gap-6 px-6 py-8">
                 <Link
                     href={board({ board: boardToken(thread.board) })}
                     className="inline-flex w-fit items-center gap-1.5 text-body-sm text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
