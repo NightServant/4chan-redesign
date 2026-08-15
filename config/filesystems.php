@@ -41,7 +41,20 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim((string) env('APP_URL', 'http://localhost'), '/').'/storage',
+            /*
+             * Root-relative, deliberately.
+             *
+             * This built from `APP_URL`, and an `APP_URL` whose scheme does not
+             * match how the site is actually served produced an `http://` image
+             * on an `https://` page — which every browser blocks as mixed
+             * content, silently. Attachments on local replies simply did not
+             * appear, with nothing on screen to say why.
+             *
+             * Everything on this disk is served by this application, so the URL
+             * has no business naming a scheme or a host. Relative inherits both
+             * from whatever page renders it and cannot disagree with reality.
+             */
+            'url' => '/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

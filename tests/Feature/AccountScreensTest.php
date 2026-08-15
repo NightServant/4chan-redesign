@@ -88,10 +88,14 @@ it('counts the anon own posts, replies and bookmarks', function (): void {
 it('reports three stats and no reputation', function (): void {
     [, , , $user] = anonWithHistory();
 
+    /* "Posts" counted threads this anon had started, which is always zero:
+       Clover accepts no new threads, so nobody has started one. A figure that
+       can only ever read 0 is not a measurement. It counts uploads now, which
+       is the same set the Media tab lists. */
     $this->actingAs($user)->get('/account')->assertInertia(
         fn ($page) => $page
             ->has('stats', 3)
-            ->where('stats.0.label', 'Posts')
+            ->where('stats.0.label', 'Media')
             ->where('stats.1.label', 'Comments')
             ->where('stats.2.label', 'Bookmarks'),
     );
