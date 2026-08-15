@@ -1,8 +1,22 @@
 import { Link, router } from '@inertiajs/react';
-import { Search } from 'lucide-react';
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { Clock, Search, X } from 'lucide-react';
+import {
+    useCallback,
+    useEffect,
+    useId,
+    useRef,
+    useState,
+    useSyncExternalStore,
+} from 'react';
 import { BoardAvatar } from '@/components/clover/board-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
+import {
+    forgetSearch,
+    rememberSearch,
+    searchHistoryServerSnapshot,
+    searchHistorySnapshot,
+    subscribeToSearchHistory,
+} from '@/lib/search-history';
 import { cn } from '@/lib/utils';
 import { board as boardRoute, search as searchRoute } from '@/routes';
 import type { Board, Thread } from '@/types/clover';
@@ -56,6 +70,25 @@ export function SearchField({
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState<Suggestions>(EMPTY);
+
+    /**
+     * What this anon searched for before, on this device.
+     *
+     * Subscribed rather than copied into state. `localStorage` fires no event
+     * for the tab that wrote to it, so a component holding its own copy has to
+     * remember to refresh it after every write — and the first version of this
+     * did that by reading storage in an effect, which is a `setState` inside an
+     * effect and a cascading render.
+     *
+     * `useSyncExternalStore` is what React provides for exactly this: the
+     * store notifies, the component re-reads, and the server snapshot covers
+     * the render where `localStorage` does not exist yet.
+     */
+    const history = useSyncExternalStore(
+        subscribeToSearchHistory,
+        searchHistorySnapshot,
+        searchHistoryServerSnapshot,
+    );
 
     const input = useRef<HTMLInputElement>(null);
     const wrapper = useRef<HTMLDivElement>(null);
@@ -130,14 +163,25 @@ export function SearchField({
         return () => document.removeEventListener('keydown', onKeyDown);
     }, []);
 
-    const submit = useCallback(() => {
-        if (query.trim() === '') {
+    const runSearch = useCallback((term: string) => {
+        const trimmed = term.trim();
+
+        if (trimmed === '') {
             return;
         }
 
+        rememberSearch(trimmed);
         setOpen(false);
-        router.visit(`${searchRoute.url()}?q=${encodeURIComponent(query)}`);
-    }, [query]);
+        router.visit(`${searchRoute.url()}?q=${encodeURIComponent(trimmed)}`);
+    }, []);
+
+    const submit = useCallback(() => {
+        runSearch(query);
+    }, [query, runSearch]);
+
+    /* Only while the box is empty. Once an anon is typing, what they want is
+       the results, not the past. */
+    const showsHistory = query.trim() === '' && history.length > 0;
 
     const hasResults = results.boards.length > 0 || results.threads.length > 0;
 
@@ -192,6 +236,51 @@ export function SearchField({
                     data-slot="search-results"
                     className="absolute inset-x-0 top-[calc(100%+6px)] z-50 max-h-[70vh] overflow-y-auto rounded-md border border-border bg-surface-elevated py-2 shadow-lift"
                 >
+                    {showsHistory ? (
+                        <SearchGroup heading="Recent searches">
+                            {history.map((term) => (
+                                <li
+                                    key={term}
+                                    role="presentation"
+                                    className="flex items-center gap-1 pr-1 hover:bg-surface-hover"
+                                >
+                                    <button
+                                        type="button"
+                                        role="option"
+                                        aria-selected="false"
+                                        onClick={() => runSearch(term)}
+                                        className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2 text-left"
+                                    >
+                                        <Clock
+                                            aria-hidden="true"
+                                            className="size-4 shrink-0 text-faint"
+                                        />
+                                        <span className="truncate text-body-sm text-foreground">
+                                            {term}
+                                        </span>
+                                    </button>
+
+                                    {/* Its own button rather than an icon
+                                        inside the row: a control nested in
+                                        another control is invalid, and this
+                                        one must not run the search it is
+                                        removing. */}
+                                    <button
+                                        type="button"
+                                        aria-label={`Remove "${term}" from recent searches`}
+                                        onClick={() => forgetSearch(term)}
+                                        className="grid size-7 shrink-0 place-items-center rounded-sm text-faint hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                    >
+                                        <X
+                                            aria-hidden="true"
+                                            className="size-3.5"
+                                        />
+                                    </button>
+                                </li>
+                            ))}
+                        </SearchGroup>
+                    ) : null}
+
                     {results.boards.length > 0 ? (
                         <SearchGroup
                             heading={query === '' ? 'Busiest boards' : 'Boards'}
@@ -261,6 +350,15 @@ export function SearchField({
     );
 }
 
+/**
+ * One labelled section of the dropdown.
+ *
+ * The heading was a bare `<p>`: visible, and invisible to assistive tech,
+ * which got a flat run of options with nothing to say which were boards, which
+ * were threads and which were things this anon had searched for before. Inside
+ * a listbox that grouping is exactly what `role="group"` with a name is for,
+ * and the name is the heading already on screen.
+ */
 function SearchGroup({
     heading,
     children,
@@ -268,9 +366,14 @@ function SearchGroup({
     heading: string;
     children: React.ReactNode;
 }) {
+    const headingId = useId();
+
     return (
-        <div className="py-1">
-            <p className="px-3 pb-1 text-label font-semibold tracking-[1.2px] text-faint uppercase">
+        <div role="group" aria-labelledby={headingId} className="py-1">
+            <p
+                id={headingId}
+                className="px-3 pb-1 text-label font-semibold tracking-[1.2px] text-faint uppercase"
+            >
                 {heading}
             </p>
             <ul>{children}</ul>

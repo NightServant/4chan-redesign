@@ -47,12 +47,34 @@ export function useBookmark(): UseBookmark {
             return;
         }
 
-        const request = thread.bookmarked ? router.delete : router.post;
+        const url = bookmarkThread(thread.id).url;
 
         /* `preserveScroll` because the press happens mid-list and the reply is
            a redirect back: without it the page returns to the top and the row
            an anon just saved is somewhere above them. */
-        request(bookmarkThread(thread.id).url, { preserveScroll: true });
+        const options = { preserveScroll: true };
+
+        /**
+         * Called on the router, never picked off it.
+         *
+         * This was `const request = thread.bookmarked ? router.delete :
+         * router.post`, which detaches the method from its object: `this` is
+         * undefined inside, and Inertia throws `Cannot read properties of
+         * undefined (reading 'visit')` before a request is ever made. Every
+         * page carried that line, so the bookmark button had never once worked
+         * for a signed-in anon on any screen.
+         *
+         * `post` takes `(url, data, options)`, so the empty body is not
+         * decoration: `post(url, options)` puts `preserveScroll` in the request
+         * body, where it is ignored, and the page jumps to the top.
+         */
+        if (thread.bookmarked) {
+            router.delete(url, options);
+
+            return;
+        }
+
+        router.post(url, {}, options);
     }
 
     return {

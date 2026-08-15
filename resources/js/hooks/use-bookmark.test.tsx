@@ -8,9 +8,36 @@ import { makeThread } from '@/fixtures/factories';
 import { useBookmark } from '@/hooks/use-bookmark';
 import type { User } from '@/types/auth';
 
+/**
+ * A router double that behaves like the real one, and specifically one whose
+ * `post` and `delete` are *methods* that go through `this`.
+ *
+ * The previous double was `{ post: vi.fn(), delete: vi.fn() }` — three plain
+ * functions with no receiver. That cannot express the way Inertia's router
+ * actually fails, and the way this hook actually broke: picking the method off
+ * the object (`const request = cond ? router.delete : router.post`) detaches
+ * it, so `this` is undefined inside and Inertia throws
+ * `Cannot read properties of undefined (reading 'visit')`.
+ *
+ * Every page carried that line, the tests were green throughout, and the
+ * bookmark button had never once worked for a signed-in anon. A mock that
+ * cannot reproduce the failure is a mock that certifies the bug.
+ */
 const { usePage, router } = vi.hoisted(() => ({
     usePage: vi.fn(),
-    router: { post: vi.fn(), delete: vi.fn(), visit: vi.fn() },
+    router: {
+        visit: vi.fn(),
+        post(url: string, data?: unknown, options?: unknown) {
+            return this.visit(url, {
+                ...(options ?? {}),
+                method: 'post',
+                data,
+            });
+        },
+        delete(url: string, options?: unknown) {
+            return this.visit(url, { ...(options ?? {}), method: 'delete' });
+        },
+    },
 }));
 
 vi.mock('@inertiajs/react', () => ({
@@ -60,8 +87,7 @@ function Harness({ bookmarked }: { bookmarked: boolean }) {
 }
 
 beforeEach(() => {
-    router.post.mockClear();
-    router.delete.mockClear();
+    router.visit.mockClear();
     mockPage(true);
 });
 
@@ -72,10 +98,10 @@ describe('useBookmark', () => {
 
         await user.click(screen.getByRole('button', { name: 'Toggle' }));
 
-        expect(router.post).toHaveBeenCalledWith('/threads/7/bookmark', {
-            preserveScroll: true,
-        });
-        expect(router.delete).not.toHaveBeenCalled();
+        expect(router.visit).toHaveBeenCalledWith(
+            '/threads/7/bookmark',
+            expect.objectContaining({ method: 'post' }),
+        );
     });
 
     it('unsaves one that is', async () => {
@@ -84,10 +110,30 @@ describe('useBookmark', () => {
 
         await user.click(screen.getByRole('button', { name: 'Toggle' }));
 
-        expect(router.delete).toHaveBeenCalledWith('/threads/7/bookmark', {
-            preserveScroll: true,
-        });
-        expect(router.post).not.toHaveBeenCalled();
+        expect(router.visit).toHaveBeenCalledWith(
+            '/threads/7/bookmark',
+            expect.objectContaining({ method: 'delete' }),
+        );
+    });
+
+    /**
+     * The press happens mid-list and the reply is a redirect back. Without
+     * this the page returns to the top and the row an anon just saved is
+     * somewhere above them, which reads as nothing having happened.
+     *
+     * It also has to arrive as an *option*. `router.post(url, data, options)`
+     * — passing it second put it in the request body, where it did nothing.
+     */
+    it('preserves scroll on both directions', async () => {
+        const user = userEvent.setup();
+
+        render(<Harness bookmarked={false} />);
+        await user.click(screen.getByRole('button', { name: 'Toggle' }));
+
+        expect(router.visit).toHaveBeenLastCalledWith(
+            '/threads/7/bookmark',
+            expect.objectContaining({ preserveScroll: true }),
+        );
     });
 
     /**
@@ -103,7 +149,7 @@ describe('useBookmark', () => {
         await user.click(screen.getByRole('button', { name: 'Toggle' }));
 
         expect(await screen.findByRole('dialog')).toBeInTheDocument();
-        expect(router.post).not.toHaveBeenCalled();
+        expect(router.visit).not.toHaveBeenCalled();
     });
 });
 

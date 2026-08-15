@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SearchField } from '@/components/clover/search-field';
+import { readSearchHistory, rememberSearch } from '@/lib/search-history';
 
 const { router } = vi.hoisted(() => ({ router: { visit: vi.fn() } }));
 
@@ -55,6 +56,7 @@ function mockFetch(payload: unknown = RESULTS) {
 beforeEach(() => {
     vi.useRealTimers();
     router.visit.mockClear();
+    localStorage.clear();
 });
 
 afterEach(() => {
@@ -208,6 +210,125 @@ describe('SearchField', () => {
         expect(signals.length).toBeGreaterThan(0);
         expect(signals.every((signal) => signal instanceof AbortSignal)).toBe(
             true,
+        );
+    });
+});
+
+/**
+ * Recent searches.
+ *
+ * An empty box is the state a search field spends most of its life in, and it
+ * used to offer the busiest boards there — useful once, useless to someone who
+ * comes back to the same three terms. What an anon searched for is the thing
+ * they are most likely to want again.
+ */
+describe('SearchField recent searches', () => {
+    it('lists what was searched before when the box is empty', async () => {
+        const user = userEvent.setup();
+        mockFetch({ query: '', boards: [], threads: [] });
+        rememberSearch('init systems');
+        rememberSearch('mechanical keyboards');
+
+        render(<SearchField />);
+        await user.click(screen.getByRole('combobox'));
+
+        const recent = await screen.findByRole('group', {
+            name: 'Recent searches',
+        });
+
+        expect(recent).toHaveTextContent('mechanical keyboards');
+        expect(recent).toHaveTextContent('init systems');
+    });
+
+    it('searches again when a recent term is pressed', async () => {
+        const user = userEvent.setup();
+        mockFetch({ query: '', boards: [], threads: [] });
+        rememberSearch('init systems');
+
+        render(<SearchField />);
+        await user.click(screen.getByRole('combobox'));
+        await user.click(
+            await screen.findByRole('option', { name: 'init systems' }),
+        );
+
+        expect(router.visit).toHaveBeenCalledWith('/search?q=init%20systems');
+    });
+
+    /** The close icon the request asked for: it removes that one term. */
+    it('removes a single term from the close control beside it', async () => {
+        const user = userEvent.setup();
+        mockFetch({ query: '', boards: [], threads: [] });
+        rememberSearch('keep me');
+        rememberSearch('drop me');
+
+        render(<SearchField />);
+        await user.click(screen.getByRole('combobox'));
+        await user.click(
+            await screen.findByRole('button', {
+                name: 'Remove "drop me" from recent searches',
+            }),
+        );
+
+        expect(readSearchHistory()).toEqual(['keep me']);
+        expect(screen.queryByText('drop me')).not.toBeInTheDocument();
+        expect(screen.getByText('keep me')).toBeInTheDocument();
+    });
+
+    /** Removing a term must not run it. */
+    it('does not search when the close control is pressed', async () => {
+        const user = userEvent.setup();
+        mockFetch({ query: '', boards: [], threads: [] });
+        rememberSearch('drop me');
+
+        render(<SearchField />);
+        await user.click(screen.getByRole('combobox'));
+        await user.click(
+            await screen.findByRole('button', {
+                name: 'Remove "drop me" from recent searches',
+            }),
+        );
+
+        expect(router.visit).not.toHaveBeenCalled();
+    });
+
+    it('records a search when one is run', async () => {
+        const user = userEvent.setup();
+        mockFetch();
+
+        render(<SearchField />);
+        await user.type(screen.getByRole('combobox'), 'init systems{Enter}');
+
+        expect(readSearchHistory()).toEqual(['init systems']);
+    });
+
+    it('shows no recent group before anything has been searched', async () => {
+        const user = userEvent.setup();
+        mockFetch({ query: '', boards: [], threads: [] });
+
+        render(<SearchField />);
+        await user.click(screen.getByRole('combobox'));
+
+        await waitFor(() =>
+            expect(screen.getByRole('listbox')).toBeInTheDocument(),
+        );
+        expect(
+            screen.queryByRole('group', { name: 'Recent searches' }),
+        ).not.toBeInTheDocument();
+    });
+
+    /** Once an anon is typing, the results are what they want, not the past. */
+    it('hides recent searches once there is a query', async () => {
+        const user = userEvent.setup();
+        mockFetch();
+        rememberSearch('init systems');
+
+        render(<SearchField />);
+        await user.type(screen.getByRole('combobox'), 'g');
+
+        await waitFor(() =>
+            expect(
+                screen.queryByRole('group', { name: 'Recent searches' }),
+            ).not.toBeInTheDocument(),
         );
     });
 });
