@@ -1,5 +1,5 @@
 import { Form, Link, usePage } from '@inertiajs/react';
-import { LockIcon } from 'lucide-react';
+import { LockIcon, ShieldIcon } from 'lucide-react';
 import { useRef } from 'react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
@@ -10,12 +10,12 @@ import DeleteUser from '@/components/delete-user';
 import type { Props as ManagePasskeysProps } from '@/components/manage-passkeys';
 import ManagePasskeys from '@/components/manage-passkeys';
 import type { Props as ManageTwoFactorProps } from '@/components/manage-two-factor';
-import ManageTwoFactor from '@/components/manage-two-factor';
 import PasswordInput from '@/components/password-input';
 import { MatureBoardsToggle } from '@/components/settings/mature-boards-toggle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { confirm as confirmPassword } from '@/routes/settings';
+import { edit as editTwoFactor } from '@/routes/two-factor';
 import { send } from '@/routes/verification';
 import type { Auth } from '@/types';
 
@@ -89,7 +89,6 @@ export default function Settings({
     passwordRules,
     securityUnlocked,
     canManageTwoFactor,
-    requiresConfirmation,
     twoFactorEnabled,
     canManagePasskeys,
     passkeys,
@@ -270,30 +269,32 @@ export default function Settings({
                 </Form>
             </Panel>
 
-            {/* The two feature panels are gated on the same flags their
-                components check. That looks like a duplicated guard, and is
-                not: a component returning null inside a `Panel` leaves a
-                titled, empty region on the page, which reads as a broken
-                feature rather than an absent one.
+            {/* Two-factor has a page of its own, so this is a status row and
+                a way to it rather than a second place to manage it. Reading
+                whether it is on is worth having beside the rest of the
+                account; turning it on and off is not something to offer in
+                two places, which is how the two drift apart.
 
-                The id is the header's target. Its avatar menu links straight
-                at two-factor, and on a page this long that has to land on the
-                panel rather than at the top of the document. */}
+                The state is safe to show unconfirmed — it is one bit, and an
+                anon who can see this page can see it. Everything the page
+                behind the link reveals stays behind `RequirePassword`. */}
             {canManageTwoFactor ? (
-                securityUnlocked ? (
-                    <Panel id="two-factor" title="Two-factor authentication">
-                        <ManageTwoFactor
-                            canManageTwoFactor={canManageTwoFactor}
-                            requiresConfirmation={requiresConfirmation}
-                            twoFactorEnabled={twoFactorEnabled}
-                        />
-                    </Panel>
-                ) : (
-                    <LockedPanel
-                        id="two-factor"
-                        title="Two-factor authentication"
-                    />
-                )
+                <Panel id="two-factor" title="Two-factor authentication">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-body-sm text-muted-foreground">
+                            {twoFactorEnabled
+                                ? 'On. Signing in asks for a code from your authenticator app.'
+                                : 'Off. Signing in needs only your password.'}
+                        </p>
+
+                        <Button variant="outline" asChild>
+                            <Link href={editTwoFactor()}>
+                                <ShieldIcon aria-hidden="true" />
+                                {twoFactorEnabled ? 'Manage' : 'Turn on'}
+                            </Link>
+                        </Button>
+                    </div>
+                </Panel>
             ) : null}
 
             {canManagePasskeys ? (

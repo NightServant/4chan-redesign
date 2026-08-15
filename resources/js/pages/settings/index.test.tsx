@@ -303,27 +303,63 @@ describe('Settings', () => {
      * authentication" link must not land on a page that appears not to have
      * two-factor at all.
      */
-    it('keeps both panels present while locked, with a way through', () => {
+    it('keeps the passkeys panel present while locked, with a way through', () => {
         renderSettings({ securityUnlocked: false });
 
-        const twoFactor = screen.getByRole('region', {
-            name: 'Two-factor authentication',
-        });
+        const passkeys = screen.getByRole('region', { name: 'Passkeys' });
 
         expect(
-            screen.getByRole('region', { name: 'Passkeys' }),
-        ).toBeInTheDocument();
-        expect(
-            within(twoFactor).getByRole('link', { name: /confirm password/i }),
+            within(passkeys).getByRole('link', { name: /confirm password/i }),
         ).toHaveAttribute('href', '/settings/confirm');
     });
 
-    /** The header links at `#two-factor`, which has to land on the panel. */
-    it('anchors the two-factor panel where the header points', () => {
-        renderSettings();
+    /**
+     * Two-factor is a page now, not a panel. This row reports the state and
+     * links there; managing it in two places is how the two drift apart.
+     */
+    it('reports the two-factor state and links at its own page', () => {
+        renderSettings({ twoFactorEnabled: true });
+
+        const row = screen.getByRole('region', {
+            name: 'Two-factor authentication',
+        });
+
+        expect(row).toHaveTextContent(/On\./);
+        expect(
+            within(row).getByRole('link', { name: 'Manage' }),
+        ).toHaveAttribute('href', '/settings/two-factor');
+    });
+
+    /**
+     * The state is shown whether or not the password has been confirmed. A row
+     * that said "Off" because the state was withheld would tell an anon their
+     * account is unprotected when it is not.
+     */
+    it('reports the state even while the rest is locked', () => {
+        renderSettings({ securityUnlocked: false, twoFactorEnabled: true });
 
         expect(
             screen.getByRole('region', { name: 'Two-factor authentication' }),
-        ).toHaveAttribute('id', 'two-factor');
+        ).toHaveTextContent(/On\./);
+    });
+
+    it('says it is off when it is', () => {
+        renderSettings({ twoFactorEnabled: false });
+
+        const row = screen.getByRole('region', {
+            name: 'Two-factor authentication',
+        });
+
+        expect(row).toHaveTextContent(/Off\./);
+        expect(
+            within(row).getByRole('link', { name: 'Turn on' }),
+        ).toBeInTheDocument();
+    });
+
+    /** It does not manage two-factor, which is the point of the split. */
+    it('offers no two-factor controls of its own', () => {
+        renderSettings();
+
+        expect(screen.queryByTestId('manage-two-factor')).toBeNull();
     });
 });

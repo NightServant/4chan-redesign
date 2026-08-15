@@ -1,7 +1,6 @@
-import { router, usePage } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import { Eraser, History as HistoryIcon, Search } from 'lucide-react';
 import { useState } from 'react';
-import { AuthGate } from '@/components/clover/auth-gate';
 import { EmptyState } from '@/components/clover/empty-state';
 import { PageHeader } from '@/components/clover/page-header';
 import { PageMeta } from '@/components/clover/page-meta';
@@ -10,9 +9,9 @@ import { SectionLabel } from '@/components/clover/section-label';
 import { ThreadCard } from '@/components/clover/thread-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useBookmark } from '@/hooks/use-bookmark';
 import { destroy as clearHistory } from '@/routes/history';
-import { bookmark as bookmarkThread } from '@/routes/threads';
-import type { HistoryEntry, Thread } from '@/types/clover';
+import type { HistoryEntry } from '@/types/clover';
 
 const GROUPS = ['Today', 'Yesterday', 'Earlier'] as const;
 
@@ -63,12 +62,9 @@ type HistoryProps = {
 };
 
 export default function History({ entries }: HistoryProps) {
+    const { toggleBookmark, authGate } = useBookmark();
     const [query, setQuery] = useState('');
     const [page, setPage] = useState(1);
-    const [gatedAction, setGatedAction] = useState<string | null>(null);
-
-    const { auth } = usePage().props;
-    const signedIn = Boolean(auth.user);
 
     const matched = entries.filter((entry) => matches(entry, query));
 
@@ -78,26 +74,6 @@ export default function History({ entries }: HistoryProps) {
         (current - 1) * PAGE_SIZE,
         current * PAGE_SIZE,
     );
-
-    /**
-     * The same toggle the feed's rows carry, wired to the same route.
-     *
-     * It arrives with the card rather than being rebuilt here, which is half
-     * the point of sharing the component. A bookmark button that renders on
-     * one screen and does nothing on another is the defect this codebase keeps
-     * finding, and the feed's own button was exactly that for six tasks.
-     */
-    function toggleBookmark(thread: Thread): void {
-        if (!signedIn) {
-            setGatedAction('save a thread');
-
-            return;
-        }
-
-        const request = thread.bookmarked ? router.delete : router.post;
-
-        request(bookmarkThread(thread.id).url, { preserveScroll: true });
-    }
 
     function clearAll(): void {
         router.delete(clearHistory().url);
@@ -203,15 +179,7 @@ export default function History({ entries }: HistoryProps) {
                 )}
             </div>
 
-            <AuthGate
-                action={gatedAction ?? 'do that'}
-                open={gatedAction !== null}
-                onOpenChange={(open) => {
-                    if (!open) {
-                        setGatedAction(null);
-                    }
-                }}
-            />
+            {authGate}
         </>
     );
 }

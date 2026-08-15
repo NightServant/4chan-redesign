@@ -7,6 +7,7 @@ import { ThreadCard } from '@/components/clover/thread-card';
 import { BoardHeader } from '@/components/feed/board-header';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useBookmark } from '@/hooks/use-bookmark';
 import { popular } from '@/routes';
 import type { Board as BoardType, Thread } from '@/types/clover';
 
@@ -61,6 +62,8 @@ type BoardProps = {
  * was how a routable slug with no data rendered a blank page.
  */
 export default function Board({ board, threads }: BoardProps) {
+    const { toggleBookmark, authGate } = useBookmark();
+
     const [sort, setSort] = useState<SortOption>('bumped');
 
     const slug = board.slug;
@@ -109,6 +112,9 @@ export default function Board({ board, threads }: BoardProps) {
                                             <ThreadCard
                                                 key={thread.no}
                                                 thread={thread}
+                                                onBookmark={() =>
+                                                    toggleBookmark(thread)
+                                                }
                                             />
                                         ),
                                     )}
@@ -118,6 +124,8 @@ export default function Board({ board, threads }: BoardProps) {
                     ))}
                 </Tabs>
             </div>
+
+            {authGate}
         </>
     );
 }

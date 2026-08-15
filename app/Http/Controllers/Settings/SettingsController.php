@@ -61,7 +61,24 @@ class SettingsController extends Controller
             'canManageTwoFactor' => Features::canManageTwoFactorAuthentication(),
             'canManagePasskeys' => Features::canManagePasskeys(),
             'passkeys' => [],
+            'twoFactorEnabled' => false,
         ];
+
+        /**
+         * Whether two-factor is on, sent whether or not the password has been
+         * confirmed.
+         *
+         * The screen shows this as a status row now rather than as a panel, and
+         * a row that reports "Off" because the state was withheld is worse than
+         * no row: it tells an anon their account is unprotected when it is not.
+         * It is one bit, it is about the reader's own account, and everything
+         * the two-factor page itself reveals stays behind `RequirePassword`.
+         */
+        if (Features::canManageTwoFactorAuthentication()) {
+            $request->ensureStateIsValid();
+
+            $props['twoFactorEnabled'] = $request->user()->hasEnabledTwoFactorAuthentication();
+        }
 
         if (! $unlocked) {
             return Inertia::render('settings/index', $props);
@@ -82,13 +99,6 @@ class SettingsController extends Controller
                 ])
                 ->values()
                 ->all();
-        }
-
-        if (Features::canManageTwoFactorAuthentication()) {
-            $request->ensureStateIsValid();
-
-            $props['twoFactorEnabled'] = $request->user()->hasEnabledTwoFactorAuthentication();
-            $props['requiresConfirmation'] = Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm');
         }
 
         return Inertia::render('settings/index', $props);

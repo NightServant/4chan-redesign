@@ -30,7 +30,7 @@ import { ACCOUNT_MENU, PRIMARY_NAV } from '@/lib/navigation';
 import { cn, plural } from '@/lib/utils';
 import { account, login, logout, register } from '@/routes';
 import { update as boardPreference } from '@/routes/board-preference';
-import { edit as editSettings } from '@/routes/settings';
+import { edit as editTwoFactor } from '@/routes/two-factor';
 import type { CloverNavItem } from '@/types/navigation';
 
 /**
@@ -297,16 +297,15 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                                         />
                                     </DropdownMenuItem>
 
-                                    {/* Anchored at the panel, not at the top of
-                                        settings. There is one settings page
-                                        now and two-factor sits well down it,
-                                        so a link to the page alone would drop
-                                        an anon at a display-name field and
-                                        leave them to find it. */}
+                                    {/* The two-factor page itself.
+
+                                        This pointed at `/settings#two-factor`,
+                                        which lands an anon in the middle of a
+                                        page of six panels and asks them to
+                                        find the thing they pressed a button to
+                                        reach. Two-factor has a page now. */}
                                     <DropdownMenuItem asChild>
-                                        <Link
-                                            href={`${editSettings().url}#two-factor`}
-                                        >
+                                        <Link href={editTwoFactor()}>
                                             <ShieldIcon aria-hidden="true" />
                                             Two-factor authentication
                                         </Link>

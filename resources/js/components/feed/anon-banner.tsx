@@ -1,13 +1,17 @@
-import { Link } from '@inertiajs/react';
 import { Shield } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { login, register } from '@/routes';
 
 /**
  * Shown at the top of the feed to a signed-out anon. Reading never needs an
- * account; posting and commenting do, so this is where that line
- * gets drawn rather than at the point of a blocked action.
+ * account; posting and commenting do, so this is where that line gets drawn
+ * rather than at the point of a blocked action.
+ *
+ * It carried "Log in" and "Create account" buttons, and the header carries
+ * both on every screen a signed-out anon can reach — including this one, two
+ * inches above. A banner that repeats the chrome directly beneath it is not
+ * offering a second chance to sign up, it is asking the same question twice.
+ *
+ * What is left is the sentence, which is the part the header does not say.
  */
 function AnonBanner() {
     return (
@@ -23,15 +27,6 @@ function AnonBanner() {
                 You are browsing anonymously. Reading is open to everyone,
                 posting and commenting need an account.
             </p>
-
-            <div className="flex shrink-0 items-center gap-2">
-                <Button variant="ghost" asChild>
-                    <Link href={login()}>Log in</Link>
-                </Button>
-                <Button variant="primary" asChild>
-                    <Link href={register()}>Create account</Link>
-                </Button>
-            </div>
         </Card>
     );
 }

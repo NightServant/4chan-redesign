@@ -4,6 +4,7 @@ use App\Http\Controllers\Settings\BoardPreferenceController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use App\Http\Controllers\Settings\SettingsController;
+use App\Http\Controllers\Settings\TwoFactorController;
 use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Support\Facades\Route;
 
@@ -57,6 +58,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('settings/confirm', fn () => redirect()->route('settings.edit'))
         ->middleware(RequirePassword::class)
         ->name('settings.confirm');
+
+    /**
+     * Two-factor, on a page of its own rather than a fragment on a long one.
+     *
+     * `RequirePassword` sits here and not on `settings`: turning two-factor
+     * off is the most useful thing an attacker can do with a borrowed session,
+     * and reading the page reveals whether it is on. Everything else in
+     * settings is reachable without proving anything twice.
+     */
+    Route::get('settings/two-factor', [TwoFactorController::class, 'edit'])
+        ->middleware(RequirePassword::class)
+        ->name('two-factor.edit');
 
     Route::put('settings/password', [SecurityController::class, 'update'])
         ->middleware('throttle:6,1')

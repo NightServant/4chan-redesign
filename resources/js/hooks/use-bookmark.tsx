@@ -1,0 +1,68 @@
+import { router, usePage } from '@inertiajs/react';
+import { useState } from 'react';
+import type { ReactNode } from 'react';
+import { AuthGate } from '@/components/clover/auth-gate';
+import { bookmark as bookmarkThread } from '@/routes/threads';
+import type { Thread } from '@/types/clover';
+
+/**
+ * Saving and unsaving a thread, wherever a `ThreadCard` renders.
+ *
+ * ## Why this is a hook and not five copies
+ *
+ * `ThreadCard` draws a bookmark button unconditionally and calls whatever
+ * `onBookmark` it was handed. Three of the six screens that render one handed
+ * it nothing: the board, search, and the account screen's own Saved tab. The
+ * button was there, it looked identical to the working ones, and pressing it
+ * did nothing at all — which also explains the other half of the complaint,
+ * that saved threads were not appearing. Nothing had been saved.
+ *
+ * The feed, history and bookmarks screens each had their own copy of this
+ * function, so the fix for the other three was to write it a fourth, fifth and
+ * sixth time and hope the seventh screen remembers. It lives here instead.
+ *
+ * ## The gate comes with it
+ *
+ * A signed-out anon pressing save must meet `AuthGate`, never a redirect to
+ * the login form — reading is open, and being bounced out of a page for
+ * reaching at a control is not how that reads. The gate is returned as an
+ * element so a caller cannot take the toggle and forget the dialog; a page
+ * that renders `authGate` gets both or neither.
+ */
+type UseBookmark = {
+    /** Toggles the thread's saved state, or opens the gate when signed out. */
+    toggleBookmark: (thread: Thread) => void;
+    /** Render this once, anywhere in the page. */
+    authGate: ReactNode;
+};
+
+export function useBookmark(): UseBookmark {
+    const { auth } = usePage().props;
+    const [gated, setGated] = useState(false);
+
+    function toggleBookmark(thread: Thread): void {
+        if (!auth.user) {
+            setGated(true);
+
+            return;
+        }
+
+        const request = thread.bookmarked ? router.delete : router.post;
+
+        /* `preserveScroll` because the press happens mid-list and the reply is
+           a redirect back: without it the page returns to the top and the row
+           an anon just saved is somewhere above them. */
+        request(bookmarkThread(thread.id).url, { preserveScroll: true });
+    }
+
+    return {
+        toggleBookmark,
+        authGate: (
+            <AuthGate
+                action="save a thread"
+                open={gated}
+                onOpenChange={setGated}
+            />
+        ),
+    };
+}
