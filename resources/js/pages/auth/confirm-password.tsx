@@ -1,10 +1,11 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form } from '@inertiajs/react';
 import {
     index as confirmOptions,
     store as confirmStore,
 } from '@/actions/Laravel/Passkeys/Http/Controllers/PasskeyConfirmationController';
 import { AuthPasswordInput } from '@/components/auth/auth-input';
 import { FormField } from '@/components/clover/form-field';
+import { PageMeta } from '@/components/clover/page-meta';
 import PasskeyVerify from '@/components/passkey-verify';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -13,7 +14,10 @@ import { store } from '@/routes/password/confirm';
 export default function ConfirmPassword() {
     return (
         <>
-            <Head title="Confirm password" />
+            <PageMeta
+                title="Confirm password"
+                description="Confirm your password to reach the parts of settings that manage how you sign in."
+            />
 
             <PasskeyVerify
                 routes={{

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Http\Resources\AttachmentResource;
+use App\Http\Resources\ThreadResource;
 use App\Models\Thread;
 use App\Models\ThreadRead;
 use Carbon\CarbonInterface;
@@ -33,16 +33,24 @@ class HistoryController extends Controller
                 'thread_id',
                 Thread::query()->onVisibleBoard($showsMature)->select('id'),
             )
-            ->with(['thread.board', 'thread.originalPost'])
+            ->with(['thread.board', 'thread.originalPost', 'thread.bookmarks'])
             ->orderByDesc('last_read_at')
             ->get();
 
         return Inertia::render('history', [
+            /**
+             * The thread itself, as the feed receives it, plus when this anon
+             * was last on it.
+             *
+             * This used to be a shape of its own — a title, a board, a post
+             * number and an attachment, flattened by hand — which is how the
+             * history screen ended up looking nothing like the feed it is a
+             * history of. Sending the same resource means the same card, and
+             * means a field added to threads reaches both screens rather than
+             * one.
+             */
             'entries' => $reads->map(fn (ThreadRead $read): array => [
-                'id' => $read->thread->id,
-                'no' => $read->thread->no,
-                'board' => $read->thread->board->displaySlug(),
-                'title' => $read->thread->displayTitle(),
+                'thread' => ThreadResource::make($read->thread)->resolve($request),
                 'when' => $this->when($read->last_read_at, $now),
 
                 /**
@@ -52,9 +60,6 @@ class HistoryController extends Controller
                  * timestamp knows its own day.
                  */
                 'day' => $this->day($read->last_read_at, $now),
-
-                'progress' => $read->progress,
-                'media' => AttachmentResource::for($read->thread->originalPost, $request),
             ])->all(),
         ]);
     }

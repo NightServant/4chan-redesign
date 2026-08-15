@@ -1,8 +1,9 @@
-import { Head, Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { SearchIcon } from 'lucide-react';
 import { BoardAvatar } from '@/components/clover/board-avatar';
 import { EmptyState } from '@/components/clover/empty-state';
 import { MachineValue } from '@/components/clover/machine-value';
+import { PageMeta } from '@/components/clover/page-meta';
 import { SectionLabel } from '@/components/clover/section-label';
 import { ThreadCard } from '@/components/clover/thread-card';
 import { board as boardRoute } from '@/routes';
@@ -28,7 +29,14 @@ export default function Search({ query, boards, threads }: SearchProps) {
 
     return (
         <>
-            <Head title={query === '' ? 'Search' : `${query} — search`} />
+            <PageMeta
+                title={query === '' ? 'Search' : `${query} — search`}
+                description={
+                    query === ''
+                        ? 'Search every thread Clover holds, by title and by body.'
+                        : `Threads matching “${query}” across every board Clover mirrors.`
+                }
+            />
 
             <div className="mx-auto flex w-full max-w-[820px] flex-col gap-6 px-6 py-8">
                 <div className="flex flex-col gap-2">

@@ -209,7 +209,9 @@ describe('ThreadCard', () => {
         );
 
         expect(
-            screen.getByRole('img', { name: media.filename }),
+            screen.getByRole('img', {
+                name: `Attached image: ${media.filename}`,
+            }),
         ).toBeInTheDocument();
 
         rerender(<ThreadCard thread={{ ...baseThread, media: null }} />);
@@ -233,7 +235,9 @@ describe('ThreadCard', () => {
 
         render(<ThreadCard thread={{ ...baseThread, media }} />);
 
-        const image = screen.getByRole('img', { name: media.filename });
+        const image = screen.getByRole('img', {
+            name: `Attached image: ${media.filename}`,
+        });
 
         expect(image).toHaveAttribute('src', media.fullUrl);
         expect(image).toHaveClass('w-full');

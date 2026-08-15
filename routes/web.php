@@ -9,6 +9,7 @@ use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\NotificationsController;
 use App\Http\Controllers\ReplyController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StatusController;
@@ -58,11 +59,14 @@ Route::middleware('auth')->group(function () {
     Route::get('history', HistoryController::class)->name('history');
 
     /**
-     * The last destination still without a screen. It keeps the shared
-     * placeholder rather than 404ing, so the nav stays honest about being
-     * unfinished instead of looking broken.
+     * New replies in threads this anon is in.
+     *
+     * The last destination that was still a placeholder. Nobody can be
+     * notified personally here -- a post carries no identity, so there is no
+     * author to address a reply to -- so the notification belongs to the
+     * thread instead. See `ThreadNotifications`.
      */
-    Route::inertia('notifications', 'placeholder', ['destination' => 'notifications'])->name('notifications');
+    Route::get('notifications', NotificationsController::class)->name('notifications');
 
     /**
      * What an account can do, as opposed to read.

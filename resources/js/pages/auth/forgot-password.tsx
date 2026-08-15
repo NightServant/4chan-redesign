@@ -1,9 +1,10 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form } from '@inertiajs/react';
 import { Mail } from 'lucide-react';
 import { AuthInput } from '@/components/auth/auth-input';
 import { AuthLink } from '@/components/auth/auth-link';
 import { AuthStatus } from '@/components/auth/auth-status';
 import { FormField } from '@/components/clover/form-field';
+import { PageMeta } from '@/components/clover/page-meta';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { login } from '@/routes';
@@ -12,7 +13,10 @@ import { email } from '@/routes/password';
 export default function ForgotPassword({ status }: { status?: string }) {
     return (
         <>
-            <Head title="Forgot password" />
+            <PageMeta
+                title="Forgot password"
+                description="Send a reset link to the email address on your Clover account."
+            />
 
             {status && <AuthStatus>{status}</AuthStatus>}
 

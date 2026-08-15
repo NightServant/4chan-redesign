@@ -1,10 +1,11 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { BookmarkIcon, BookmarkXIcon, SearchXIcon } from 'lucide-react';
 import { useState } from 'react';
 import { EmptyState } from '@/components/clover/empty-state';
 import { FormField } from '@/components/clover/form-field';
 import { MachineValue } from '@/components/clover/machine-value';
 import { PageHeader } from '@/components/clover/page-header';
+import { PageMeta } from '@/components/clover/page-meta';
 import { SectionLabel } from '@/components/clover/section-label';
 import { ThreadCard } from '@/components/clover/thread-card';
 import { Button } from '@/components/ui/button';
@@ -76,7 +77,10 @@ export default function Bookmarks({ bookmarks: saved }: BookmarksProps) {
 
     return (
         <>
-            <Head title="Bookmarks" />
+            <PageMeta
+                title="Bookmarks"
+                description="Threads you saved. They stay here until you remove them."
+            />
 
             <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6 px-6 py-8">
                 <PageHeader

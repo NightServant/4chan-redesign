@@ -1,8 +1,9 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form } from '@inertiajs/react';
 import { Mail, User } from 'lucide-react';
 import { AuthInput, AuthPasswordInput } from '@/components/auth/auth-input';
 import { AuthLink } from '@/components/auth/auth-link';
 import { FormField } from '@/components/clover/form-field';
+import { PageMeta } from '@/components/clover/page-meta';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { login } from '@/routes';
@@ -15,7 +16,10 @@ type Props = {
 export default function Register({ passwordRules }: Props) {
     return (
         <>
-            <Head title="Create account" />
+            <PageMeta
+                title="Create account"
+                description="An account on Clover saves threads and follows boards. Nothing you post carries it."
+            />
 
             <Form
                 {...store.form()}

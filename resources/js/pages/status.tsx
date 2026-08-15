@@ -1,5 +1,5 @@
-import { Head } from '@inertiajs/react';
 import { MachineValue } from '@/components/clover/machine-value';
+import { PageMeta } from '@/components/clover/page-meta';
 import { SectionLabel } from '@/components/clover/section-label';
 
 /**
@@ -44,7 +44,10 @@ export default function Status({
 
     return (
         <>
-            <Head title="Status" />
+            <PageMeta
+                title="Status"
+                description="How much Clover holds, when it last heard from 4chan, and exactly what it does and does not store."
+            />
 
             <article className="mx-auto flex w-full max-w-[720px] flex-col gap-8 px-6 py-12">
                 <header className="flex flex-col gap-3">

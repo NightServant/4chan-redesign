@@ -1,6 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { Bookmark, ImageIcon, MessageSquare } from 'lucide-react';
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { BoardAvatar } from '@/components/clover/board-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
 import { PostAttachment } from '@/components/clover/post-image';
@@ -44,6 +44,15 @@ type ThreadCardProps = Omit<ComponentProps<'div'>, 'onClick' | 'children'> & {
      */
     href?: string;
     onBookmark?: () => void;
+    /**
+     * Something the surrounding screen knows and the thread does not.
+     *
+     * The history screen is the caller this exists for: it shows the same
+     * threads the feed does and one thing the feed has no opinion about --
+     * when this anon was last on them. It renders beside the board line, so a
+     * row still reads as the same object it is everywhere else.
+     */
+    meta?: ReactNode;
 };
 
 const iconButtonClasses = cn(
@@ -56,6 +65,7 @@ function ThreadCard({
     thread,
     href,
     onBookmark,
+    meta,
     className,
     ...props
 }: ThreadCardProps) {
@@ -94,6 +104,12 @@ function ThreadCard({
                     <Badge tone="primary" className="ml-auto">
                         Pinned
                     </Badge>
+                ) : null}
+
+                {meta ? (
+                    <span className="ml-auto text-caption text-faint">
+                        {meta}
+                    </span>
                 ) : null}
             </div>
 

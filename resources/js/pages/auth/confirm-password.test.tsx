@@ -11,6 +11,10 @@ const { formState } = vi.hoisted(() => ({
 }));
 
 vi.mock('@inertiajs/react', () => ({
+    /* `PageMeta` reads the shared `appUrl` to build an absolute `og:url`, and
+       renders its tags inside `Head`. Neither shows up in the DOM these tests
+       query; the mock exists so the component can mount. */
+    usePage: () => ({ props: { appUrl: 'https://clover.test' }, url: '/' }),
     Head: () => null,
     router: { visit: vi.fn() },
     Form: ({

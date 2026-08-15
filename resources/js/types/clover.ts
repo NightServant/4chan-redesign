@@ -169,12 +169,37 @@ export interface ActivityEntry {
     time: string;
 }
 
-export interface HistoryEntry {
-    /** The thread's own id, which the forget route takes. See `Thread.id`. */
-    id: number;
+/**
+ * New replies in a thread this anon is in.
+ *
+ * Not "someone replied to you", which this product cannot say: a post carries
+ * no identity, so there is no author to address a reply to. The notification
+ * belongs to the thread, and `reason` is which of the anon's own actions put
+ * that thread on the list.
+ */
+export interface ThreadNotification {
+    threadId: number;
     no: number;
     board: BoardSlug;
     title: string;
+    /** How many posts arrived since this anon last looked. Never zero. */
+    replies: number;
+    reason: 'saved' | 'posted';
+    /** Relative and pre-formatted, e.g. `2 hr ago`. */
+    time: string;
+}
+
+/**
+ * A thread this anon opened, and when they were last on it.
+ *
+ * It used to be a flattened shape of its own — title, board, post number,
+ * attachment — which is how the history screen ended up drawing a card nothing
+ * else on the site drew. It carries the thread itself now, exactly as the feed
+ * receives it, so both screens render the same component and a field added to
+ * a thread reaches both.
+ */
+export interface HistoryEntry {
+    thread: Thread;
     /** Absolute and pre-formatted, e.g. `Today, 14:02`. */
     when: string;
     /**
@@ -186,9 +211,6 @@ export interface HistoryEntry {
      * to recover it.
      */
     day: 'Today' | 'Yesterday' | 'Earlier';
-    /** Read progress, 0-100. */
-    progress: number;
-    media: Attachment | null;
 }
 
 /**

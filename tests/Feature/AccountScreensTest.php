@@ -127,11 +127,18 @@ it('lists a read thread on the history screen', function (): void {
 
     $this->actingAs($user)->post("/threads/{$thread->id}/read", ['progress' => 40]);
 
+    /* The entry carries the thread itself, exactly as the feed receives it,
+       so both screens render the same card. It used to be a shape of its own
+       — a flattened title, board and post number — which is how the history
+       screen ended up drawing a row nothing else on the site drew. */
     $this->actingAs($user)->get('/history')->assertInertia(
         fn ($page) => $page
             ->component('history')
             ->has('entries', 1)
-            ->where('entries.0.progress', 40)
+            ->has('entries.0.thread.id')
+            ->has('entries.0.thread.replies')
+            ->has('entries.0.thread.bookmarked')
+            ->where('entries.0.thread.no', $thread->no)
             ->where('entries.0.day', 'Today'),
     );
 });

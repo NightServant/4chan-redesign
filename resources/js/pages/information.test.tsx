@@ -5,6 +5,10 @@ import { INFORMATION } from '@/content/information';
 import Information from '@/pages/information';
 
 vi.mock('@inertiajs/react', () => ({
+    /* `PageMeta` reads the shared `appUrl` to build an absolute `og:url`, and
+       renders its tags inside `Head`. Neither shows up in the DOM these tests
+       query; the mock exists so the component can mount. */
+    usePage: () => ({ props: { appUrl: 'https://clover.test' }, url: '/' }),
     Head: ({ title }: { title: string }) => <title>{title}</title>,
     Link: ({ children }: { children: ReactNode }) => <a href="/">{children}</a>,
 }));

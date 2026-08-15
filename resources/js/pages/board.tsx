@@ -1,7 +1,8 @@
-import { Head, Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { CompassIcon } from 'lucide-react';
 import { useState } from 'react';
 import { EmptyState } from '@/components/clover/empty-state';
+import { PageMeta } from '@/components/clover/page-meta';
 import { ThreadCard } from '@/components/clover/thread-card';
 import { BoardHeader } from '@/components/feed/board-header';
 import { Button } from '@/components/ui/button';
@@ -66,7 +67,10 @@ export default function Board({ board, threads }: BoardProps) {
 
     return (
         <>
-            <Head title={board.name} />
+            <PageMeta
+                title={`${board.slug} — ${board.name}`}
+                description={`${board.name} on Clover. ${board.description}`}
+            />
 
             <div className="mx-auto flex max-w-[760px] flex-col gap-6 px-6 py-8">
                 <BoardHeader board={board} />

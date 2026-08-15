@@ -1,7 +1,8 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form } from '@inertiajs/react';
 import { Mail } from 'lucide-react';
 import { AuthInput, AuthPasswordInput } from '@/components/auth/auth-input';
 import { FormField } from '@/components/clover/form-field';
+import { PageMeta } from '@/components/clover/page-meta';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { update } from '@/routes/password';
@@ -15,7 +16,10 @@ type Props = {
 export default function ResetPassword({ token, email, passwordRules }: Props) {
     return (
         <>
-            <Head title="Reset password" />
+            <PageMeta
+                title="Reset password"
+                description="Choose a new password for your Clover account."
+            />
 
             <Form
                 {...update.form()}

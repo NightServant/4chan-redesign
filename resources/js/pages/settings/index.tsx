@@ -1,9 +1,10 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Link, usePage } from '@inertiajs/react';
 import { LockIcon } from 'lucide-react';
 import { useRef } from 'react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
 import { FormField } from '@/components/clover/form-field';
+import { PageMeta } from '@/components/clover/page-meta';
 import { Panel } from '@/components/clover/panel';
 import DeleteUser from '@/components/delete-user';
 import type { Props as ManagePasskeysProps } from '@/components/manage-passkeys';
@@ -111,7 +112,10 @@ export default function Settings({
 
     return (
         <>
-            <Head title="Settings" />
+            <PageMeta
+                title="Settings"
+                description="Your account name, email, password, two-factor, passkeys and what Clover shows you."
+            />
 
             <Panel title="Profile information">
                 <Form

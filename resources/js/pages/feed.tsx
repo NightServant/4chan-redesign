@@ -1,9 +1,10 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { CompassIcon } from 'lucide-react';
 import { useState } from 'react';
 import { AuthGate } from '@/components/clover/auth-gate';
 import { EmptyState } from '@/components/clover/empty-state';
 import { PageHeader } from '@/components/clover/page-header';
+import { PageMeta } from '@/components/clover/page-meta';
 import { ThreadCard } from '@/components/clover/thread-card';
 import { AnonBanner } from '@/components/feed/anon-banner';
 import { Rail } from '@/components/feed/rail';
@@ -43,7 +44,21 @@ const HEADINGS: Record<Sort, string> = {
 const SORT_DESCRIPTIONS: Record<Sort, string> = {
     bumped: 'Sorted by bump order',
     latest: 'Sorted by newest first',
-    popular: 'Sorted by most blessed',
+    /* Was "Sorted by most blessed", which outlived blessings by five tasks.
+       The query orders by reply count and always has. */
+    popular: 'Sorted by most replies',
+};
+
+/**
+ * The same three sorts, written for someone who has not seen the page — a
+ * search result, or a link somebody pasted. The line above is for a reader who
+ * is already looking at the feed and needs only to know how it is ordered.
+ */
+const META_DESCRIPTIONS: Record<Sort, string> = {
+    bumped: 'Threads from every board Clover mirrors, in bump order. No account needed to read.',
+    latest: 'The newest threads across every board Clover mirrors. No account needed to read.',
+    popular:
+        'The most-replied threads across every board Clover mirrors. No account needed to read.',
 };
 
 type FeedProps = {
@@ -89,7 +104,10 @@ export default function Feed({ sort, threads, library }: FeedProps) {
 
     return (
         <>
-            <Head title={HEADINGS[sort]} />
+            <PageMeta
+                title={HEADINGS[sort]}
+                description={META_DESCRIPTIONS[sort]}
+            />
 
             <div className="mx-auto flex w-full max-w-[1180px] gap-7 px-6 py-6">
                 <div

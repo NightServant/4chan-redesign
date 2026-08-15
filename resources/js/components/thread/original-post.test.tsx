@@ -106,7 +106,9 @@ describe('OriginalPost', () => {
         render(<OriginalPost thread={MEDIA_THREAD} />);
 
         const media = MEDIA_THREAD.media!;
-        const image = screen.getByRole('img', { name: media.filename });
+        const image = screen.getByRole('img', {
+            name: `Attached image: ${media.filename}`,
+        });
 
         expect(image).toHaveAttribute('src', media.fullUrl);
         expect(image).not.toHaveAttribute('src', media.thumbnailUrl);

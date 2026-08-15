@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { PageMeta } from '@/components/clover/page-meta';
 import { BoardDirectory } from '@/components/communities/board-directory';
 import type { BoardDirectoryEntry } from '@/types/clover';
 
@@ -25,7 +25,10 @@ type CommunitiesProps = {
 export default function Communities({ boards, hiddenCount }: CommunitiesProps) {
     return (
         <>
-            <Head title="Communities" />
+            <PageMeta
+                title="Communities"
+                description="Every board Clover mirrors, with the number of threads on each. Reading needs no account."
+            />
 
             <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 px-6 py-8">
                 <BoardDirectory boards={boards} hiddenCount={hiddenCount} />

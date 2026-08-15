@@ -65,6 +65,18 @@ describe('plural', () => {
         expect(plural(1, 'saved thread')).toBe('1 saved thread');
         expect(plural(4, 'saved thread')).toBe('4 saved threads');
     });
+
+    /**
+     * The naive `-s` rule is wrong the moment a noun does not take a bare `s`,
+     * and it fails quietly: the notifications screen shipped `3 new replys`
+     * for as long as it took someone to read one. A caller with an irregular
+     * noun supplies the plural rather than working around this function.
+     */
+    it('takes an explicit plural for nouns that do not take a bare -s', () => {
+        expect(plural(1, 'new reply', 'new replies')).toBe('1 new reply');
+        expect(plural(3, 'new reply', 'new replies')).toBe('3 new replies');
+        expect(plural(0, 'new reply', 'new replies')).toBe('0 new replies');
+    });
 });
 
 describe('toUrl', () => {

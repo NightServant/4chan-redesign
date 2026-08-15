@@ -175,14 +175,9 @@ export function makeHistoryEntry(
     overrides: Partial<HistoryEntry> = {},
 ): HistoryEntry {
     return {
-        id: nextPostNumber(),
-        no: nextPostNumber(),
-        board: '/g/',
-        title: 'Anons are still arguing about init systems',
+        thread: makeThread(),
         when: 'Today, 14:02',
         day: 'Today',
-        progress: 40,
-        media: null,
         ...overrides,
     };
 }
