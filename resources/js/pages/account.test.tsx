@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import {
-    makeActivity,
     makeProfile,
     makeProfileComment,
     makeStat,
@@ -71,8 +70,6 @@ const PROFILE_COMMENTS = [
     makeProfileComment({ body: 'Mainline boots but the GPU does nothing.' }),
 ];
 
-const ACTIVITY = [makeActivity()];
-
 function accountProps() {
     return {
         profile: PROFILE,
@@ -80,8 +77,6 @@ function accountProps() {
         comments: PROFILE_COMMENTS,
         media: [],
         saved: [],
-        started: [],
-        activity: ACTIVITY,
     };
 }
 
@@ -95,7 +90,7 @@ describe('Account', () => {
         expect(headings[0]).toHaveTextContent('anon_4412');
     });
 
-    it('offers the five profile tabs and no settings tab', () => {
+    it('offers three profile tabs and no settings tab', () => {
         render(<Account {...accountProps()} />);
 
         const tablist = screen.getByRole('tablist');
@@ -104,34 +99,38 @@ describe('Account', () => {
             within(tablist)
                 .getAllByRole('tab')
                 .map((tab) => tab.textContent),
-        ).toEqual(['Overview', 'Posts', 'Comments', 'Media', 'Saved']);
+        ).toEqual(['Comments', 'Media', 'Saved']);
     });
 
-    it('opens on Overview, showing recent activity', () => {
+    it('opens on Comments, which is what an anon has here', () => {
         render(<Account {...accountProps()} />);
 
-        expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute(
+        expect(screen.getByRole('tab', { name: 'Comments' })).toHaveAttribute(
             'aria-selected',
             'true',
         );
-        expect(
-            screen.getByRole('region', { name: 'Recent activity' }),
-        ).toBeInTheDocument();
     });
 
     /**
-     * The tab used to list ingested threads as though this anon had written
-     * them, which was true of none of them: nothing attributes a post to an
-     * anon until posting lands in task 11b. An empty state is the only honest
-     * thing to show, and the tab keeps its place so the absence is visible
-     * rather than the tab silently vanishing.
+     * Overview and Posts are gone, and asserted as absences because every
+     * other test here passes with them restored.
+     *
+     * Overview summarised the tabs beside it, and its "top thread" panel read
+     * "No threads yet" on every account: Clover accepts no new threads, so
+     * nobody has started one. Posts listed the same threads that panel was
+     * empty about.
      */
-    it('says there are no posts rather than listing threads nobody wrote', async () => {
+    it('offers no tab that could only ever be empty', () => {
         render(<Account {...accountProps()} />);
 
-        await openTab('Posts');
+        for (const name of ['Overview', 'Posts']) {
+            expect(screen.queryByRole('tab', { name })).not.toBeInTheDocument();
+        }
 
-        expect(screen.getByText('No posts yet')).toBeInTheDocument();
+        expect(
+            screen.queryByRole('region', { name: 'Recent activity' }),
+        ).not.toBeInTheDocument();
+        expect(screen.queryByText('No threads yet')).not.toBeInTheDocument();
     });
 
     it('shows four distinct replies under Comments', async () => {
@@ -191,10 +190,10 @@ describe('Account', () => {
         const user = userEvent.setup();
         render(<Account {...accountProps()} />);
 
-        screen.getByRole('tab', { name: 'Overview' }).focus();
+        screen.getByRole('tab', { name: 'Comments' }).focus();
         await user.keyboard('{ArrowRight}');
 
-        expect(screen.getByRole('tab', { name: 'Posts' })).toHaveAttribute(
+        expect(screen.getByRole('tab', { name: 'Media' })).toHaveAttribute(
             'aria-selected',
             'true',
         );

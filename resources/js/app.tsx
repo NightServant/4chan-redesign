@@ -6,10 +6,23 @@ import AppLayout from '@/layouts/app-layout';
 import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+/**
+ * `Laravel` was the fallback and, because `VITE_APP_NAME` was never set, it was
+ * also the answer: every tab in the product read "… - Laravel".
+ */
+const appName = import.meta.env.VITE_APP_NAME || 'Clover';
 
 createInertiaApp({
-    title: (title) => (title ? `${title} - ${appName}` : appName),
+    /**
+     * The page's own title, and nothing appended to it.
+     *
+     * It used to be `${title} - ${appName}`, which spent the readable half of
+     * a tab on the site name — the same site name on every tab, in a browser
+     * that truncates at about twenty characters. A page carrying a thread
+     * title has more to say in that space than Clover does, and the pages that
+     * want the name in the tab say it themselves.
+     */
+    title: (title) => title || appName,
     layout: (name) => {
         switch (true) {
             case name === 'welcome':

@@ -65,7 +65,6 @@ describe('Register page', () => {
     it('keeps every field name Fortify validates', () => {
         render(<Register passwordRules={PASSWORD_RULES} />);
 
-        expect(screen.getByLabelText('Name')).toHaveAttribute('name', 'name');
         expect(screen.getByLabelText('Email address')).toHaveAttribute(
             'name',
             'email',
@@ -78,6 +77,21 @@ describe('Register page', () => {
             'name',
             'password_confirmation',
         );
+    });
+
+    /**
+     * Registration asked for a full name on a site whose entire premise is
+     * that it does not know who you are, and people answered it honestly. The
+     * field is gone and so is the column behind it. Asserted as an absence,
+     * because every other test in this file passes with it restored.
+     */
+    it('asks for no name', () => {
+        render(<Register passwordRules={PASSWORD_RULES} />);
+
+        expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
+        expect(
+            screen.queryByPlaceholderText(/full name/i),
+        ).not.toBeInTheDocument();
     });
 
     it('passes the server password rules to the browser generator', () => {

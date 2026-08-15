@@ -127,32 +127,14 @@ export default function Settings({
                 >
                     {({ processing, errors }) => (
                         <>
-                            {/* Fortify owns `name`, and it is what an anon
-                                typed at registration rather than anything the
-                                profile shows -- labelled for what it is, so it
-                                is not mistaken for the username at the top of
-                                the account screen.
-
-                                The username and bio are not on this form. They
-                                are edited in a dialog on the account screen,
-                                beside the profile they appear on, and two
-                                editors for one set of fields is how the two
-                                drift apart. */}
-                            <FormField
-                                label="Account name"
-                                description="Private. Used on receipts and account email, never on your profile."
-                                error={errors.name}
-                            >
-                                <Input
-                                    id="name"
-                                    name="name"
-                                    defaultValue={user.name}
-                                    required
-                                    autoComplete="name"
-                                    placeholder="Full name"
-                                />
-                            </FormField>
-
+                            {/* No account name. The column is gone: it
+                                held whatever an anon typed at registration,
+                                it was the heading on their public profile
+                                until task 17c stopped that, and nothing on
+                                the site needs it. What identifies an account
+                                is its email; what identifies an anon is the
+                                handle they choose, edited from the account
+                                screen beside the profile it appears on. */}
                             <FormField
                                 label="Email address"
                                 error={errors.email}

@@ -44,6 +44,7 @@ vi.mock('@inertiajs/react', () => ({
 const BOOKMARKS = [
     makeBookmark({
         thread: makeThread({
+            bookmarked: true,
             title: 'The Kola borehole and what stopped it',
             replies: 120,
         }),
@@ -52,6 +53,7 @@ const BOOKMARKS = [
     }),
     makeBookmark({
         thread: makeThread({
+            bookmarked: true,
             title: 'RISC-V laptops as daily drivers',
             replies: 90,
         }),
@@ -59,6 +61,7 @@ const BOOKMARKS = [
     }),
     makeBookmark({
         thread: makeThread({
+            bookmarked: true,
             title: 'Two years of walking 15k steps a day',
             replies: 5108,
         }),
@@ -67,6 +70,7 @@ const BOOKMARKS = [
     }),
     makeBookmark({
         thread: makeThread({
+            bookmarked: true,
             title: 'Mainline kernel support or vendor tree',
             replies: 40,
         }),
@@ -74,7 +78,6 @@ const BOOKMARKS = [
     }),
 ];
 const KOLA = BOOKMARKS[0].thread.title;
-const RISC_V = BOOKMARKS[1].thread.title;
 const WALKING = BOOKMARKS[2].thread.title;
 
 function savedTitles(): string[] {
@@ -94,11 +97,22 @@ describe('Bookmarks page', () => {
         expect(screen.getByText('4 saved threads')).toBeInTheDocument();
     });
 
-    it('renders every saved thread with the date it was saved', () => {
+    it('renders every saved thread', () => {
         render(<Bookmarks bookmarks={BOOKMARKS} />);
 
         expect(savedTitles()).toHaveLength(BOOKMARKS.length);
-        expect(screen.getByText('Saved 2 days ago')).toBeInTheDocument();
+    });
+
+    /**
+     * There used to be a row under each card carrying "Saved 2 days ago" and a
+     * bin. The timestamp answered a question nobody asks of their own reading
+     * list, and the bin was a second control for what the card was already
+     * offering — two ways to unsave one thread, one of which showed no state.
+     */
+    it('states no saved-at time under each card', () => {
+        render(<Bookmarks bookmarks={BOOKMARKS} />);
+
+        expect(screen.queryByText(/^Saved /)).not.toBeInTheDocument();
     });
 
     it("marks the anon's own note as theirs, and omits it when unwritten", () => {
@@ -162,11 +176,13 @@ describe('Bookmarks page', () => {
         const user = userEvent.setup();
         render(<Bookmarks bookmarks={BOOKMARKS} />);
 
-        await user.click(
-            screen.getByRole('button', {
-                name: `Remove bookmark: ${RISC_V}`,
-            }),
-        );
+        /* The card's own bookmark button is the remove control here, and it
+           is filled and green because every thread on this page is saved. */
+        const [remove] = screen.getAllByRole('button', {
+            name: 'Remove bookmark',
+        });
+
+        await user.click(remove);
 
         expect(router.delete).toHaveBeenCalledWith(
             expect.stringContaining('/bookmark'),
@@ -191,5 +207,30 @@ describe('Bookmarks page', () => {
                 'Threads you save appear here and stay until you remove them.',
             ),
         ).toBeInTheDocument();
+    });
+
+    /**
+     * The complaint that produced this: the card's bookmark button drew the
+     * same outline whether a thread was saved or not, so pressing it did
+     * something the row never admitted to. On this page every thread is saved,
+     * so every button here is the pressed state.
+     */
+    it('shows every thread as saved, because on this page they are', () => {
+        const { container } = render(<Bookmarks bookmarks={BOOKMARKS} />);
+
+        const buttons = screen.getAllByRole('button', {
+            name: 'Remove bookmark',
+        });
+
+        expect(buttons).toHaveLength(BOOKMARKS.length);
+
+        for (const button of buttons) {
+            expect(button).toHaveAttribute('aria-pressed', 'true');
+            expect(button.className).toContain('text-primary');
+        }
+
+        expect(container.querySelectorAll('.fill-current').length).toBe(
+            BOOKMARKS.length,
+        );
     });
 });

@@ -168,13 +168,38 @@ function ThreadCard({
                     size="sm"
                     className="ml-auto"
                 />
+                {/* Saved state, on the control that sets it.
+                
+                    This button drew the same outline whether a thread was
+                    saved or not, so pressing it did something the row never
+                    admitted to: an anon pressed, the request went, the props
+                    came back, and nothing on screen moved. The thread page's
+                    own bookmark has looked like this since it was built; the
+                    card simply never caught up.
+                
+                    Filled and green when saved, and the accessible name says
+                    which way the press goes -- colour alone is not a state. */}
                 <button
                     type="button"
-                    aria-label="Bookmark thread"
+                    aria-pressed={thread.bookmarked}
+                    aria-label={
+                        thread.bookmarked
+                            ? 'Remove bookmark'
+                            : 'Bookmark thread'
+                    }
                     onClick={onBookmark}
-                    className={iconButtonClasses}
+                    className={cn(
+                        iconButtonClasses,
+                        thread.bookmarked && 'text-primary',
+                    )}
                 >
-                    <Bookmark aria-hidden="true" className="size-4" />
+                    <Bookmark
+                        aria-hidden="true"
+                        className={cn(
+                            'size-4',
+                            thread.bookmarked && 'fill-current',
+                        )}
+                    />
                 </button>
             </div>
         </div>

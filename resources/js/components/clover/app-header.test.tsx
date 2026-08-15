@@ -132,7 +132,6 @@ beforeAll(() => {
 
 const SIGNED_IN_USER: User = {
     id: 7,
-    name: 'Anonymous',
     email: 'anon@example.com',
     email_verified_at: null,
     created_at: '2026-01-01T00:00:00Z',
@@ -197,9 +196,11 @@ describe('AppHeader', () => {
             screen.queryByRole('link', { name: 'Log in' }),
         ).not.toBeInTheDocument();
 
-        const trigger = screen.getByRole('button', {
-            name: new RegExp(SIGNED_IN_USER.name, 'i'),
-        });
+        /* Named for what it opens, not for who is signed in. The trigger used
+           to be labelled "Account menu for {full name}", and the menu printed
+           that name at the top of itself — on a site whose premise is that it
+           does not know who you are. */
+        const trigger = screen.getByRole('button', { name: 'Account menu' });
         expect(
             document.querySelector('[data-slot="anon-avatar"]'),
         ).toBeInTheDocument();

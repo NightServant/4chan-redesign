@@ -1,5 +1,5 @@
 import { Form } from '@inertiajs/react';
-import { Mail, User } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import { AuthInput, AuthPasswordInput } from '@/components/auth/auth-input';
 import { AuthLink } from '@/components/auth/auth-link';
 import { FormField } from '@/components/clover/form-field';
@@ -30,22 +30,13 @@ export default function Register({ passwordRules }: Props) {
                 {({ processing, errors }) => (
                     <>
                         <div className="flex flex-col gap-4">
-                            <FormField
-                                id="name"
-                                label="Name"
-                                error={errors.name}
-                            >
-                                <AuthInput
-                                    icon={User}
-                                    type="text"
-                                    name="name"
-                                    required
-                                    autoFocus
-                                    autoComplete="name"
-                                    placeholder="Full name"
-                                />
-                            </FormField>
-
+                            {/* No name field. Registration asked for a full
+                                name on a site whose premise is anonymity, and
+                                people gave their real one -- it was then the
+                                heading on their public profile, because the
+                                handle fell back to it. The account needs an
+                                address to reach you at and a password; it does
+                                not need to know who you are. */}
                             <FormField
                                 id="email"
                                 label="Email address"

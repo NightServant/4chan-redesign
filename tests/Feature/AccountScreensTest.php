@@ -9,6 +9,7 @@ use App\Models\Thread;
 use App\Models\ThreadRead;
 use App\Models\User;
 use App\Support\RoutableBoards;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * The account screens, reading what the write paths recorded.
@@ -236,63 +237,6 @@ it('shows a local reply in the thread and on the account', function (): void {
 });
 
 /**
- * Seeded rather than posted. This drove the thread-creation route, which is
- * gone: Clover accepts no uploads, and a board where every new thread opens
- * without an image is not the board it is mirroring.
- *
- * What the screen does with a thread an anon started is still worth asserting,
- * and there are still local threads in the database from before the composer
- * was removed, so the row is built directly.
- */
-it('shows a thread this anon started under their own posts', function (): void {
-    [$board, , , $user] = anonWithHistory();
-
-    $mine = Thread::factory()->for($board)->create(['subject' => 'A thread I started']);
-
-    Post::factory()->for($mine)->op()->create([
-        'user_id' => $user->id,
-        'is_local' => true,
-        'body' => 'The opening post.',
-    ]);
-
-    $this->actingAs($user)->get('/account')->assertInertia(
-        fn ($page) => $page
-            ->has('started', 1)
-            ->where('started.0.title', 'A thread I started'),
-    );
-});
-
-/**
- * Activity is what this anon did, not what was done to them. The fixture it
- * replaced announced "Anonymous replied to your post" and "Your report was
- * actioned", neither of which has a source.
- */
-it('reports the anon own activity', function (): void {
-    [$board, $thread, , $user] = anonWithHistory();
-
-    $this->actingAs($user)->post("/{$board->slug}/{$thread->no}/replies", ['body' => 'x']);
-    $this->actingAs($user)->post("/threads/{$thread->id}/bookmark");
-
-    /* Both happened in the same second, so the order between them is a tie
-       rather than a guarantee. What matters is that both are reported and
-       both describe something this anon did. */
-    $this->actingAs($user)->get('/account')->assertInertia(
-        fn ($page) => $page
-            ->has('activity', 2)
-            ->where('activity.0.text', fn (string $text): bool => str_starts_with($text, 'You '))
-            ->where('activity.1.text', fn (string $text): bool => str_starts_with($text, 'You ')),
-    );
-});
-
-it('reports no activity for an anon who has done nothing', function (): void {
-    [, , , $user] = anonWithHistory();
-
-    $this->actingAs($user)->get('/account')->assertInertia(
-        fn ($page) => $page->has('activity', 0),
-    );
-});
-
-/**
  * The two settings that moved into the account menu behind the avatar.
  *
  * Both were a page visit away from a preference they affect everywhere:
@@ -326,4 +270,47 @@ it('still routes to the security page the menu links to', function (): void {
     $user = User::factory()->create(['email_verified_at' => now()]);
 
     $this->actingAs($user)->get('/settings/security')->assertStatus(302);
+});
+
+/**
+ * The account screen sends three tabs' worth of props, not five.
+ *
+ * "Overview" summarised the tabs beside it, and its "top thread" panel read
+ * "No threads yet" on every account — Clover accepts no new threads, so nobody
+ * has started one. "Posts" listed the same threads that panel was empty about.
+ * Both are gone, and so are the queries behind them: a payload still carrying
+ * them would be a payload a client could restore the tabs from without the
+ * server noticing.
+ */
+it('sends no props for the tabs that were removed', function (): void {
+    [, , , $user] = anonWithHistory();
+
+    $this->actingAs($user)->get('/account')->assertInertia(
+        fn ($page) => $page
+            ->component('account')
+            ->missing('started')
+            ->missing('activity')
+            ->has('comments')
+            ->has('media')
+            ->has('saved'),
+    );
+});
+
+/**
+ * Accounts no longer hold a name. Registration asked for a full name on a site
+ * whose entire premise is that it does not know who you are, and the column has
+ * been dropped — but the address and password it signs in with have not.
+ */
+it('registers an account without asking who anyone is', function (): void {
+    $this->post('/register', [
+        'email' => 'anon@example.test',
+        'password' => 'a-long-enough-password',
+        'password_confirmation' => 'a-long-enough-password',
+    ])->assertSessionHasNoErrors();
+
+    $user = User::query()->where('email', 'anon@example.test')->firstOrFail();
+
+    expect(Schema::hasColumn('users', 'name'))->toBeFalse();
+    expect($user->email)->toBe('anon@example.test');
+    expect($user->password)->not->toBeEmpty();
 });

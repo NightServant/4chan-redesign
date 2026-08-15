@@ -103,11 +103,12 @@ function LibraryPanel({ library }: { library: FeedLibrary }) {
                 ))}
             </dl>
 
-            {library.lastSyncedAt === null ? null : (
-                <p className="border-t border-border pt-3 text-caption text-muted-foreground">
-                    Last synced from 4chan {library.lastSyncedAt}.
-                </p>
-            )}
+            {/* The sync time is not here.
+            
+                It answers a question about Clover's plumbing, not about the
+                feed beside it, and a reader who wants it has a page that is
+                entirely about it: /status. Three counted figures are what this
+                panel is for. */}
         </Panel>
     );
 }

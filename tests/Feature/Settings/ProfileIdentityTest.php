@@ -110,15 +110,14 @@ test('the endpoint is closed to anyone not signed in', function () {
 /**
  * The public heading used to fall through the account's `name` before reaching
  * the `anon_{id}` fallback, which put whatever an anon typed at registration on
- * their profile. People type their real name there. On a site whose premise is
- * anonymity that is a leak, not a nicety.
+ * their profile. People type their real name there.
+ *
+ * The column is gone now, so there is nothing left to fall through to — which
+ * is the strongest version of the fix. The guard stays because the fallback is
+ * still the thing under test.
  */
-test('an anon with no handle is never named by their account name', function () {
-    $user = User::factory()->create([
-        'name' => 'Elijah Gabe Cervantes',
-        'handle' => null,
-    ]);
+test('an anon with no handle is named only by their id', function () {
+    $user = User::factory()->create(['handle' => null]);
 
     expect($user->displayHandle())->toBe("anon_{$user->id}");
-    expect($user->displayHandle())->not->toContain('Elijah');
 });
