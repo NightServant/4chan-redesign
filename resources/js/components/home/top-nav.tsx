@@ -38,7 +38,18 @@ function TopNav({ className, ...props }: TopNavProps) {
             {...props}
         >
             <PatternField depth={0} feather={false}>
-                <div className="mx-auto flex h-16 max-w-(--measure-page) items-center justify-between border-x border-border px-6">
+                {/* `min-h-16` with `flex-wrap`, not a fixed `h-16` row.
+                    At 320px this row needs 71 (wordmark) + 261 (auth
+                    buttons) + 48 (theme toggle) = 380px, and a fixed
+                    single-line height sent the button group 37px past the
+                    edge of the viewport with nowhere for it to go. `min-h-16`
+                    keeps the current height everywhere the content already
+                    fits one line, and only grows to a second line where it
+                    does not. */}
+                <div
+                    data-slot="top-nav-row"
+                    className="mx-auto flex min-h-16 max-w-(--measure-page) flex-wrap items-center justify-between gap-2 border-x border-border px-6 py-2"
+                >
                     <Link href={home()} aria-label="Clover home">
                         <Wordmark />
                     </Link>

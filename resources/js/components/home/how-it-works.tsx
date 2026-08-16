@@ -37,7 +37,11 @@ function HowItWorks() {
             <ol
                 className="grid list-none gap-5"
                 style={{
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                    /* `min(260px, 100%)`, not a bare 260px minimum — see
+                       board-directory.tsx for the overflow a bare pixel
+                       minimum produces at a 320px viewport. */
+                    gridTemplateColumns:
+                        'repeat(auto-fit, minmax(min(260px, 100%), 1fr))',
                 }}
             >
                 {STEPS.map((step, index) => (

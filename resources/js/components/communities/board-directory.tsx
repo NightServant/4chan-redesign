@@ -154,7 +154,15 @@ export function BoardDirectory({
                         >
                             <SectionLabel>{category}</SectionLabel>
 
-                            <ul className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4">
+                            {/* `minmax(min(320px,100%),1fr)`, not a bare
+                                `minmax(320px,1fr)`: at a 320px viewport this
+                                container is 272px after its own padding, and
+                                a bare 320px minimum overflowed it by 48px,
+                                overlapping neighbouring cells. `min()` lets
+                                the track's floor collapse to the container's
+                                width instead of forcing the container wider
+                                than it is. */}
+                            <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(320px,100%),1fr))] gap-4">
                                 {visible
                                     .filter(
                                         (entry) => entry.category === category,

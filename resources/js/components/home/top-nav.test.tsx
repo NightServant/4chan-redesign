@@ -132,6 +132,25 @@ describe('TopNav', () => {
     });
 
     /**
+     * At a 320px viewport this row needs 71 (wordmark) + 261 (auth buttons) +
+     * 48 (theme toggle) = 380px inside a 320px header, and a fixed `h-16`
+     * with no wrap sent the auth button group 37px past the edge of the
+     * viewport. `flex-wrap` on `min-h-16` lets the row grow to two lines
+     * exactly when it does not fit one, which is a no-op at every width wide
+     * enough to fit already (the whole desktop and tablet range) and the fix
+     * at 320px. jsdom has no layout engine and cannot measure the overflow
+     * itself, so this only pins the classes that make wrapping possible.
+     */
+    it('lets the row wrap instead of forcing a fixed single-line height', () => {
+        const { container } = render(<TopNav />);
+
+        const row = container.querySelector('[data-slot="top-nav-row"]');
+
+        expect(row).toHaveClass('flex-wrap', 'min-h-16');
+        expect(row).not.toHaveClass('h-16');
+    });
+
+    /**
      * The header sits over scrolling content, so it needs to read as glass
      * rather than as an opaque bar cutting the page in half.
      *

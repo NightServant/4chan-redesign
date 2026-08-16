@@ -111,7 +111,10 @@ export default function Account({
                                 body="Images you attach to a reply appear here."
                             />
                         ) : (
-                            <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
+                            /* `min(220px,100%)`, not a bare 220px minimum —
+                               see board-directory.tsx for the overflow this
+                               produces at a 320px viewport. */
+                            <div className="grid grid-cols-[repeat(auto-fill,minmax(min(220px,100%),1fr))] gap-3">
                                 {media.map((attachment) => (
                                     <PostAttachment
                                         key={attachment.fullUrl}
