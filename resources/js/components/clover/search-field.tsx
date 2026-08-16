@@ -1,11 +1,9 @@
 import { Link, router } from '@inertiajs/react';
 import { Clock, Search, X } from 'lucide-react';
 import {
-    forwardRef,
     useCallback,
     useEffect,
     useId,
-    useImperativeHandle,
     useRef,
     useState,
     useSyncExternalStore,
@@ -62,317 +60,331 @@ function boardHref(slug: string): string {
 export interface SearchFieldProps {
     placeholder?: string;
     className?: string;
+    /**
+     * A focus request from outside, not a DOM handle out.
+     *
+     * `AppHeader` needs to move focus into this field from a button that
+     * lives outside it, below `md` where the field is not on screen until
+     * something opens it. A `forwardRef`/`useImperativeHandle` pair was the
+     * first cut at this, and it worked, but it widened the component's public
+     * contract to an arbitrary DOM node for a job that only ever needed one
+     * verb: focus it. A caller holding the node itself could set its value,
+     * read its selection, anything — none of which is "focus the field" and
+     * all of which this component would then need to defend against. A
+     * boolean this component watches itself is the narrower shape: the only
+     * thing a caller can ask for is the one thing this was built to do.
+     *
+     * Rising edge, not level: set it `true` once per request rather than
+     * toggling it back to `false` immediately, since the effect below only
+     * needs the transition, and `AppHeader` already has a boolean of its own
+     * (whether the mobile field is the active control) that rises and falls
+     * at exactly the moments this should too.
+     */
+    focusRequested?: boolean;
 }
 
-/**
- * A forwarded ref onto the input itself, not the wrapper.
- *
- * `AppHeader` needs to focus this field from a button that lives outside it,
- * below `md` where there is no room for the field to sit on screen until
- * something opens it. `useImperativeHandle` exposes the same node the
- * component already tracks internally for the `⌘K` shortcut, so there is one
- * `input` ref driving both rather than a second copy that could drift from it.
- */
-export const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(
-    function SearchField(
-        { placeholder = 'Search boards and threads', className },
-        forwardedRef,
-    ) {
-        const [query, setQuery] = useState('');
-        const [open, setOpen] = useState(false);
-        const [loading, setLoading] = useState(false);
-        const [results, setResults] = useState<Suggestions>(EMPTY);
+export function SearchField({
+    placeholder = 'Search boards and threads',
+    className,
+    focusRequested,
+}: SearchFieldProps) {
+    const [query, setQuery] = useState('');
+    const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [results, setResults] = useState<Suggestions>(EMPTY);
 
-        /**
-         * What this anon searched for before, on this device.
-         *
-         * Subscribed rather than copied into state. `localStorage` fires no event
-         * for the tab that wrote to it, so a component holding its own copy has to
-         * remember to refresh it after every write — and the first version of this
-         * did that by reading storage in an effect, which is a `setState` inside an
-         * effect and a cascading render.
-         *
-         * `useSyncExternalStore` is what React provides for exactly this: the
-         * store notifies, the component re-reads, and the server snapshot covers
-         * the render where `localStorage` does not exist yet.
-         */
-        const history = useSyncExternalStore(
-            subscribeToSearchHistory,
-            searchHistorySnapshot,
-            searchHistoryServerSnapshot,
-        );
+    /**
+     * What this anon searched for before, on this device.
+     *
+     * Subscribed rather than copied into state. `localStorage` fires no event
+     * for the tab that wrote to it, so a component holding its own copy has to
+     * remember to refresh it after every write — and the first version of this
+     * did that by reading storage in an effect, which is a `setState` inside an
+     * effect and a cascading render.
+     *
+     * `useSyncExternalStore` is what React provides for exactly this: the
+     * store notifies, the component re-reads, and the server snapshot covers
+     * the render where `localStorage` does not exist yet.
+     */
+    const history = useSyncExternalStore(
+        subscribeToSearchHistory,
+        searchHistorySnapshot,
+        searchHistoryServerSnapshot,
+    );
 
-        const input = useRef<HTMLInputElement>(null);
-        const wrapper = useRef<HTMLDivElement>(null);
-        const listId = useId();
+    const input = useRef<HTMLInputElement>(null);
+    const wrapper = useRef<HTMLDivElement>(null);
+    const listId = useId();
 
-        useImperativeHandle(
-            forwardedRef,
-            () => input.current as HTMLInputElement,
-        );
+    /**
+     * Calling `.focus()` here is a side effect kept inside the component that
+     * owns the node, not a state update propagating outward — it is not the
+     * `setState`-inside-`useEffect` shape this codebase has twice rewritten
+     * away from elsewhere (the reply composer's attachment preview, this
+     * field's own history reading above). Nothing here calls a setter; the
+     * DOM focus this produces is exactly what `useEffect` is for.
+     */
+    useEffect(() => {
+        if (focusRequested) {
+            input.current?.focus();
+        }
+    }, [focusRequested]);
 
-        /**
-         * One request per pause, and never two answers racing. Without the abort a
-         * slow response for `ge` can land after a fast one for `gen` and overwrite
-         * it, so the list shows results for a query the anon has already finished
-         * typing past.
-         */
-        useEffect(() => {
-            if (!open) {
-                return;
-            }
+    /**
+     * One request per pause, and never two answers racing. Without the abort a
+     * slow response for `ge` can land after a fast one for `gen` and overwrite
+     * it, so the list shows results for a query the anon has already finished
+     * typing past.
+     */
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
 
-            const controller = new AbortController();
-            const timer = setTimeout(() => {
-                setLoading(true);
+        const controller = new AbortController();
+        const timer = setTimeout(() => {
+            setLoading(true);
 
-                fetch(`/search/suggest?q=${encodeURIComponent(query)}`, {
-                    signal: controller.signal,
-                    headers: { Accept: 'application/json' },
+            fetch(`/search/suggest?q=${encodeURIComponent(query)}`, {
+                signal: controller.signal,
+                headers: { Accept: 'application/json' },
+            })
+                .then((response) => (response.ok ? response.json() : null))
+                .then((data: Suggestions | null) => {
+                    setResults(data ?? EMPTY);
+                    setLoading(false);
                 })
-                    .then((response) => (response.ok ? response.json() : null))
-                    .then((data: Suggestions | null) => {
-                        setResults(data ?? EMPTY);
-                        setLoading(false);
-                    })
-                    .catch(() => {
-                        /* An abort is the normal case here, not a failure: it means
+                .catch(() => {
+                    /* An abort is the normal case here, not a failure: it means
                        another keystroke arrived. Either way the list keeps what
                        it has rather than flashing empty. */
-                    });
-            }, DEBOUNCE_MS);
+                });
+        }, DEBOUNCE_MS);
 
-            return () => {
-                controller.abort();
-                clearTimeout(timer);
-            };
-        }, [query, open]);
+        return () => {
+            controller.abort();
+            clearTimeout(timer);
+        };
+    }, [query, open]);
 
-        /** Closing on outside pointer down rather than on blur, so a click on a result lands. */
-        useEffect(() => {
-            if (!open) {
-                return;
+    /** Closing on outside pointer down rather than on blur, so a click on a result lands. */
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        const onPointerDown = (event: PointerEvent): void => {
+            if (!wrapper.current?.contains(event.target as Node)) {
+                setOpen(false);
             }
+        };
 
-            const onPointerDown = (event: PointerEvent): void => {
-                if (!wrapper.current?.contains(event.target as Node)) {
-                    setOpen(false);
-                }
-            };
+        document.addEventListener('pointerdown', onPointerDown);
 
-            document.addEventListener('pointerdown', onPointerDown);
+        return () => document.removeEventListener('pointerdown', onPointerDown);
+    }, [open]);
 
-            return () =>
-                document.removeEventListener('pointerdown', onPointerDown);
-        }, [open]);
-
-        /** ⌘K from anywhere, which the field has always advertised and never had. */
-        useEffect(() => {
-            const onKeyDown = (event: KeyboardEvent): void => {
-                if (event.key === 'k' && (event.metaKey || event.ctrlKey)) {
-                    event.preventDefault();
-                    input.current?.focus();
-                    setOpen(true);
-                }
-            };
-
-            document.addEventListener('keydown', onKeyDown);
-
-            return () => document.removeEventListener('keydown', onKeyDown);
-        }, []);
-
-        const runSearch = useCallback((term: string) => {
-            const trimmed = term.trim();
-
-            if (trimmed === '') {
-                return;
+    /** ⌘K from anywhere, which the field has always advertised and never had. */
+    useEffect(() => {
+        const onKeyDown = (event: KeyboardEvent): void => {
+            if (event.key === 'k' && (event.metaKey || event.ctrlKey)) {
+                event.preventDefault();
+                input.current?.focus();
+                setOpen(true);
             }
+        };
 
-            rememberSearch(trimmed);
-            setOpen(false);
-            router.visit(
-                `${searchRoute.url()}?q=${encodeURIComponent(trimmed)}`,
-            );
-        }, []);
+        document.addEventListener('keydown', onKeyDown);
 
-        const submit = useCallback(() => {
-            runSearch(query);
-        }, [query, runSearch]);
+        return () => document.removeEventListener('keydown', onKeyDown);
+    }, []);
 
-        /* Only while the box is empty. Once an anon is typing, what they want is
+    const runSearch = useCallback((term: string) => {
+        const trimmed = term.trim();
+
+        if (trimmed === '') {
+            return;
+        }
+
+        rememberSearch(trimmed);
+        setOpen(false);
+        router.visit(`${searchRoute.url()}?q=${encodeURIComponent(trimmed)}`);
+    }, []);
+
+    const submit = useCallback(() => {
+        runSearch(query);
+    }, [query, runSearch]);
+
+    /* Only while the box is empty. Once an anon is typing, what they want is
        the results, not the past. */
-        const showsHistory = query.trim() === '' && history.length > 0;
+    const showsHistory = query.trim() === '' && history.length > 0;
 
-        const hasResults =
-            results.boards.length > 0 || results.threads.length > 0;
+    const hasResults = results.boards.length > 0 || results.threads.length > 0;
 
-        return (
-            <div ref={wrapper} className={cn('relative', className)}>
-                <div className="flex h-9.5 w-full items-center gap-2 rounded-md border border-border bg-surface px-3 focus-within:border-border-strong">
-                    <Search
-                        aria-hidden="true"
-                        className="size-4 shrink-0 text-faint"
-                    />
-                    <input
-                        ref={input}
-                        type="search"
-                        role="combobox"
-                        aria-expanded={open}
-                        aria-controls={listId}
-                        aria-autocomplete="list"
-                        aria-keyshortcuts="Meta+K"
-                        aria-label={placeholder}
-                        placeholder={placeholder}
-                        value={query}
-                        data-slot="search-field"
-                        onChange={(event) => {
-                            setQuery(event.target.value);
-                            setOpen(true);
-                        }}
-                        onFocus={() => setOpen(true)}
-                        onKeyDown={(event) => {
-                            if (event.key === 'Enter') {
-                                submit();
-                            }
+    return (
+        <div ref={wrapper} className={cn('relative', className)}>
+            <div className="flex h-9.5 w-full items-center gap-2 rounded-md border border-border bg-surface px-3 focus-within:border-border-strong">
+                <Search
+                    aria-hidden="true"
+                    className="size-4 shrink-0 text-faint"
+                />
+                <input
+                    ref={input}
+                    type="search"
+                    role="combobox"
+                    aria-expanded={open}
+                    aria-controls={listId}
+                    aria-autocomplete="list"
+                    aria-keyshortcuts="Meta+K"
+                    aria-label={placeholder}
+                    placeholder={placeholder}
+                    value={query}
+                    data-slot="search-field"
+                    onChange={(event) => {
+                        setQuery(event.target.value);
+                        setOpen(true);
+                    }}
+                    onFocus={() => setOpen(true)}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                            submit();
+                        }
 
-                            if (event.key === 'Escape') {
-                                setOpen(false);
-                            }
-                        }}
-                        className="min-w-0 flex-1 bg-transparent text-body-sm text-foreground outline-none placeholder:text-muted-foreground"
-                    />
-                    <span
-                        aria-hidden="true"
-                        className="hidden shrink-0 rounded-sm border border-border px-1.5 py-0.5 text-caption text-faint tabular-nums sm:block"
-                    >
-                        ⌘K
-                    </span>
-                </div>
+                        if (event.key === 'Escape') {
+                            setOpen(false);
+                        }
+                    }}
+                    className="min-w-0 flex-1 bg-transparent text-body-sm text-foreground outline-none placeholder:text-muted-foreground"
+                />
+                <span
+                    aria-hidden="true"
+                    className="hidden shrink-0 rounded-sm border border-border px-1.5 py-0.5 text-caption text-faint tabular-nums sm:block"
+                >
+                    ⌘K
+                </span>
+            </div>
 
-                {open ? (
-                    <div
-                        id={listId}
-                        role="listbox"
-                        aria-label="Search results"
-                        data-slot="search-results"
-                        className="absolute inset-x-0 top-[calc(100%+6px)] z-50 max-h-[70vh] overflow-y-auto rounded-md border border-border bg-surface-elevated py-2 shadow-lift"
-                    >
-                        {showsHistory ? (
-                            <SearchGroup heading="Recent searches">
-                                {history.map((term) => (
-                                    <li
-                                        key={term}
-                                        role="presentation"
-                                        className="flex items-center gap-1 pr-1 hover:bg-surface-hover"
+            {open ? (
+                <div
+                    id={listId}
+                    role="listbox"
+                    aria-label="Search results"
+                    data-slot="search-results"
+                    className="absolute inset-x-0 top-[calc(100%+6px)] z-50 max-h-[70vh] overflow-y-auto rounded-md border border-border bg-surface-elevated py-2 shadow-lift"
+                >
+                    {showsHistory ? (
+                        <SearchGroup heading="Recent searches">
+                            {history.map((term) => (
+                                <li
+                                    key={term}
+                                    role="presentation"
+                                    className="flex items-center gap-1 pr-1 hover:bg-surface-hover"
+                                >
+                                    <button
+                                        type="button"
+                                        role="option"
+                                        aria-selected="false"
+                                        onClick={() => runSearch(term)}
+                                        className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2 text-left"
                                     >
-                                        <button
-                                            type="button"
-                                            role="option"
-                                            aria-selected="false"
-                                            onClick={() => runSearch(term)}
-                                            className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2 text-left"
-                                        >
-                                            <Clock
-                                                aria-hidden="true"
-                                                className="size-4 shrink-0 text-faint"
-                                            />
-                                            <span className="truncate text-body-sm text-foreground">
-                                                {term}
-                                            </span>
-                                        </button>
+                                        <Clock
+                                            aria-hidden="true"
+                                            className="size-4 shrink-0 text-faint"
+                                        />
+                                        <span className="truncate text-body-sm text-foreground">
+                                            {term}
+                                        </span>
+                                    </button>
 
-                                        {/* Its own button rather than an icon
+                                    {/* Its own button rather than an icon
                                         inside the row: a control nested in
                                         another control is invalid, and this
                                         one must not run the search it is
                                         removing. */}
-                                        <button
-                                            type="button"
-                                            aria-label={`Remove "${term}" from recent searches`}
-                                            onClick={() => forgetSearch(term)}
-                                            className="grid size-7 shrink-0 place-items-center rounded-sm text-faint hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                                        >
-                                            <X
-                                                aria-hidden="true"
-                                                className="size-3.5"
-                                            />
-                                        </button>
-                                    </li>
-                                ))}
-                            </SearchGroup>
-                        ) : null}
+                                    <button
+                                        type="button"
+                                        aria-label={`Remove "${term}" from recent searches`}
+                                        onClick={() => forgetSearch(term)}
+                                        className="grid size-7 shrink-0 place-items-center rounded-sm text-faint hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                    >
+                                        <X
+                                            aria-hidden="true"
+                                            className="size-3.5"
+                                        />
+                                    </button>
+                                </li>
+                            ))}
+                        </SearchGroup>
+                    ) : null}
 
-                        {results.boards.length > 0 ? (
-                            <SearchGroup
-                                heading={
-                                    query === '' ? 'Busiest boards' : 'Boards'
-                                }
-                            >
-                                {results.boards.map((board) => (
-                                    <li key={board.slug} role="presentation">
-                                        <Link
-                                            role="option"
-                                            aria-selected="false"
-                                            href={boardHref(board.slug)}
-                                            onClick={() => setOpen(false)}
-                                            className="flex items-center gap-2.5 px-3 py-2 hover:bg-surface-hover"
-                                        >
-                                            <BoardAvatar
-                                                slug={board.slug}
-                                                size={24}
-                                                decorative
-                                            />
-                                            <span className="truncate text-body-sm text-foreground">
-                                                {board.name}
-                                            </span>
-                                            <MachineValue className="ml-auto shrink-0">
-                                                {board.slug}
-                                            </MachineValue>
-                                        </Link>
-                                    </li>
-                                ))}
-                            </SearchGroup>
-                        ) : null}
+                    {results.boards.length > 0 ? (
+                        <SearchGroup
+                            heading={query === '' ? 'Busiest boards' : 'Boards'}
+                        >
+                            {results.boards.map((board) => (
+                                <li key={board.slug} role="presentation">
+                                    <Link
+                                        role="option"
+                                        aria-selected="false"
+                                        href={boardHref(board.slug)}
+                                        onClick={() => setOpen(false)}
+                                        className="flex items-center gap-2.5 px-3 py-2 hover:bg-surface-hover"
+                                    >
+                                        <BoardAvatar
+                                            slug={board.slug}
+                                            size={24}
+                                            decorative
+                                        />
+                                        <span className="truncate text-body-sm text-foreground">
+                                            {board.name}
+                                        </span>
+                                        <MachineValue className="ml-auto shrink-0">
+                                            {board.slug}
+                                        </MachineValue>
+                                    </Link>
+                                </li>
+                            ))}
+                        </SearchGroup>
+                    ) : null}
 
-                        {results.threads.length > 0 ? (
-                            <SearchGroup heading="Threads">
-                                {results.threads.map((thread) => (
-                                    <li key={thread.no} role="presentation">
-                                        <Link
-                                            role="option"
-                                            aria-selected="false"
-                                            href={`${thread.board}${thread.no}`}
-                                            onClick={() => setOpen(false)}
-                                            className="flex flex-col gap-0.5 px-3 py-2 hover:bg-surface-hover"
-                                        >
-                                            <span className="line-clamp-1 text-body-sm text-foreground">
-                                                {thread.title}
-                                            </span>
-                                            <MachineValue className="text-faint">
-                                                {thread.board} ·{' '}
-                                                {thread.replies} replies
-                                            </MachineValue>
-                                        </Link>
-                                    </li>
-                                ))}
-                            </SearchGroup>
-                        ) : null}
+                    {results.threads.length > 0 ? (
+                        <SearchGroup heading="Threads">
+                            {results.threads.map((thread) => (
+                                <li key={thread.no} role="presentation">
+                                    <Link
+                                        role="option"
+                                        aria-selected="false"
+                                        href={`${thread.board}${thread.no}`}
+                                        onClick={() => setOpen(false)}
+                                        className="flex flex-col gap-0.5 px-3 py-2 hover:bg-surface-hover"
+                                    >
+                                        <span className="line-clamp-1 text-body-sm text-foreground">
+                                            {thread.title}
+                                        </span>
+                                        <MachineValue className="text-faint">
+                                            {thread.board} · {thread.replies}{' '}
+                                            replies
+                                        </MachineValue>
+                                    </Link>
+                                </li>
+                            ))}
+                        </SearchGroup>
+                    ) : null}
 
-                        {!hasResults ? (
-                            <p className="px-3 py-6 text-center text-body-sm text-muted-foreground">
-                                {loading
-                                    ? 'Searching.'
-                                    : query === ''
-                                      ? 'Type to search boards and threads.'
-                                      : `Nothing matches "${query}".`}
-                            </p>
-                        ) : null}
-                    </div>
-                ) : null}
-            </div>
-        );
-    },
-);
+                    {!hasResults ? (
+                        <p className="px-3 py-6 text-center text-body-sm text-muted-foreground">
+                            {loading
+                                ? 'Searching.'
+                                : query === ''
+                                  ? 'Type to search boards and threads.'
+                                  : `Nothing matches "${query}".`}
+                        </p>
+                    ) : null}
+                </div>
+            ) : null}
+        </div>
+    );
+}
 
 /**
  * One labelled section of the dropdown.

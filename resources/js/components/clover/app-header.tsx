@@ -12,7 +12,7 @@ import {
     SunIcon,
     UserIcon,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ComponentProps, ReactNode } from 'react';
 import { AnonAvatar } from '@/components/clover/anon-avatar';
 import { NotificationItem } from '@/components/clover/notification-item';
@@ -58,10 +58,16 @@ import type { CloverNavItem } from '@/types/navigation';
  * genuine flex-shrink — absorbed all of the deficit down to a literal 0px. A
  * bordered box with a magnifier `<svg>` remained, decorative and with no
  * handler, over an input nothing could type into. There was no way to search
- * on a phone. Below `md` a real button stands in the field's place now; the
- * row itself also wraps rather than forcing the account controls to overflow
- * or shrink below a readable size, the same fix `top-nav.tsx` uses for the
- * same shape of bug.
+ * on a phone.
+ *
+ * Below `md` a real button stands in the field's place now, and `Log in` /
+ * `Create account` stop rendering there too: a hamburger, a search control
+ * and a theme toggle already fill a 320px row on their own, and two
+ * full-size auth buttons never fit alongside them at any width this small.
+ * The design below `md` is exactly that row — hamburger, search, theme
+ * toggle — and nothing past it; a signed-out anon on a phone has no sign-in
+ * control anywhere in the app shell until task 4 settles that on the bottom
+ * bar. At `md` and up both buttons, and the row itself, are unchanged.
  */
 
 /** Bounded to what the notifications menu previews before "See all". */
@@ -128,13 +134,6 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
      * visits to put the field back for the next page on its own.
      */
     const [mobileSearchExpanded, setMobileSearchExpanded] = useState(false);
-    const mobileSearchInput = useRef<HTMLInputElement>(null);
-
-    useEffect(() => {
-        if (mobileSearchExpanded) {
-            mobileSearchInput.current?.focus();
-        }
-    }, [mobileSearchExpanded]);
 
     useEffect(() => {
         return router.on('navigate', () => setMobileSearchExpanded(false));
@@ -157,19 +156,12 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
         <header
             data-slot="app-header"
             className={cn(
-                'sticky top-0 z-30 border-b border-border bg-bg',
+                'sticky top-0 z-30 h-16 border-b border-border bg-bg',
                 className,
             )}
             {...props}
         >
-            {/* No fixed height on the header or the band beneath it: the row
-                inside is `min-h-16` rather than `h-16` now, so it can wrap to
-                a second line below `md` instead of forcing its content past
-                the edge of the viewport, and a fixed-height ancestor would
-                clip whichever line that pushed out. `top-nav.tsx` is the same
-                shape of header solving the same overflow with the same
-                un-fixed height. */}
-            <PatternField depth={0} feather={false}>
+            <PatternField depth={0} feather={false} className="h-full">
                 {/* The same container the feed uses, and the field is sized to
                     the same column the threads are, so search sits directly
                     over the posts rather than floating at its own width in a
@@ -178,7 +170,7 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                     page. */}
                 <div
                     data-slot="app-header-row"
-                    className="mx-auto flex min-h-16 w-full max-w-(--measure-page) flex-wrap items-center gap-2 px-6 py-2 md:gap-7"
+                    className="mx-auto flex h-16 w-full max-w-(--measure-page) items-center gap-7 px-6"
                 >
                     {/* Below `lg` the sidebar is a drawer rather than a
                         persistent rail, so this is the only way back into it
@@ -241,7 +233,7 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                         </Button>
 
                         <SearchField
-                            ref={mobileSearchInput}
+                            focusRequested={mobileSearchExpanded}
                             className={cn(
                                 'w-full',
                                 mobileSearchExpanded ? 'flex' : 'hidden',
@@ -455,10 +447,28 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                             </DropdownMenu>
                         ) : (
                             <>
-                                <Button variant="ghost" asChild>
+                                {/* Hidden below `md`: a hamburger, a search
+                                    control and a theme toggle are already the
+                                    full width of a 320px row, and these two
+                                    full-size buttons do not fit next to them.
+                                    Neither branch is deleted — both links
+                                    render at every width, unchanged at `md`
+                                    and up — since a signed-out anon on a
+                                    narrower screen still needs the styles and
+                                    markup ready the moment the viewport grows
+                                    past this one. */}
+                                <Button
+                                    variant="ghost"
+                                    asChild
+                                    className="hidden md:inline-flex"
+                                >
                                     <Link href={login()}>Log in</Link>
                                 </Button>
-                                <Button variant="primary" asChild>
+                                <Button
+                                    variant="primary"
+                                    asChild
+                                    className="hidden md:inline-flex"
+                                >
                                     <Link href={register()}>
                                         Create account
                                     </Link>

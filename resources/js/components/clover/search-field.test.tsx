@@ -193,6 +193,33 @@ describe('SearchField', () => {
     });
 
     /**
+     * `AppHeader` needs to move focus into this field from a button that
+     * lives outside it, below `md` where the field is not on screen until
+     * something opens it. `focusRequested` is the whole of that contract: a
+     * boolean the field watches, not a DOM handle passed out for a caller to
+     * do anything with. Negative control first -- a prop that did nothing
+     * would pass a test that only checked the positive case.
+     */
+    it('does not focus itself while no focus is requested', () => {
+        mockFetch();
+
+        render(<SearchField />);
+
+        expect(screen.getByRole('combobox')).not.toHaveFocus();
+    });
+
+    it('focuses itself when focusRequested becomes true', () => {
+        mockFetch();
+
+        const { rerender } = render(<SearchField focusRequested={false} />);
+        expect(screen.getByRole('combobox')).not.toHaveFocus();
+
+        rerender(<SearchField focusRequested={true} />);
+
+        expect(screen.getByRole('combobox')).toHaveFocus();
+    });
+
+    /**
      * A slow answer for `ge` must not land after a fast one for `gen` and
      * overwrite it. The request in flight is aborted on every keystroke.
      */

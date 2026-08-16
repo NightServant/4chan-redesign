@@ -223,6 +223,61 @@ describe('AppHeader', () => {
         ).not.toBeInTheDocument();
     });
 
+    /**
+     * Below `md` there is no room for a hamburger, a search control, a theme
+     * toggle *and* two full-size auth buttons in one row -- that is the
+     * overflow this task exists to fix. The brief describes that row as
+     * hamburger, search, theme toggle: nothing else. `AppSidebar` carries
+     * `Log in` / `Create account` below `md` instead (its own tests cover
+     * that), so the header keeps both here -- still real links, still
+     * reachable at `md` and up exactly as before -- and only stops showing
+     * them below it.
+     */
+    it('hides Log in and Create account below `md`, unchanged at `md` and up', () => {
+        renderHeader();
+
+        const logIn = screen.getByRole('link', { name: 'Log in' });
+        const createAccount = screen.getByRole('link', {
+            name: 'Create account',
+        });
+
+        expect(logIn).toHaveClass('hidden', 'md:inline-flex');
+        expect(createAccount).toHaveClass('hidden', 'md:inline-flex');
+    });
+
+    /**
+     * The contract below `md` for a signed-out anon, stated directly: the
+     * hamburger, the search control and the theme toggle carry no `md:`
+     * visibility gate at all -- unconditionally reachable at every width --
+     * while `Log in` and `Create account` carry exactly the opposite, a gate
+     * that keeps them out below `md` and back at `md` and up. jsdom cannot
+     * evaluate the media query itself, so this is the class-level version of
+     * that fact: the three that must always be there have no `hidden`/`md:`
+     * pair on them, and the two that must not have exactly one.
+     */
+    it('below `md` a signed-out anon reaches exactly the hamburger, search and theme toggle', () => {
+        renderHeader();
+
+        const hamburger = screen.getByRole('button', { name: /open sidebar/i });
+        const search = screen.getByRole('button', { name: 'Search' });
+        const theme = screen.getByRole('button', {
+            name: /switch to (light|dark) theme/i,
+        });
+        const logIn = screen.getByRole('link', { name: 'Log in' });
+        const createAccount = screen.getByRole('link', {
+            name: 'Create account',
+        });
+
+        for (const control of [hamburger, search, theme]) {
+            expect(control.className).not.toMatch(/(^|\s)hidden(\s|$)/);
+        }
+
+        for (const control of [logIn, createAccount]) {
+            expect(control.className).toMatch(/(^|\s)hidden(\s|$)/);
+            expect(control.className).toMatch(/md:inline-flex/);
+        }
+    });
+
     it('shows the account avatar trigger and opens the account menu on click, with items reachable', async () => {
         const user = userEvent.setup();
         mockPage.props.auth.user = SIGNED_IN_USER;
@@ -537,17 +592,25 @@ describe('AppHeader', () => {
     });
 
     /**
-     * `board-directory.test.tsx`'s and `top-nav.tsx`'s fix for the same class
-     * of bug was letting the row wrap rather than shrinking anything below its
-     * readable size. `Log in` and `Create account` are full-size buttons that
-     * cannot shrink to fit 320px next to a hamburger and a search control
-     * without either wrapping or losing a word -- wrapping is what keeps both
-     * buttons intact and reachable.
+     * A wrapping row was the first cut at the overflow this task exists to
+     * fix, needed while `Log in` and `Create account` were still in the row
+     * below `md`. They render only at `md` and up now (see the test above),
+     * so below `md` the row is back to exactly three fixed-size controls --
+     * hamburger, the collapsed search button, the theme toggle -- comfortably
+     * inside 320px on their own, and the row is a fixed `h-16` again rather
+     * than a `min-h-16` that could grow to two lines it no longer needs.
+     * Measured live at 320px signed out: `scrollWidth` and `clientWidth` both
+     * 320, expanded and collapsed.
      */
-    it('lets the header row wrap instead of forcing everything onto one line', () => {
+    it('keeps the header a fixed single-line height, not a wrapping row', () => {
         renderHeader();
 
+        const header = document.querySelector('[data-slot="app-header"]');
         const row = document.querySelector('[data-slot="app-header-row"]');
-        expect(row).toHaveClass('flex-wrap');
+
+        expect(header).toHaveClass('h-16');
+        expect(header).not.toHaveClass('min-h-16');
+        expect(row).toHaveClass('h-16');
+        expect(row).not.toHaveClass('flex-wrap');
     });
 });
