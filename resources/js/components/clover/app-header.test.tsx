@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import {
@@ -103,8 +103,29 @@ const mockPage: {
     url: '/',
 };
 
+/**
+ * `router.on` is captured the same way `app-layout.test.tsx` captures it, so
+ * a test can fire a fake Inertia navigation without a real visit. `AppHeader`
+ * needs this now too: it listens for `navigate` to collapse the mobile search
+ * button back down, the same reason `AppLayout` listens for it to close the
+ * sidebar drawer.
+ */
+const { navigateCallbacks } = vi.hoisted(() => ({
+    navigateCallbacks: [] as Array<() => void>,
+}));
+
 vi.mock('@inertiajs/react', () => ({
     usePage: () => mockPage,
+    router: {
+        on: (event: string, callback: () => void) => {
+            if (event === 'navigate') {
+                navigateCallbacks.push(callback);
+            }
+
+            return () => {};
+        },
+        patch: vi.fn(),
+    },
     Link: ({
         href,
         as,
@@ -163,6 +184,7 @@ beforeEach(() => {
     };
     mockPage.url = '/';
     document.documentElement.classList.remove('dark');
+    navigateCallbacks.length = 0;
 });
 
 afterEach(() => {
@@ -408,5 +430,124 @@ describe('AppHeader', () => {
 
         const trigger = screen.getByRole('button', { name: /open sidebar/i });
         expect(trigger).toHaveClass('lg:hidden');
+    });
+
+    /**
+     * Below `md` the field's wrapper used to collapse to a literal 0px: a
+     * bordered box with a magnifier `<svg>` that had no handler, sitting over
+     * an input nothing could type into. Tapping it did nothing, and nothing in
+     * the accessibility tree said otherwise either -- the decorative glyph and
+     * the zero-width input were the whole story. This button is the real
+     * control in its place: a real `<button>`, a real accessible name, hidden
+     * only once `md` and up hand the job back to the inline field.
+     */
+    describe('mobile search', () => {
+        it('offers a real, labelled search button below `md`', () => {
+            renderHeader();
+
+            const trigger = screen.getByRole('button', { name: 'Search' });
+
+            expect(trigger).toHaveClass('md:hidden');
+            expect(trigger.tagName).toBe('BUTTON');
+
+            /* The glyph inside carries no name of its own -- the button's
+               `aria-label` is what a screen reader announces, so the icon
+               being decorative here is correct rather than the bug the old
+               field had. */
+            const icon = trigger.querySelector('svg');
+            expect(icon).toHaveAttribute('aria-hidden', 'true');
+        });
+
+        it('is absent from the document before render finds nothing else named "Search" pretending to be it', () => {
+            renderHeader();
+
+            /* Only one control answers to this name: the button. The field
+               itself is named "Search boards and threads", not "Search", so
+               there is no ambiguity for a query this exact to resolve. */
+            expect(
+                screen.getAllByRole('button', { name: 'Search' }),
+            ).toHaveLength(1);
+        });
+
+        it('focuses the field and opens its dropdown when the button is pressed, then steps aside for it', async () => {
+            const user = userEvent.setup();
+            renderHeader();
+
+            expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+            await user.click(screen.getByRole('button', { name: 'Search' }));
+
+            const field = screen.getByRole('combobox', {
+                name: /search boards and threads/i,
+            });
+
+            expect(field).toHaveFocus();
+            expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+            /* The button and the field occupy the same slot below `md`; both
+               visible at once would be two controls claiming the same job.
+               Visibility itself is a CSS fact jsdom cannot see, so this reads
+               the class that carries it instead. */
+            expect(screen.getByRole('button', { name: 'Search' })).toHaveClass(
+                'hidden',
+            );
+        });
+
+        it('collapses back to the button once focus leaves the field', async () => {
+            const user = userEvent.setup();
+            renderHeader();
+
+            await user.click(screen.getByRole('button', { name: 'Search' }));
+            expect(screen.getByRole('button', { name: 'Search' })).toHaveClass(
+                'hidden',
+            );
+
+            /* Tabbing to the next control in the header -- the theme toggle
+               -- moves focus outside the search area entirely, which is what
+               should close it. A click inside the results dropdown must not:
+               that case is what the "opens ... then steps aside" test above
+               already covers by never leaving the field. */
+            await user.tab();
+
+            expect(
+                screen.getByRole('button', { name: 'Search' }),
+            ).not.toHaveClass('hidden');
+        });
+
+        it('collapses back to the button when an Inertia navigation completes', async () => {
+            const user = userEvent.setup();
+            renderHeader();
+
+            await user.click(screen.getByRole('button', { name: 'Search' }));
+            expect(screen.getByRole('button', { name: 'Search' })).toHaveClass(
+                'hidden',
+            );
+
+            expect(navigateCallbacks.length).toBeGreaterThan(0);
+            act(() => {
+                for (const callback of navigateCallbacks) {
+                    callback();
+                }
+            });
+
+            expect(
+                screen.getByRole('button', { name: 'Search' }),
+            ).not.toHaveClass('hidden');
+        });
+    });
+
+    /**
+     * `board-directory.test.tsx`'s and `top-nav.tsx`'s fix for the same class
+     * of bug was letting the row wrap rather than shrinking anything below its
+     * readable size. `Log in` and `Create account` are full-size buttons that
+     * cannot shrink to fit 320px next to a hamburger and a search control
+     * without either wrapping or losing a word -- wrapping is what keeps both
+     * buttons intact and reachable.
+     */
+    it('lets the header row wrap instead of forcing everything onto one line', () => {
+        renderHeader();
+
+        const row = document.querySelector('[data-slot="app-header-row"]');
+        expect(row).toHaveClass('flex-wrap');
     });
 });

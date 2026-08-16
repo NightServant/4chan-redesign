@@ -7,10 +7,12 @@ import {
     MenuIcon,
     MessageSquareIcon,
     MoonIcon,
+    SearchIcon,
     ShieldIcon,
     SunIcon,
     UserIcon,
 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import type { ComponentProps, ReactNode } from 'react';
 import { AnonAvatar } from '@/components/clover/anon-avatar';
 import { NotificationItem } from '@/components/clover/notification-item';
@@ -49,6 +51,17 @@ import type { CloverNavItem } from '@/types/navigation';
  * the `Sheet` `AppLayout` renders around this component — nothing is passed
  * down as a prop, so this component does not need to know whether it is
  * mounted inside one until it actually renders.
+ *
+ * Below `md` there is no room left for the inline search field once the
+ * hamburger and the account controls are on screen too: at 320px it measured
+ * out to 355px of content in a 272px row, and the field — the one thing with
+ * genuine flex-shrink — absorbed all of the deficit down to a literal 0px. A
+ * bordered box with a magnifier `<svg>` remained, decorative and with no
+ * handler, over an input nothing could type into. There was no way to search
+ * on a phone. Below `md` a real button stands in the field's place now; the
+ * row itself also wraps rather than forcing the account controls to overflow
+ * or shrink below a readable size, the same fix `top-nav.tsx` uses for the
+ * same shape of bug.
  */
 
 /** Bounded to what the notifications menu previews before "See all". */
@@ -103,6 +116,30 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
     const { resolvedAppearance, updateAppearance } = useAppearance();
     const isDark = resolvedAppearance === 'dark';
 
+    /**
+     * Whether the mobile search button has handed its slot to the field.
+     *
+     * Below `md` the button and the field occupy the same spot in the row
+     * rather than both being laid out at once — there is not the width to
+     * spare for that, and it is also the wrong picture: only one of them is
+     * ever the active control. Reset on navigation for the same reason
+     * `AppLayout` resets the drawer's open state on navigation: this header
+     * is part of a persistent layout, so nothing else unmounts it between
+     * visits to put the field back for the next page on its own.
+     */
+    const [mobileSearchExpanded, setMobileSearchExpanded] = useState(false);
+    const mobileSearchInput = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (mobileSearchExpanded) {
+            mobileSearchInput.current?.focus();
+        }
+    }, [mobileSearchExpanded]);
+
+    useEffect(() => {
+        return router.on('navigate', () => setMobileSearchExpanded(false));
+    }, []);
+
     const bookmarksItem = findNavItem('Bookmarks');
     const historyItem = findNavItem('History');
     const notificationsItem = findNavItem('Notifications');
@@ -120,19 +157,29 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
         <header
             data-slot="app-header"
             className={cn(
-                'sticky top-0 z-30 h-16 border-b border-border bg-bg',
+                'sticky top-0 z-30 border-b border-border bg-bg',
                 className,
             )}
             {...props}
         >
-            <PatternField depth={0} feather={false} className="h-full">
+            {/* No fixed height on the header or the band beneath it: the row
+                inside is `min-h-16` rather than `h-16` now, so it can wrap to
+                a second line below `md` instead of forcing its content past
+                the edge of the viewport, and a fixed-height ancestor would
+                clip whichever line that pushed out. `top-nav.tsx` is the same
+                shape of header solving the same overflow with the same
+                un-fixed height. */}
+            <PatternField depth={0} feather={false}>
                 {/* The same container the feed uses, and the field is sized to
                     the same column the threads are, so search sits directly
                     over the posts rather than floating at its own width in a
                     full-bleed bar. It was capped at 520px against a 760px
                     column, which read as two grids that happened to share a
                     page. */}
-                <div className="mx-auto flex h-16 w-full max-w-(--measure-page) items-center gap-7 px-6">
+                <div
+                    data-slot="app-header-row"
+                    className="mx-auto flex min-h-16 w-full max-w-(--measure-page) flex-wrap items-center gap-2 px-6 py-2 md:gap-7"
+                >
                     {/* Below `lg` the sidebar is a drawer rather than a
                         persistent rail, so this is the only way back into it
                         once it is closed. Named to match the sidebar's own
@@ -151,8 +198,56 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                         </Button>
                     </SheetTrigger>
 
-                    <div className="max-w-(--measure-column) min-w-0 flex-1">
-                        <SearchField />
+                    {/* This wrapper is the row's actual flex item, sized
+                        exactly as the plain field wrapper it replaces was —
+                        the button and the field both live inside it rather
+                        than each carrying their own slot, since they trade
+                        places rather than coexisting. `justify-center` only
+                        matters below `md`, where it is usually the only
+                        visible child and centring it is the point; at `md`
+                        and up the field fills the box on its own and the
+                        alignment is moot. */}
+                    <div
+                        className="flex max-w-(--measure-column) min-w-0 flex-1 items-center justify-center"
+                        onBlur={(event) => {
+                            /* Tabbing or clicking to anything outside this box
+                               — the theme toggle, a link, the page itself —
+                               closes the field back down to the button.
+                               Clicking a result inside the dropdown does not:
+                               that click lands on a descendant of this same
+                               box, which `contains` still reports as inside
+                               it. */
+                            if (
+                                mobileSearchExpanded &&
+                                !event.currentTarget.contains(
+                                    event.relatedTarget as Node | null,
+                                )
+                            ) {
+                                setMobileSearchExpanded(false);
+                            }
+                        }}
+                    >
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Search"
+                            onClick={() => setMobileSearchExpanded(true)}
+                            className={cn(
+                                'md:hidden',
+                                mobileSearchExpanded && 'hidden',
+                            )}
+                        >
+                            <SearchIcon aria-hidden="true" />
+                        </Button>
+
+                        <SearchField
+                            ref={mobileSearchInput}
+                            className={cn(
+                                'w-full',
+                                mobileSearchExpanded ? 'flex' : 'hidden',
+                                'md:flex',
+                            )}
+                        />
                     </div>
 
                     <div className="ml-auto flex items-center gap-2">

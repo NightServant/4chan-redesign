@@ -150,6 +150,12 @@ describe('AppLayout', () => {
      * this the drawer would stay open over whatever page Inertia just
      * swapped in. `AppLayout` is a persistent layout that does not remount
      * between visits, which is exactly why this has to be explicit.
+     *
+     * Two listeners register here, not one: `AppHeader` also listens for
+     * `navigate` now, to collapse its own mobile search button back down for
+     * the same persistent-layout reason. This test only cares that the
+     * drawer's listener is among them, so it fires every callback captured
+     * rather than assuming its own is the only one.
      */
     it('closes when an Inertia navigation completes', async () => {
         const user = userEvent.setup();
@@ -158,8 +164,12 @@ describe('AppLayout', () => {
         await user.click(screen.getByRole('button', { name: /open sidebar/i }));
         expect(screen.getByRole('dialog')).toBeInTheDocument();
 
-        expect(navigateCallbacks).toHaveLength(1);
-        act(() => navigateCallbacks[0]());
+        expect(navigateCallbacks.length).toBeGreaterThan(0);
+        act(() => {
+            for (const callback of navigateCallbacks) {
+                callback();
+            }
+        });
 
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
