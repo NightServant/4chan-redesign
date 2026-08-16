@@ -4,6 +4,7 @@ import {
     BellIcon,
     BookmarkIcon,
     LogOutIcon,
+    MenuIcon,
     MessageSquareIcon,
     MoonIcon,
     ShieldIcon,
@@ -25,6 +26,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { SheetTrigger } from '@/components/ui/sheet';
 import { useAppearance } from '@/hooks/use-appearance';
 import { ACCOUNT_MENU, PRIMARY_NAV } from '@/lib/navigation';
 import { cn, plural } from '@/lib/utils';
@@ -38,6 +40,15 @@ import type { CloverNavItem } from '@/types/navigation';
  * actions and the account. It sits above content on `z-30`, one above the
  * sidebar's `z-20`, and reads its destinations from `PRIMARY_NAV` rather than
  * holding a second copy of the chrome's nav.
+ *
+ * Below `lg` it also carries the trigger for the sidebar drawer. The trigger
+ * has to live somewhere always on screen, since the drawer it opens is
+ * closed by default; `AppHeader` renders on every page the drawer does, so it
+ * is where the trigger lives rather than a header carrying one only
+ * sometimes. It is a `SheetTrigger`, which reads the drawer's open state from
+ * the `Sheet` `AppLayout` renders around this component — nothing is passed
+ * down as a prop, so this component does not need to know whether it is
+ * mounted inside one until it actually renders.
  */
 
 /** Bounded to what the notifications menu previews before "See all". */
@@ -122,6 +133,24 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                     column, which read as two grids that happened to share a
                     page. */}
                 <div className="mx-auto flex h-16 w-full max-w-(--measure-page) items-center gap-7 px-6">
+                    {/* Below `lg` the sidebar is a drawer rather than a
+                        persistent rail, so this is the only way back into it
+                        once it is closed. Named to match the sidebar's own
+                        "Collapse sidebar" / "Expand sidebar" toggles, since it
+                        opens that same component. Hidden at `lg` and up,
+                        where the rail is back and a trigger for a drawer
+                        nothing can reach would do nothing. */}
+                    <SheetTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Open sidebar"
+                            className="lg:hidden"
+                        >
+                            <MenuIcon aria-hidden="true" />
+                        </Button>
+                    </SheetTrigger>
+
                     <div className="max-w-(--measure-column) min-w-0 flex-1">
                         <SearchField />
                     </div>

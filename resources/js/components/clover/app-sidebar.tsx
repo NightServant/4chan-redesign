@@ -19,7 +19,13 @@ import type { CloverNavItem } from '@/types/navigation';
 
 /**
  * The primary nav down the left side. Sticky and full height, hidden below
- * `md` where the mobile bar takes over.
+ * `lg` where a drawer built from this same component takes over.
+ *
+ * The breakpoint used to be `md`: at an 805px tablet width the expanded
+ * sidebar took a third of the screen, leaving the feed column 489px and the
+ * header's search field 108px. `AppLayout` renders a second copy of this
+ * component inside a `Sheet` for that range instead, so the persistent rail
+ * only has to cover the width it actually fits.
  *
  * Width never animates: it is a layout property, and the taste laws ban
  * animating those outright. Collapse is instant; only colour, background and
@@ -149,7 +155,7 @@ function AppSidebar({ className, ...props }: AppSidebarProps) {
             <aside
                 data-slot="app-sidebar"
                 className={cn(
-                    'sticky top-0 z-20 hidden h-screen shrink-0 border-r border-border bg-bg md:block',
+                    'sticky top-0 z-20 hidden h-screen shrink-0 border-r border-border bg-bg lg:block',
                     open ? 'w-[268px]' : 'w-[76px]',
                     className,
                 )}

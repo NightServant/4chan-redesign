@@ -11,6 +11,7 @@ import {
     vi,
 } from 'vitest';
 import { AppHeader } from '@/components/clover/app-header';
+import { Sheet } from '@/components/ui/sheet';
 import type { User } from '@/types/auth';
 import type { ActivityEntry, Board, ThreadNotification } from '@/types/clover';
 
@@ -21,6 +22,20 @@ import type { ActivityEntry, Board, ThreadNotification } from '@/types/clover';
  * is given, matching Inertia's own behaviour for non-GET links), and
  * `usePage` reads a mutable fixture reset in `beforeEach`.
  */
+
+/**
+ * The header's hamburger is a `SheetTrigger`, which throws outside a `Sheet`
+ * ancestor: Radix's dialog context has nowhere to read from. The real `Sheet`
+ * lives in `AppLayout`, one level up; this stands in for it exactly the way
+ * the mocked `Link` above stands in for Inertia's router context.
+ */
+function renderHeader() {
+    return render(
+        <Sheet>
+            <AppHeader />
+        </Sheet>,
+    );
+}
 /**
  * Four notifications, because the header previews three — the fourth is what
  * proves the preview stops while the badge still counts it.
@@ -162,7 +177,7 @@ describe('AppHeader', () => {
      * button opened a component no screen rendered.
      */
     it('offers no way to start a thread', () => {
-        render(<AppHeader />);
+        renderHeader();
 
         expect(
             screen.queryByRole('button', { name: /new thread/i }),
@@ -173,7 +188,7 @@ describe('AppHeader', () => {
     });
 
     it('shows Log in and Create account and no avatar for a signed-out anon', () => {
-        render(<AppHeader />);
+        renderHeader();
 
         expect(
             screen.getByRole('link', { name: 'Log in' }),
@@ -190,7 +205,7 @@ describe('AppHeader', () => {
         const user = userEvent.setup();
         mockPage.props.auth.user = SIGNED_IN_USER;
 
-        render(<AppHeader />);
+        renderHeader();
 
         expect(
             screen.queryByRole('link', { name: 'Log in' }),
@@ -237,7 +252,7 @@ describe('AppHeader', () => {
     it('names the notifications button with the count, not colour alone', () => {
         mockPage.props.auth.user = SIGNED_IN_USER;
 
-        render(<AppHeader />);
+        renderHeader();
 
         expect(
             screen.getByRole('button', { name: 'Notifications, 4 new' }),
@@ -254,7 +269,7 @@ describe('AppHeader', () => {
         mockPage.props.auth.user = SIGNED_IN_USER;
         mockPage.props.threadNotifications = [];
 
-        const { container } = render(<AppHeader />);
+        const { container } = renderHeader();
 
         expect(
             screen.getByRole('button', { name: 'Notifications, nothing new' }),
@@ -267,7 +282,7 @@ describe('AppHeader', () => {
         mockPage.props.auth.user = SIGNED_IN_USER;
         mockPage.props.threadNotifications = [];
 
-        render(<AppHeader />);
+        renderHeader();
 
         await user.click(
             screen.getByRole('button', { name: 'Notifications, nothing new' }),
@@ -282,7 +297,7 @@ describe('AppHeader', () => {
         const user = userEvent.setup();
         mockPage.props.auth.user = SIGNED_IN_USER;
 
-        render(<AppHeader />);
+        renderHeader();
 
         await user.click(
             screen.getByRole('button', { name: 'Notifications, 4 new' }),
@@ -309,7 +324,7 @@ describe('AppHeader', () => {
     });
 
     it('hides notifications and messages for a signed-out anon, who has nothing to show there', () => {
-        render(<AppHeader />);
+        renderHeader();
 
         expect(
             screen.queryByRole('button', { name: /notifications/i }),
@@ -321,7 +336,7 @@ describe('AppHeader', () => {
 
     it('names the theme toggle by what pressing it does, and flips that name when pressed', async () => {
         const user = userEvent.setup();
-        render(<AppHeader />);
+        renderHeader();
 
         const toggle = screen.getByRole('button', {
             name: /switch to (light|dark) theme/i,
@@ -342,7 +357,7 @@ describe('AppHeader', () => {
      * grids that happened to share a page.
      */
     it('aligns the search field with the thread column', () => {
-        render(<AppHeader />);
+        renderHeader();
 
         /* The field is a combobox now, not a button, and it renders its own
            positioning wrapper for the dropdown, so the constraint is two
@@ -363,7 +378,7 @@ describe('AppHeader', () => {
 
     /** The paper runs through the chrome as well as the content. */
     it('is drawn on the same patterned paper as the page', () => {
-        const { container } = render(<AppHeader />);
+        const { container } = renderHeader();
 
         expect(
             container.querySelector('[data-slot="pattern-field-paper"]')
@@ -372,11 +387,26 @@ describe('AppHeader', () => {
     });
 
     it('is a sticky bar sitting above content, not fixed', () => {
-        render(<AppHeader />);
+        renderHeader();
 
         const header = document.querySelector('[data-slot="app-header"]');
 
         expect(header).toHaveClass('sticky', 'top-0');
         expect(header).not.toHaveClass('fixed');
+    });
+
+    /**
+     * Below `lg` the sidebar is a drawer instead of a persistent rail, and
+     * this is its only entry point once closed. Named to match the sidebar's
+     * own "Collapse sidebar" / "Expand sidebar" toggles rather than the
+     * generic "menu", since it opens that same component. Hidden at `lg` and
+     * up: the rail is back by then, and a trigger for a drawer nothing can
+     * open is a control that does nothing.
+     */
+    it('renders a hamburger that opens the sidebar drawer, hidden at `lg` and up', () => {
+        renderHeader();
+
+        const trigger = screen.getByRole('button', { name: /open sidebar/i });
+        expect(trigger).toHaveClass('lg:hidden');
     });
 });

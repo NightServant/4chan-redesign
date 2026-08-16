@@ -282,6 +282,20 @@ describe('AppSidebar', () => {
         ).toHaveClass('w-[76px]');
     });
 
+    /**
+     * The rail used to persist from `md`, which at an 805px tablet width left
+     * the feed only 489px wide against a 268px sidebar. Below `lg` it is a
+     * drawer's job now, built from this same component, so the rail itself
+     * only needs to stay out of `lg`'s way.
+     */
+    it('stays visible from `lg` up rather than `md`, now that a drawer covers everything below it', () => {
+        const { container } = render(<AppSidebar />);
+
+        const aside = container.querySelector('[data-slot="app-sidebar"]');
+        expect(aside).toHaveClass('lg:block');
+        expect(aside).not.toHaveClass('md:block');
+    });
+
     /** The paper runs through the chrome as well as the content. */
     it('is drawn on the same patterned paper as the page', () => {
         const { container } = render(<AppSidebar />);

@@ -129,6 +129,8 @@ export {
     Sheet,
     SheetTrigger,
     SheetClose,
+    SheetOverlay,
+    SheetPortal,
     SheetContent,
     SheetHeader,
     SheetFooter,
