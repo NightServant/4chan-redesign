@@ -5,9 +5,11 @@ import { MOBILE_NAV, navHref } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 
 /**
- * The bottom bar on small screens. It is the only navigation below `md`,
- * there is no hamburger drawer, so its keyboard and screen-reader behaviour
- * carries as much weight as the sidebar's.
+ * The bottom bar on small screens. It is one of two ways to navigate below
+ * `lg` — the header's hamburger drawer is the other, reachable at every width
+ * below `lg`, including here. This bar's own keyboard and screen-reader
+ * behaviour still carries as much weight as the sidebar's: it is what a
+ * signed-in anon reaches for first below `md`, drawer or no drawer.
  *
  * `requiresAuth` entries drop out for signed-out anons, which means the bar
  * renders a variable number of items. Distributing with `flex-1` rather than
