@@ -61,13 +61,24 @@ import type { CloverNavItem } from '@/types/navigation';
  * on a phone.
  *
  * Below `md` a real button stands in the field's place now, and `Log in` /
- * `Create account` stop rendering there too: a hamburger, a search control
- * and a theme toggle already fill a 320px row on their own, and two
- * full-size auth buttons never fit alongside them at any width this small.
- * The design below `md` is exactly that row — hamburger, search, theme
- * toggle — and nothing past it; a signed-out anon on a phone has no sign-in
- * control anywhere in the app shell until task 4 settles that on the bottom
- * bar. At `md` and up both buttons, and the row itself, are unchanged.
+ * `Create account` stay out of the markup's visible row there too: a
+ * hamburger, a search control and a theme toggle already fill a 320px row on
+ * their own, and two full-size auth buttons never fit alongside them at any
+ * width this small. The design below `md` is exactly that row — hamburger,
+ * search, theme toggle — and nothing past it; a signed-out anon on a phone
+ * has no sign-in control anywhere in the app shell until task 4 settles that
+ * on the bottom bar. At `md` and up both buttons, and the row itself, are
+ * unchanged.
+ *
+ * Pressing the mobile search button hides the hamburger and the right-hand
+ * control group too, not only the button it replaces. Measured at 320px
+ * signed in: the hamburger (38px), two `gap-7` separators (56px) and the
+ * signed-in group — bell, theme toggle, avatar, ~130px — leave the expanded
+ * field's `w-full` wrapper only 48px, the same defect this task exists to
+ * kill wearing a different cause. Both step aside while the field is
+ * expanded and come back the moment it collapses, with a `md:` override that
+ * keeps them on screen at `md` and up regardless of that state, since the
+ * field there is always the smaller, inline one and nothing is ever gated.
  */
 
 /** Bounded to what the notifications menu previews before "See all". */
@@ -178,13 +189,26 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                         "Collapse sidebar" / "Expand sidebar" toggles, since it
                         opens that same component. Hidden at `lg` and up,
                         where the rail is back and a trigger for a drawer
-                        nothing can reach would do nothing. */}
+                        nothing can reach would do nothing.
+
+                        Also hidden below `md` while the mobile field is
+                        expanded: see the comment on the right-hand group
+                        below, which hides for the same reason. `md:inline-flex`
+                        restores it at `md` and up regardless of that state,
+                        matching the field's own trigger button rather than
+                        interacting with `lg:hidden`, which still wins at `lg`
+                        and up because Tailwind emits breakpoints in ascending
+                        order and a later rule wins a tie. */}
                     <SheetTrigger asChild>
                         <Button
                             variant="ghost"
                             size="icon"
                             aria-label="Open sidebar"
-                            className="lg:hidden"
+                            className={cn(
+                                'lg:hidden',
+                                mobileSearchExpanded && 'hidden',
+                                'md:inline-flex',
+                            )}
                         >
                             <MenuIcon aria-hidden="true" />
                         </Button>
@@ -242,7 +266,25 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                         />
                     </div>
 
-                    <div className="ml-auto flex items-center gap-2">
+                    {/* Hidden below `md` while the field is expanded, for the
+                        same reason the hamburger is: measured at a 320px
+                        viewport, signed in, this group (bell + theme toggle +
+                        avatar, ~130px) plus the hamburger (38px) plus two
+                        `gap-7` separators (56px) leaves the expanded field's
+                        `w-full` wrapper 48px to fill -- the original defect
+                        this task exists to kill, reappearing with icon
+                        buttons standing in for `Log in` / `Create account`
+                        as the cause. `md:flex` restores it at `md` and up
+                        regardless of `mobileSearchExpanded`, matching the
+                        hamburger's own override. */}
+                    <div
+                        data-slot="app-header-actions"
+                        className={cn(
+                            'ml-auto items-center gap-2',
+                            mobileSearchExpanded ? 'hidden' : 'flex',
+                            'md:flex',
+                        )}
+                    >
                         {isSignedIn && (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -452,11 +494,12 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                                     full width of a 320px row, and these two
                                     full-size buttons do not fit next to them.
                                     Neither branch is deleted — both links
-                                    render at every width, unchanged at `md`
-                                    and up — since a signed-out anon on a
-                                    narrower screen still needs the styles and
-                                    markup ready the moment the viewport grows
-                                    past this one. */}
+                                    stay in the markup at every width, only
+                                    hidden below `md` and visible again
+                                    unchanged at `md` and up — since a
+                                    signed-out anon on a narrower screen still
+                                    needs the styles and markup ready the
+                                    moment the viewport grows past this one. */}
                                 <Button
                                     variant="ghost"
                                     asChild

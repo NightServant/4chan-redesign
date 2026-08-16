@@ -589,6 +589,138 @@ describe('AppHeader', () => {
                 screen.getByRole('button', { name: 'Search' }),
             ).not.toHaveClass('hidden');
         });
+
+        /**
+         * Signed in, the collapsed row already carries a hamburger and three
+         * icon buttons (bell, theme toggle, avatar) alongside the search
+         * button -- tighter controls than the signed-out case's two
+         * full-size links, but real width all the same. Measured at 320px:
+         * 272px inner width, 38px hamburger + 130px of icon buttons + 56px
+         * of `gap-7` leaves the expanded field's `w-full` wrapper only 48px
+         * to fill -- the original defect ("a bordered box ... over an input
+         * nothing could type into") with a different cause. The hamburger
+         * and the right-hand group step aside while the field is expanded so
+         * it can have the row to itself, the same shape of fix already in
+         * this file for `Log in` / `Create account`.
+         */
+        describe('signed in', () => {
+            it('gives the field the whole row while expanded: hamburger and account controls step aside', async () => {
+                const user = userEvent.setup();
+                mockPage.props.auth.user = SIGNED_IN_USER;
+                renderHeader();
+
+                await user.click(
+                    screen.getByRole('button', { name: 'Search' }),
+                );
+
+                const hamburger = screen.getByRole('button', {
+                    name: /open sidebar/i,
+                });
+                const actions = document.querySelector(
+                    '[data-slot="app-header-actions"]',
+                );
+
+                expect(hamburger).toHaveClass('hidden');
+                expect(actions).toHaveClass('hidden');
+
+                const field = screen.getByRole('combobox', {
+                    name: /search boards and threads/i,
+                });
+                expect(field).toHaveFocus();
+            });
+
+            it('keeps the hamburger, bell, theme toggle and avatar reachable below `md` while collapsed', () => {
+                mockPage.props.auth.user = SIGNED_IN_USER;
+                renderHeader();
+
+                const hamburger = screen.getByRole('button', {
+                    name: /open sidebar/i,
+                });
+                const notifications = screen.getByRole('button', {
+                    name: /notifications/i,
+                });
+                const theme = screen.getByRole('button', {
+                    name: /switch to (light|dark) theme/i,
+                });
+                const avatar = screen.getByRole('button', {
+                    name: 'Account menu',
+                });
+
+                for (const control of [
+                    hamburger,
+                    notifications,
+                    theme,
+                    avatar,
+                ]) {
+                    expect(control.className).not.toMatch(/(^|\s)hidden(\s|$)/);
+                }
+            });
+
+            /**
+             * `md:` overrides are what make the `hidden` gate above a
+             * mobile-only fact rather than a permanent one. jsdom cannot
+             * evaluate the media query itself, so this pins the class that
+             * carries it, in both states -- collapsed, where nothing is
+             * hidden yet the override still belongs on the element, and
+             * expanded, where it is what undoes the hide at `md` and up.
+             */
+            it('carries the `md:` override that restores the hamburger and account controls, expanded or not', async () => {
+                const user = userEvent.setup();
+                mockPage.props.auth.user = SIGNED_IN_USER;
+                renderHeader();
+
+                const hamburger = screen.getByRole('button', {
+                    name: /open sidebar/i,
+                });
+                const actions = document.querySelector(
+                    '[data-slot="app-header-actions"]',
+                );
+
+                expect(hamburger).toHaveClass('md:inline-flex');
+                expect(actions).toHaveClass('md:flex');
+
+                await user.click(
+                    screen.getByRole('button', { name: 'Search' }),
+                );
+
+                expect(hamburger).toHaveClass('md:inline-flex');
+                expect(actions).toHaveClass('md:flex');
+            });
+
+            /**
+             * The `onBlur` collapse path lives on the field's own wrapper,
+             * not on the hamburger or the account group -- they are siblings
+             * of it, never inside the `contains` check it runs, so hiding
+             * them carries no risk of changing what that check sees. This is
+             * the behavioural half of that: focus leaving the field must
+             * still bring everything back, hamburger and account controls
+             * included, not just un-hide the search button.
+             */
+            it('brings the hamburger and account controls back when focus leaves the expanded field', async () => {
+                const user = userEvent.setup();
+                mockPage.props.auth.user = SIGNED_IN_USER;
+                renderHeader();
+
+                await user.click(
+                    screen.getByRole('button', { name: 'Search' }),
+                );
+
+                const hamburger = screen.getByRole('button', {
+                    name: /open sidebar/i,
+                });
+                const actions = document.querySelector(
+                    '[data-slot="app-header-actions"]',
+                );
+
+                expect(hamburger).toHaveClass('hidden');
+                expect(actions).toHaveClass('hidden');
+
+                await user.tab();
+
+                expect(hamburger).not.toHaveClass('hidden');
+                expect(actions).not.toHaveClass('hidden');
+            });
+        });
     });
 
     /**
