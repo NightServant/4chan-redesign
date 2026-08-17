@@ -38,8 +38,15 @@ const InputOTPSlot = React.forwardRef<
     return (
         <div
             ref={ref}
+            data-slot="input-otp-slot"
+            /* On Clover's tokens and Clover's touch target. These slots came
+               from the starter kit untouched: raw `text-sm` rather than a
+               token, `border-input` rather than `border-border`, a `shadow-sm`
+               on a design that draws no shadows, and 36px boxes on a branch
+               whose task 5 put every touch target at 44px. Every other control
+               on an auth screen is 44px and on the token scale. */
             className={cn(
-                'relative flex h-9 w-9 items-center justify-center border-y border-r border-input text-sm shadow-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md',
+                'relative flex size-11 items-center justify-center border-y border-r border-border text-body transition-all first:rounded-l-md first:border-l last:rounded-r-md',
                 isActive && 'z-10 ring-1 ring-ring',
                 className,
             )}

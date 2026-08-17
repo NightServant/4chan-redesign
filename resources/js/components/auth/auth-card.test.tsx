@@ -69,6 +69,27 @@ describe('AuthCard', () => {
         ).toHaveAttribute('href', '/');
     });
 
+    /**
+     * The other half of the 320px chrome. The form side already spends less on
+     * padding below `sm`; a card still at `p-8` inside it would eat the saving
+     * straight back. See `auth-split-layout.tsx`.
+     */
+    it('spends less of a narrow viewport on its own padding', () => {
+        const { container } = render(
+            <AuthCard title="Welcome back">
+                <p>form</p>
+            </AuthCard>,
+        );
+
+        const card = container.querySelector<HTMLElement>(
+            '[data-slot="auth-card"]',
+        );
+
+        expect(card?.className).toMatch(/(^|\s)p-5(\s|$)/);
+        expect(card?.className).toMatch(/(^|\s)sm:p-8(\s|$)/);
+        expect(card?.className).not.toMatch(/(^|\s)p-8(\s|$)/);
+    });
+
     it('renders the form it wraps', () => {
         render(
             <AuthCard title="Welcome back">

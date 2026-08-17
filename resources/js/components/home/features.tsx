@@ -1,4 +1,5 @@
 import {
+    ChevronDown,
     LayoutGrid,
     MessageSquare,
     Share2,
@@ -6,56 +7,67 @@ import {
     Users,
     Zap,
 } from 'lucide-react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useState } from 'react';
 import type { ComponentType } from 'react';
 import { Section } from '@/components/home/section';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 /**
- * What Clover is, as six claims a reader steps through rather than six cards
- * they scan past.
+ * What Clover is, as six claims a reader opens one at a time.
  *
- * ## Why this stopped being a grid of cards
+ * ## Why this stopped being a grid of cards, and then stopped being tabs
  *
  * Six cards of equal weight is a wall: every claim competes with the other
  * five, so the reader takes an impression rather than an argument, and the
  * body copy has to be short enough to fit a tile whether or not the claim
- * needs the room. As tabs, one claim is on screen at a time and can be
- * answered in a sentence that is allowed to breathe.
+ * needs the room. Tabs fixed that and brought their own problem, which is two
+ * equal columns: below `md` the list and its answer stack, and a reader has to
+ * look away from the claim they pressed to find what it says.
  *
- * It also drops six bordered boxes from a page whose own rule is that bands
- * are divided by hairlines rather than stacked as slabs.
+ * ## An accordion below `md`, the whole list above it
  *
- * ## The composition
+ * Gabe's request, 2026-08-17, and the breakpoint is the request. On a phone a
+ * band of six claims and six paragraphs is a screen and a half of scrolling
+ * before anything else on the page, so the answers collapse under the claims
+ * they belong to. There is room for all six on a desktop, so all six are
+ * simply shown: headings and descriptions, and nothing to press.
  *
- * Two equal columns. The left holds the claims and is the control; the right
- * holds the answer to whichever is selected. Vertical rather than the
- * primitive's default horizontal strip, because six labels of this length in a
- * row either wrap into an unreadable block or scroll sideways, and a list of
- * claims reads as a list of claims.
+ * It branches on `useIsMobile` rather than on a class, and that is the
+ * load-bearing part. A CSS-gated accordion would keep the triggers in the
+ * document at every width, so at `md` and up there would be six buttons
+ * announcing "collapsed" over content that is permanently visible — controls
+ * claiming to do something they do not. Above `md` there are no buttons at
+ * all. The same reasoning picks a sheet over a dialog in
+ * `account/edit-profile-dialog.tsx`.
  *
- * Equal halves rather than a narrow rail beside a wide panel. The claims are
- * not a table of contents for the answers, they are half the argument: a
- * reader who only scans the left column has still read the case for the site.
- * Sizing them the same says so.
+ * ## Real headings, not styled `div`s
  *
- * A rule divides the two, not a gap. Whitespace between columns reads as two
- * lists that happen to sit side by side, and this pair is one control and its
- * output. The rule is the list's own right edge, so a single line falls
- * between the columns rather than two meeting in the gutter.
+ * Each trigger is a `button` inside an `h3`. That is the load-bearing detail:
+ * an accordion whose triggers are `div`s is a list a screen reader cannot
+ * navigate, because none of it appears in the document outline and there is
+ * nothing to jump between. Wrapped this way the band reads as six named
+ * subsections of "Built for reading, not for engagement", and each one
+ * announces whether it is open.
  *
- * ## Motion
+ * The icon is inside the trigger rather than beside it, so pressing the glyph
+ * is pressing the control. A decorative icon next to a button is a target that
+ * looks pressable and is not.
  *
- * Switching claims is the one moment this band has, so the answer is animated
- * rather than swapped. The outgoing answer leaves before the incoming one
- * arrives, which reads as a card being turned over rather than as text being
- * replaced; the marker on the selected claim slides between rows on a shared
- * layout id, so the eye is carried from the old row to the new one instead of
- * having to find it again.
+ * ## One open at a time
  *
- * All of it is position and opacity on content already on the page, and all of
- * it resolves. Nothing here paints a surface.
+ * The claim being answered is a single piece of state, and the rows are
+ * `Collapsible`s driven by it. Radix still owns every part of a disclosure
+ * that is easy to get wrong: `aria-expanded`, `aria-controls`, the id joining
+ * them, the keyboard handling and the `data-state` the height animation hangs
+ * off. What is written here is only which of the six that state names.
+ *
+ * The open one closes when pressed again. A disclosure that cannot be closed
+ * is a label with extra steps.
  */
 type Feature = {
     icon: ComponentType<{ size?: number; className?: string }>;
@@ -106,9 +118,96 @@ function slugFor(title: string): string {
     return title.toLowerCase().replaceAll(' ', '-');
 }
 
+/** One claim, opened and closed. Below `md` only: see the docblock above. */
+function FeatureDisclosure({
+    feature: { icon: Icon, title, body },
+    open,
+    onOpenChange,
+}: {
+    feature: Feature;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}) {
+    return (
+        <Collapsible
+            open={open}
+            onOpenChange={onOpenChange}
+            className="border-r border-b border-border px-6"
+        >
+            {/* A real heading with the button inside it. An accordion whose
+                triggers are `div`s is a list a screen reader cannot navigate:
+                none of it reaches the document outline, so there is nothing to
+                jump between and no announcement of what is open. */}
+            <h3>
+                <CollapsibleTrigger className="group flex w-full items-center gap-3 py-5 text-left transition-colors duration-[var(--duration-hover)] ease-standard hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+                    {/* Inside the control, not beside it. A decorative glyph
+                        next to a button is a target that looks pressable and
+                        is not, and the request was that the icon works too. */}
+                    <Icon
+                        size={20}
+                        aria-hidden="true"
+                        className="shrink-0 text-primary"
+                    />
+
+                    <span className="min-w-0 flex-1 font-display text-h2 font-semibold tracking-[-0.2px] text-pretty text-foreground">
+                        {title}
+                    </span>
+
+                    <ChevronDown
+                        size={18}
+                        aria-hidden="true"
+                        className="shrink-0 text-faint transition-transform duration-[var(--duration-hover)] ease-standard group-data-[state=open]:rotate-180 motion-reduce:transition-none"
+                    />
+                </CollapsibleTrigger>
+            </h3>
+
+            <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down motion-reduce:animate-none">
+                <p className="max-w-[52ch] pb-5 pl-8 text-body leading-[1.55] text-pretty text-muted-foreground">
+                    {body}
+                </p>
+            </CollapsibleContent>
+        </Collapsible>
+    );
+}
+
+/** The same claim with nothing to press. `md` and up. */
+function FeatureEntry({
+    feature: { icon: Icon, title, body },
+}: {
+    feature: Feature;
+}) {
+    return (
+        <div className="flex h-full flex-col gap-2 border-r border-b border-border p-6">
+            <h3 className="flex items-center gap-3 font-display text-h2 font-semibold tracking-[-0.2px] text-pretty text-foreground">
+                <Icon
+                    size={20}
+                    aria-hidden="true"
+                    className="shrink-0 text-primary"
+                />
+                {title}
+            </h3>
+
+            <p className="max-w-[52ch] pl-8 text-body leading-[1.55] text-pretty text-muted-foreground">
+                {body}
+            </p>
+        </div>
+    );
+}
+
 function Features() {
-    const reduced = useReducedMotion();
-    const [selected, setSelected] = useState(slugFor(FEATURES[0].title));
+    const isMobile = useIsMobile();
+
+    /**
+     * Which claim is answered. One at a time: six open bodies is the wall of
+     * copy this band stopped being, and the open one closes when pressed
+     * again, because a disclosure that cannot close is a label.
+     *
+     * Radix still owns everything that is easy to get wrong about a
+     * disclosure: `aria-expanded`, `aria-controls`, the id joining them, the
+     * keyboard handling and the `data-state` the height animation hangs off.
+     * What is written here is only which of the six that state names.
+     */
+    const [open, setOpen] = useState<string | null>(slugFor(FEATURES[0].title));
 
     return (
         <Section
@@ -117,100 +216,62 @@ function Features() {
             label="Features"
             title="Built for reading, not for engagement"
         >
-            <Tabs
-                value={selected}
-                onValueChange={setSelected}
-                orientation="vertical"
-                /* Stacked on a phone, equal halves from `md`. The list stays
-                   above the answer either way, because the control has to come
-                   before the thing it controls for anyone reading in order. */
-                className="grid gap-6 md:grid-cols-2 md:gap-0"
+            {/* A hard grid, ruled on both axes, flush with the band's frame.
+
+                One column below `md`, two at `md`, three at `lg`. One column
+                at every width left about a thousand pixels of empty paper
+                beside six short items at 1420px while the band ran nearly
+                800px tall.
+
+                ## Which line is drawn by what
+
+                `Section` draws the vertical rules down both sides of the
+                content column (`border-x`) and the horizontal rule above the
+                band (`border-t` on the section). The grid draws its own top
+                rule, every interior line, and the bottom of its last row —
+                nothing else. So:
+
+                - **left and right edges: the section's.** The grid adds none.
+                  Two hairlines a pixel apart is what happens if it does.
+                - **interior verticals and horizontals: the cells',** one each,
+                  drawn by `border-r border-b`. That pattern survives a wrapping
+                  grid without any `:nth-child` scheme, which matters because
+                  the column count changes at two breakpoints and a rule keyed
+                  to three columns is wrong at two.
+
+                The last cell in each row still draws a right-hand rule, and it
+                would land beside the section's rather than on it. `-ml-6`
+                cancels the column's left padding so the grid starts on the
+                frame; `-mr-[25px]` is that same 24px plus one more, so the
+                grid runs a pixel *past* the frame and the last cell's rule
+                falls exactly on the section's. Same line, by construction
+                rather than by exception — `[&>*:last-child]:border-r-0` cannot
+                do this, since "last in row" is not a thing CSS can name here.
+
+                The breathing room the `px-6` used to give is now `p-6` inside
+                each cell, so the text is not against the rules.
+
+                No short last row to worry about: `FEATURES` is six, and six
+                divides by one, two and three alike. */}
+            <div
+                data-slot="features-list"
+                className="-mr-[25px] -ml-6 grid border-t border-border md:grid-cols-2 lg:grid-cols-3"
             >
-                {/* The primitive's list is a horizontal strip with a bottom
-                    rule, so every part of that is overridden here: a column,
-                    ruled down its left edge, with each claim marking itself
-                    against that rule rather than under it. */}
-                {/* The divider between the claims and their answer. A rule
-                    rather than a gap: two columns separated by whitespace read
-                    as two lists that happen to be adjacent, and this pair is
-                    one control and its output. It is the list's right edge so
-                    that a single line falls between the columns rather than
-                    two lines meeting in the gutter. */}
-                <TabsList className="w-full flex-col items-stretch gap-0 border-b-0 border-l border-border md:border-r md:pr-0">
-                    {FEATURES.map(({ title }) => (
-                        <TabsTrigger
-                            key={title}
-                            value={slugFor(title)}
-                            /* The border is transparent even when active: the
-                               marker below paints it, so the two cannot both
-                               claim the same edge and double it. */
-                            className="relative -mb-0 -ml-px justify-start border-b-0 border-l-2 border-l-transparent px-4 py-3 text-left whitespace-normal data-[state=active]:border-l-transparent data-[state=active]:font-semibold"
-                        >
-                            {selected === slugFor(title) ? (
-                                <motion.span
-                                    layoutId="feature-marker"
-                                    aria-hidden="true"
-                                    transition={
-                                        reduced
-                                            ? { duration: 0 }
-                                            : {
-                                                  type: 'spring',
-                                                  stiffness: 480,
-                                                  damping: 40,
-                                              }
-                                    }
-                                    className="absolute inset-y-0 -left-0.5 w-0.5 bg-primary"
-                                />
-                            ) : null}
-                            {title}
-                        </TabsTrigger>
-                    ))}
-                </TabsList>
-
-                {/* `mode="wait"` so the two answers never overlap. Crossfading
-                    them stacks two paragraphs of body copy on top of each
-                    other for the length of the transition, which is unreadable
-                    for exactly as long as it lasts. */}
-                <AnimatePresence mode="wait" initial={false}>
-                    {FEATURES.filter(
-                        ({ title }) => slugFor(title) === selected,
-                    ).map(({ icon: Icon, title, body }) => (
-                        <TabsContent
-                            key={title}
-                            value={slugFor(title)}
-                            forceMount
-                            className="flex flex-col gap-4 md:pt-1 md:pl-12"
-                            asChild
-                        >
-                            <motion.div
-                                initial={
-                                    reduced ? false : { opacity: 0, y: 10 }
-                                }
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={
-                                    reduced
-                                        ? { opacity: 1 }
-                                        : { opacity: 0, y: -6 }
-                                }
-                                transition={{
-                                    duration: 0.22,
-                                    ease: [0.2, 0, 0, 1],
-                                }}
-                            >
-                                <Icon size={20} className="text-primary" />
-
-                                <h3 className="font-display text-[clamp(22px,2.2vw,28px)] leading-[1.15] font-semibold tracking-[-0.4px] text-balance text-foreground">
-                                    {title}
-                                </h3>
-
-                                <p className="max-w-[52ch] text-[17px] leading-[1.55] text-pretty text-muted-foreground">
-                                    {body}
-                                </p>
-                            </motion.div>
-                        </TabsContent>
-                    ))}
-                </AnimatePresence>
-            </Tabs>
+                {FEATURES.map((feature) =>
+                    isMobile ? (
+                        <FeatureDisclosure
+                            key={feature.title}
+                            feature={feature}
+                            open={open === slugFor(feature.title)}
+                            onOpenChange={(next) =>
+                                setOpen(next ? slugFor(feature.title) : null)
+                            }
+                        />
+                    ) : (
+                        <FeatureEntry key={feature.title} feature={feature} />
+                    ),
+                )}
+            </div>
         </Section>
     );
 }

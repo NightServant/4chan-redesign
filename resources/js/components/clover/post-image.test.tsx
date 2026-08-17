@@ -54,28 +54,190 @@ describe('PostImage', () => {
     });
 
     /**
-     * An aspect ratio alone does not stop a 1920x4000 infographic taking over
-     * the page, so each variant is capped — a card tighter than a post, being
-     * one item in a list rather than the thing being read.
+     * The two variants are bounded by different mechanisms now (task 12). A
+     * card is a cell in a uniform grid, so its box is a fixed ratio and the
+     * image is cropped into it; a post is the file being read, so it keeps the
+     * height cap and is shown whole under it.
      */
-    it('caps a card tighter than a post', () => {
+    it('bounds a card by its ratio and a post by its height cap', () => {
         const media = makeAttachment();
 
         const { unmount } = render(<PostImage media={media} variant="card" />);
 
-        expect(screen.getByRole('img')).toHaveClass('max-h-[520px]');
+        expect(screen.getByRole('button')).toHaveClass('aspect-[4/3]');
+        expect(screen.getByRole('img')).not.toHaveClass('max-h-[520px]');
 
         unmount();
 
         render(<PostImage media={media} variant="post" />);
 
+        expect(screen.getByRole('button')).not.toHaveClass('aspect-[4/3]');
         expect(screen.getByRole('img')).toHaveClass('max-h-[720px]');
     });
 
-    it('defaults to the card variant, the tighter cap', () => {
+    it('defaults to the card variant, the cropped box', () => {
         render(<PostImage media={makeAttachment()} />);
 
-        expect(screen.getByRole('img')).toHaveClass('max-h-[520px]');
+        expect(screen.getByRole('button')).toHaveClass('aspect-[4/3]');
+        expect(screen.getByRole('img')).toHaveClass('object-cover');
+    });
+
+    /**
+     * Task 12, and every assertion here is a class contract: jsdom has no
+     * layout engine, so nothing below measures a box. What is checked is that
+     * the classes which produce the box are present, absent, or unprefixed.
+     */
+    describe('the box (task 12)', () => {
+        /**
+         * A feed is a uniform grid, and a tall 4chan image must not be allowed
+         * to set the row height. Cropped rather than contained, and anchored
+         * to the *top* of the image: an OP's subject is nearly always at the
+         * top, and centre-cropping a tall one is exactly what loses it.
+         */
+        it('crops a card from the top of the image', () => {
+            render(<PostImage media={makeAttachment()} variant="card" />);
+
+            const image = screen.getByRole('img');
+
+            expect(image).toHaveClass('object-cover');
+            expect(image).toHaveClass('object-top');
+            expect(image).not.toHaveClass('object-contain');
+        });
+
+        /**
+         * The thread page is where the file is actually being looked at, so
+         * nothing there is cropped. It carries neither half of the card's
+         * mechanism.
+         */
+        it('leaves the post variant uncropped', () => {
+            render(<PostImage media={makeAttachment()} variant="post" />);
+
+            const image = screen.getByRole('img');
+
+            expect(image).toHaveClass('object-contain');
+            expect(image).not.toHaveClass('object-cover');
+            expect(image).not.toHaveClass('object-top');
+            expect(screen.getByRole('button').className).not.toMatch(/aspect-/);
+        });
+
+        /**
+         * The point of the fixed ratio: a 400x4000 infographic and a 4000x400
+         * banner produce the same row. The box cannot depend on the file, so
+         * the classes that draw it must be identical for both — and the `<img>`
+         * must not be carrying an intrinsic-size class of its own either.
+         */
+        it('gives a tall and a wide image the same box in a feed', () => {
+            const tall = makeAttachment({ width: 400, height: 4000 });
+            const wide = makeAttachment({ width: 4000, height: 400 });
+
+            const { unmount } = render(
+                <PostImage media={tall} variant="card" />,
+            );
+
+            const tallBox = screen.getByRole('button').className;
+            const tallImage = screen.getByRole('img').className;
+
+            unmount();
+
+            render(<PostImage media={wide} variant="card" />);
+
+            expect(screen.getByRole('button').className).toBe(tallBox);
+            expect(screen.getByRole('img').className).toBe(tallImage);
+            expect(tallBox).toContain('aspect-[4/3]');
+        });
+
+        /**
+         * Gabe's addition, 2026-08-17: in a 760px column (840px past 1536px) a
+         * full-bleed image is wider than everything else on the page and reads
+         * as a banner. The box takes the column up to a cap and stops.
+         *
+         * It caps the box, not the crop, so both variants carry it — the
+         * thread page's column is the same 760px.
+         */
+        it.each(['card', 'post'] as const)(
+            'caps the width of a %s box',
+            (variant) => {
+                render(
+                    <PostImage media={makeAttachment()} variant={variant} />,
+                );
+
+                expect(screen.getByRole('button')).toHaveClass('max-w-[560px]');
+            },
+        );
+
+        /**
+         * Gabe's thread page at ~857px, and again at ~885px: the capped box sat
+         * against the left edge with the whole remainder on the right, while
+         * the post's header, title and footer all ran the full width. The cap
+         * itself produced the gap — a box with a `max-width` hugs the leading
+         * edge unless told otherwise.
+         *
+         * Every parent this variant has is a `flex flex-col`
+         * (`thread/original-post.tsx`, `clover/comment-tree.tsx`), so its
+         * horizontal placement is cross-axis alignment: `self-center` is the
+         * property that decides it, rather than an auto margin that only gets
+         * there by overriding the container's `align-items`.
+         *
+         * Read off the rendered element, not off the exported constant — a
+         * guard that reads the same value the component reads cannot fail, and
+         * `cn()` merges these strings before they reach the DOM. Both rules
+         * are checked, since two of them for one job is the state this is
+         * meant to avoid.
+         */
+        it('centres the post box in its column rather than hugging one edge', () => {
+            const { container } = render(
+                <PostImage media={makeAttachment()} variant="post" />,
+            );
+
+            const box = container.querySelector<HTMLElement>(
+                '[data-slot="post-image"]',
+            );
+
+            expect(box?.className).toMatch(/(^|\s)self-center(\s|$)/);
+            expect(box?.className).not.toMatch(/(^|\s)mx-auto(\s|$)/);
+            expect(box?.className).toMatch(/(^|\s)max-w-\[560px\](\s|$)/);
+            expect(box?.className).not.toMatch(/aspect-/);
+            expect(screen.getByRole('img')).toHaveClass('object-contain');
+        });
+
+        /**
+         * A feed row's image belongs to the row above it. Aligned to the same
+         * leading edge as the title and the stats, not centred against them.
+         */
+        it('leaves the card box on the column edge, aligned with its row', () => {
+            const { container } = render(
+                <PostImage media={makeAttachment()} variant="card" />,
+            );
+
+            const box = container.querySelector<HTMLElement>(
+                '[data-slot="post-image"]',
+            );
+
+            expect(box?.className).not.toMatch(/(^|\s)self-center(\s|$)/);
+            expect(box?.className).not.toMatch(/(^|\s)mx-auto(\s|$)/);
+        });
+
+        /**
+         * "At every width, not only on phones." A cap written as `md:max-w-…`
+         * would hold at 1280 and at 2545 and do nothing at 390, or the reverse;
+         * an unprefixed one holds everywhere. jsdom applies no stylesheet and
+         * cannot be resized, so the guard is that no breakpoint prefix is
+         * attached to any width class on the box.
+         */
+        it.each(['card', 'post'] as const)(
+            'applies the %s cap at every width rather than behind a breakpoint',
+            (variant) => {
+                render(
+                    <PostImage media={makeAttachment()} variant={variant} />,
+                );
+
+                const box = screen.getByRole('button').className;
+
+                expect(box).not.toMatch(
+                    /(sm|md|lg|xl|2xl|min-\[|max-\[):max-w-/,
+                );
+            },
+        );
     });
 
     /**

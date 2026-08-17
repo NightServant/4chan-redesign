@@ -78,37 +78,6 @@ function intrinsicBox(media: Attachment): {
 }
 
 /**
- * How large the image is allowed to draw.
- *
- * The image fills the column's full width, and that is the load-bearing part.
- * Sizing from the height cap instead (`w-auto` under a `max-h`) leaves every
- * landscape image short of the right edge by however much its aspect ratio
- * happens to differ — a ragged margin down one side of the feed that reads as
- * a layout bug rather than a decision.
- *
- * So width is fixed and height follows the image's own ratio, capped. The cap
- * is what stops a 1920x4000 infographic taking over the page, and `object-cover`
- * is what happens when it bites: a very tall image is cropped to the cap
- * rather than letterboxed, because letterboxing would put the gaps back, just
- * on both sides instead of one.
- *
- * Only genuinely tall images are ever cropped. A landscape or roughly square
- * one scaled to the column width lands under the cap and is untouched. Opening
- * the image shows it whole either way.
- */
-/**
- * `object-contain`, not `object-cover`.
- *
- * `cover` fills the box and crops whatever does not fit, which on a board
- * where a good share of attachments are screenshots, comics and tall infographics
- * meant the top and bottom of the actual content were cut off. The point of an
- * attachment is the attachment.
- *
- * The height cap stays: a 5000px tall image would otherwise push every other
- * thread off the screen. Contained rather than cropped, a tall image is shown
- * whole and small, which is the honest presentation and still opens full size.
- */
-/**
  * The accessible name for an attachment.
  *
  * It was the bare filename, which on 4chan is very often `1712345678901.jpg` —
@@ -126,8 +95,72 @@ function altFor(media: Attachment): string {
     return `Attached image: ${media.filename}`;
 }
 
-const VARIANT_CLASSES: Record<PostImageVariant, string> = {
-    card: 'h-auto max-h-[520px] w-full object-contain',
+/**
+ * The width the box stops at, whatever the column happens to be.
+ *
+ * Gabe, 2026-08-17: "Some of the images in larger screens felt too much wide."
+ * The reading column is 760px, and 840px past 1536px, so a full-bleed
+ * attachment was the widest element on the page by a wide margin — it read as
+ * a banner rather than as one part of a post. The box takes the column up to
+ * this and stops.
+ *
+ * Unprefixed on purpose. This is a cap on the box, not a phone accommodation,
+ * so it holds at 390 and at 2545 alike; a `md:`-gated version would be exactly
+ * the half-measure the request was about.
+ */
+const MAX_BOX_WIDTH = 'max-w-[560px]';
+
+/**
+ * The box each variant draws, and the image inside it.
+ *
+ * **`card` is a fixed, cover-cropped box.** A feed is a uniform grid, and a
+ * 400x4000 infographic must not be allowed to set the height of the row it
+ * happens to land in — under a height cap alone it still varied every row by
+ * however tall it was under that cap. A fixed ratio makes every row the same
+ * row, and cropping is what fills it.
+ *
+ * `object-top`, not the default centre. An OP's subject is nearly always at the
+ * top of the file — the screenshot's window, the panel, the face — and
+ * centre-cropping a tall image is precisely what loses it. Anchoring the crop
+ * to the top keeps the part that was the reason for posting.
+ *
+ * **`post` is unchanged and uncropped.** The thread page is where the file is
+ * actually being looked at, so it is contained under a height cap and shown
+ * whole. Only the width cap above applies to both, because that one is about
+ * the box's place on the page rather than about what may be cut off.
+ *
+ * Either way, opening the attachment shows it whole at full size.
+ *
+ * ## Why only the post box is centred, and why with `self-center`
+ *
+ * The cap above is a `max-width`, and a box narrower than its container hugs
+ * the leading edge unless it is told otherwise. On the thread page that put
+ * roughly 300px of empty column to the right of the image while the post's
+ * header, title and footer all ran the full width — the image read as having
+ * failed to load the rest of itself.
+ *
+ * `self-center`, not `mx-auto`: every parent this variant has is a
+ * `flex flex-col` (`thread/original-post.tsx` and `clover/comment-tree.tsx`),
+ * so horizontal placement here is cross-axis alignment and `align-self` is the
+ * property that decides it — an auto margin only reaches the same result by
+ * being allowed to override the container's `align-items`. One rule, named
+ * after the thing it does; `mx-auto` is deliberately not also present, because
+ * two rules for one job leaves nobody able to tell which is load-bearing.
+ *
+ * Nothing else about the variant changes: no upscaling to fill the column, no
+ * crop and no fixed ratio. A 557px image blown up to 857px is worse than a gap.
+ *
+ * The card box is deliberately left where it is. A feed row's image sits under
+ * that row's title and stats, and aligning it to their leading edge is what
+ * makes it read as part of the row rather than as a centred illustration.
+ */
+const VARIANT_BOX_CLASSES: Record<PostImageVariant, string> = {
+    card: `aspect-[4/3] ${MAX_BOX_WIDTH}`,
+    post: `self-center ${MAX_BOX_WIDTH}`,
+};
+
+const VARIANT_IMAGE_CLASSES: Record<PostImageVariant, string> = {
+    card: 'h-full w-full object-cover object-top',
     post: 'h-auto max-h-[720px] w-full object-contain',
 };
 
@@ -211,6 +244,7 @@ function PostImage({ media, variant = 'card', className }: PostImageProps) {
                     /* Full width too: an image that fills its box is still
                        inset if the box itself does not fill the column. */
                     'group block w-full overflow-hidden rounded-lg border border-border bg-surface-elevated',
+                    VARIANT_BOX_CLASSES[variant],
                     'transition-colors duration-[var(--duration-hover)] ease-standard hover:border-border-strong',
                     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                     className,
@@ -227,7 +261,7 @@ function PostImage({ media, variant = 'card', className }: PostImageProps) {
                        at least keeps which page an anon was reading out of it. */
                     referrerPolicy="no-referrer"
                     onError={() => setFailed(true)}
-                    className={cn('block', VARIANT_CLASSES[variant])}
+                    className={cn('block', VARIANT_IMAGE_CLASSES[variant])}
                 />
             </button>
 

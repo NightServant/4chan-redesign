@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import {
     ArrowLeftIcon,
     ChevronRightIcon,
@@ -103,6 +103,7 @@ export default function Search({
     comments,
     busiestBoards,
 }: SearchProps) {
+    const { auth } = usePage().props;
     const { toggleBookmark, authGate } = useBookmark();
 
     const total = boards.length + threads.length + comments.length;
@@ -153,7 +154,9 @@ export default function Search({
             : liveResults;
 
     function submit(term: string): void {
-        runSearch(term);
+        /* Same gate as the header field: a signed-out anon's terms are not
+           recorded. See `runSearch`. */
+        runSearch(term, { signedIn: Boolean(auth.user) });
     }
 
     /**

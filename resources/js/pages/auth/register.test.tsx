@@ -50,6 +50,22 @@ beforeEach(() => {
     formState.errors = {};
 });
 
+/**
+ * `useIsMobile` reads a real `matchMedia`, which jsdom does not implement.
+ */
+function setViewport(isMobile: boolean): void {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+        matches: isMobile,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+    }));
+}
+
 describe('Register page', () => {
     it('posts to the registration route', () => {
         const { container } = render(
@@ -149,5 +165,43 @@ describe('Register page', () => {
             title: 'Create your Clover account',
             description: 'Join the modern anonymous discussion platform.',
         });
+    });
+
+    /**
+     * `Confirm password` is the longest placeholder on any of these screens and
+     * the one that failed hardest: Gabe's register screenshot at ~320px showed
+     * `Confirm passw`, clipped mid-word with no ellipsis. Shortened below `md`,
+     * unchanged above it. See `auth/auth-input.tsx` for why it is shortened
+     * rather than set smaller.
+     */
+    it('shortens the longest placeholder below `md` and restores it above', () => {
+        setViewport(true);
+
+        const { unmount } = render(<Register passwordRules="" />);
+
+        expect(screen.getByLabelText('Confirm password')).toHaveAttribute(
+            'placeholder',
+            'Confirm',
+        );
+        expect(screen.getByLabelText('Email address')).toHaveAttribute(
+            'placeholder',
+            'you@site.com',
+        );
+
+        unmount();
+        setViewport(false);
+
+        render(<Register passwordRules="" />);
+
+        expect(screen.getByLabelText('Confirm password')).toHaveAttribute(
+            'placeholder',
+            'Confirm password',
+        );
+        expect(screen.getByLabelText('Email address')).toHaveAttribute(
+            'placeholder',
+            'email@example.com',
+        );
+
+        vi.unstubAllGlobals();
     });
 });

@@ -15,15 +15,36 @@ import { searchUrl } from '@/lib/search-params';
  * history, but pressing Enter or tapping a result *is* navigation, exactly
  * the distinction `SearchField`'s own docblock already draws between
  * `fetch` and `router.visit`.
+ *
+ * ## Why `signedIn` is a required argument
+ *
+ * This module has no page context and no way to ask who is signed in, which is
+ * how a signed-out visitor's terms ended up written to `clover:search-history`
+ * and replayed at them on the suggestions screen (task 13, fix 1). The two
+ * callers are both components and both already know, so the answer is passed
+ * in rather than guessed at.
+ *
+ * Required rather than defaulted, and named after the condition rather than
+ * after the effect: a `remember?: boolean` that defaults to `true` puts the
+ * bug back for whichever caller forgets it, and `remember` says nothing about
+ * *when* it may be false.
  */
-export function runSearch(term: string): void {
+export function runSearch(
+    term: string,
+    { signedIn }: { signedIn: boolean },
+): void {
     const trimmed = term.trim();
 
     if (trimmed === '') {
         return;
     }
 
-    rememberSearch(trimmed);
+    /* The write only. Reading is deliberately left alone: an anon who signs
+       out keeps whatever they already recorded, and nothing here deletes a key
+       it was not asked to delete. */
+    if (signedIn) {
+        rememberSearch(trimmed);
+    }
 
     /* One URL builder for the whole feature: submitting a search lands on the
        All tab with the default ordering, which is exactly `searchUrl`'s own

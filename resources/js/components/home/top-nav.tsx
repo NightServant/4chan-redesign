@@ -79,7 +79,22 @@ function TopNav({ className, ...props }: TopNavProps) {
                                 <Link href={dashboard()}>Go to dashboard</Link>
                             </Button>
                         ) : (
-                            <>
+                            /* Gone below `md`, unchanged from `md` up. Two
+                               buttons of this length plus the wordmark and the
+                               toggle need 380px on one line, so at 320 they
+                               wrapped the header onto a second row to say the
+                               same thing the hero already says.
+
+                               The consequence is stated rather than solved:
+                               the homepage has no drawer and no bottom bar, so
+                               below `md` it now carries no route to sign in at
+                               all — the hero's only call to action goes to
+                               `/popular`. That is Gabe's call, made twice, and
+                               a hamburger here is explicitly not the answer. */
+                            <div
+                                data-slot="top-nav-auth"
+                                className="hidden items-center gap-2 md:flex"
+                            >
                                 <Button variant="ghost" asChild>
                                     <Link href={login()}>Log in</Link>
                                 </Button>
@@ -88,7 +103,7 @@ function TopNav({ className, ...props }: TopNavProps) {
                                         Create account
                                     </Link>
                                 </Button>
-                            </>
+                            </div>
                         )}
                     </div>
                 </div>

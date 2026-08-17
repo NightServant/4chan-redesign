@@ -92,6 +92,57 @@ describe('ThreadMarquee', () => {
         expect(durationAt(50)).toBeCloseTo(durationAt(100) * 2, 1);
     });
 
+    /**
+     * Task 13. Gabe's homepage at ~340px: a 320px card inside a band whose
+     * window is about the width of the viewport itself — the ticker is
+     * `-mx-6` and so spans past the section's own padding — means no whole
+     * card is ever on screen. His shots show a title cut at the right edge and
+     * another cut at the left, at all times, with nothing whole between them.
+     *
+     * The component's docblock argues that a clipped row "reads as a cell
+     * passing a window rather than as a clipping bug", and that holds at
+     * desktop widths where a whole card plus part of the next is visible. It
+     * does not hold when nothing whole ever fits.
+     *
+     * 232px is the answer, and the "one whole card fits" half of it is
+     * arithmetic rather than a measurement: against roughly 318px of window at
+     * a 320px viewport it leaves 86px of the following card showing, and even
+     * against the narrower 272px reading (were the `-mx-6` ever dropped) it
+     * still leaves 40px. jsdom lays none of this out, so what is guarded is the
+     * pair of classes.
+     */
+    it('narrows the ticker card below `sm` so one fits whole, and restores it above', () => {
+        const { container } = render(
+            <ThreadMarquee threads={[THREADS[0]]} axis="x" />,
+        );
+
+        const row = container.querySelector<HTMLElement>(
+            '[data-slot="thread-marquee-row"]',
+        );
+
+        expect(row?.className).toMatch(/(^|\s)w-\[232px\](\s|$)/);
+        expect(row?.className).toMatch(/(^|\s)sm:w-\[320px\](\s|$)/);
+        expect(row?.className).not.toMatch(/(^|\s)w-\[320px\](\s|$)/);
+    });
+
+    /**
+     * The vertical rails do not have this problem and are not touched. A `y`
+     * row takes the width of the rail it is in, and the rails themselves are
+     * `hidden lg:block` — they do not exist at any width where this could
+     * bite.
+     */
+    it('leaves the vertical row without a fixed width', () => {
+        const { container } = render(
+            <ThreadMarquee threads={[THREADS[0]]} axis="y" />,
+        );
+
+        const row = container.querySelector<HTMLElement>(
+            '[data-slot="thread-marquee-row"]',
+        );
+
+        expect(row?.className).not.toMatch(/w-\[/);
+    });
+
     /** A ticker travels sideways, and needs its own keyframes to do it. */
     it('travels along the axis it was given', () => {
         const { container } = render(

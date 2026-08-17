@@ -20,7 +20,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
 
             {status && <AuthStatus>{status}</AuthStatus>}
 
-            <Form {...email.form()} className="flex flex-col gap-6">
+            <Form {...email.form()} className="flex flex-col gap-5">
                 {({ processing, errors }) => (
                     <>
                         <FormField
@@ -35,6 +35,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
                                 autoComplete="off"
                                 autoFocus
                                 placeholder="email@example.com"
+                                shortPlaceholder="you@site.com"
                             />
                         </FormField>
 

@@ -108,6 +108,37 @@ describe('TwoFactorChallenge page', () => {
         );
     });
 
+    /**
+     * Task 13, fix 2 — the type scale half of it, and the one place on these
+     * screens that genuinely predated the tokens in `app.css`.
+     *
+     * The OTP slots came from the starter kit untouched: raw `text-sm` rather
+     * than a token, `border-input` rather than `border-border`, a `shadow-sm`
+     * on a design that draws no shadows, and 36px boxes on a branch whose task
+     * 5 put every touch target at 44px. Every other control on an auth screen
+     * is 44px and on the token scale; this one was neither.
+     */
+    it('sets the code slots on the token scale and the 44px target', () => {
+        const { container } = render(<TwoFactorChallenge />);
+
+        const slots = Array.from(
+            container.querySelectorAll<HTMLElement>(
+                '[data-slot="input-otp-slot"]',
+            ),
+        );
+
+        expect(slots.length).toBeGreaterThan(0);
+
+        for (const slot of slots) {
+            expect(slot.className).toMatch(/(^|\s)text-body(\s|$)/);
+            expect(slot.className).not.toMatch(/(^|\s)text-sm(\s|$)/);
+            expect(slot.className).toMatch(/border-border/);
+            expect(slot.className).not.toMatch(/border-input/);
+            expect(slot.className).not.toMatch(/shadow-/);
+            expect(slot.className).toMatch(/(^|\s)size-11(\s|$)/);
+        }
+    });
+
     it('keeps a submit control that is disabled while the code is checked', () => {
         formState.processing = true;
 

@@ -30,7 +30,11 @@ function AuthCard({ title, description, children, className }: AuthCardProps) {
         <div
             data-slot="auth-card"
             className={cn(
-                'flex w-full max-w-[480px] flex-col gap-6 p-8',
+                /* `p-5` below `sm`. The form side around this already steps
+                   its own padding down there, and a card still at `p-8` would
+                   take the saving straight back: 128px of chrome on a 320px
+                   viewport is what left "Confirm password" nowhere to set. */
+                'flex w-full max-w-[480px] flex-col gap-6 p-5 sm:p-8',
                 className,
             )}
         >

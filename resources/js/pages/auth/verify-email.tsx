@@ -22,7 +22,7 @@ export default function VerifyEmail({ status }: { status?: string }) {
                 </AuthStatus>
             )}
 
-            <Form {...send.form()} className="flex flex-col gap-6">
+            <Form {...send.form()} className="flex flex-col gap-5">
                 {({ processing }) => (
                     <>
                         <Button

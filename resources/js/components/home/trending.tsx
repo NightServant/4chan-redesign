@@ -1,8 +1,8 @@
 import { Link } from '@inertiajs/react';
+import { ChevronRightIcon } from 'lucide-react';
 import { MachineValue } from '@/components/clover/machine-value';
 import { Section } from '@/components/home/section';
 import { ThreadMarquee } from '@/components/home/thread-marquee';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { board as boardRoute, popular } from '@/routes';
 import type { Thread, TrendingTag } from '@/types/clover';
@@ -38,11 +38,59 @@ export interface TrendingProps {
     trending: readonly TrendingTag[];
 }
 
-const chipClasses = cn(
-    'inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5',
-    'transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover',
+/**
+ * One board, as a ruled row.
+ *
+ * These were pill chips: `rounded-full` with a border box each. Decision 1 of
+ * the responsive plan is that Clover takes Reddit's information architecture
+ * and keeps its own visual language — ruled hairlines, no cards, no pill
+ * chips — because importing them undoes tasks 13 to 17. This was the last
+ * place they survived, and it was on the homepage.
+ *
+ * They did not fit either. Each row carries a slug and a formatted count, so
+ * at ~340px the six of them wrapped one per line and the band spent roughly
+ * 250px listing six boards inside boxes.
+ *
+ * The pattern is `communities/board-row.tsx` from task 9, which answered the
+ * identical problem: the rule belongs to the list (`divide-y`) rather than to
+ * each item, so a stack of rows draws one continuous set of hairlines instead
+ * of a column of doubled edges.
+ */
+const boardRowClasses = cn(
+    'flex items-center justify-between gap-3 p-6',
+    'transition-colors duration-[var(--duration-hover)] ease-standard hover:text-primary',
     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
 );
+
+/** Every cell draws its own right and bottom; see the list's own comment. */
+const boardCellClasses = 'border-r border-b border-border';
+
+/**
+ * How many empty cells the last row needs to reach the right-hand rule.
+ *
+ * An odd count is the normal case here — the list is however many boards the
+ * server sent — and a short last row would otherwise stop the horizontal rule
+ * partway across the page. The columns change at two breakpoints, so the
+ * number of fillers is different at `md` and at `lg` and each one is shown only
+ * where it is needed. At one column no row is ever short.
+ *
+ * Returns the visibility class for each filler, in order, or an empty array
+ * when both grids already come out even.
+ */
+function fillerVisibility(count: number): string[] {
+    const atMd = (2 - (count % 2)) % 2;
+    const atLg = (3 - (count % 3)) % 3;
+
+    return Array.from({ length: Math.max(atMd, atLg) }, (_unused, index) => {
+        if (index < atMd) {
+            return index < atLg
+                ? 'hidden md:block'
+                : 'hidden md:block lg:hidden';
+        }
+
+        return 'hidden lg:block';
+    });
+}
 
 function Trending({ threads, trending }: TrendingProps) {
     return (
@@ -51,26 +99,61 @@ function Trending({ threads, trending }: TrendingProps) {
             depth={72}
             label="Trending discussions"
             title="What is being bumped today"
+            /* A heading-row link with a trailing chevron, which is what this
+               codebase uses for "this section continues elsewhere" (task 7's
+               `Posts ` on the search page). It was an outlined button, which
+               made the loudest control on the band the one that merely goes to
+               the feed the ticker below is already showing. */
             action={
-                <Button asChild variant="outline">
-                    <Link href={popular.url()}>Open the feed</Link>
-                </Button>
+                <Link
+                    href={popular.url()}
+                    className="inline-flex items-center gap-1.5 rounded-sm text-body-sm font-medium text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                    Open the feed
+                    <ChevronRightIcon aria-hidden="true" className="size-4" />
+                </Link>
             }
         >
             {trending.length > 0 ? (
+                /* A hard grid, ruled on both axes: one column below `md`,
+                   two at `md`, three at `lg` — the same grid and the same
+                   breakpoints the features band uses, because two bands on one
+                   page answering the same question differently is worse than
+                   either answer.
+
+                   One row per board across the full page put the slug at the
+                   left edge and its count at the right with about 1,300px of
+                   empty rule between them at 1420px. In a ~380px cell the pair
+                   reads as one line.
+
+                   The lines are the grid's own and each is drawn once: the
+                   container carries the top and left edges, every cell carries
+                   its right and bottom. No `:nth-child` scheme, which is what
+                   makes it hold at all three column counts.
+
+                   The left and right edges are the section's `border-x`, not
+                   the grid's: two hairlines a pixel apart is what happens if
+                   the grid draws its own. `-ml-6` cancels the content column's
+                   left padding so the grid starts on the frame, and
+                   `-mr-[25px]` is that same 24px plus one more, so the last
+                   cell's right-hand rule falls exactly on the section's rather
+                   than beside it. The padding the column used to give is now
+                   `p-6` inside each cell.
+
+                   The fillers close a short last row. See `fillerVisibility`. */
                 <ul
                     aria-label="Boards by post volume"
-                    className="flex flex-wrap gap-2"
+                    className="-mr-[25px] -ml-6 grid border-t border-border md:grid-cols-2 lg:grid-cols-3"
                 >
                     {trending.map((item) => (
-                        <li key={item.tag}>
+                        <li key={item.tag} className={boardCellClasses}>
                             <Link
                                 /* `tag` is a display slug like `/g/`; routes
                                    carry the bare token. */
                                 href={boardRoute.url(
                                     item.tag.replaceAll('/', ''),
                                 )}
-                                className={chipClasses}
+                                className={boardRowClasses}
                             >
                                 <span className="text-body-sm font-semibold text-foreground">
                                     {item.tag}
@@ -79,6 +162,17 @@ function Trending({ threads, trending }: TrendingProps) {
                             </Link>
                         </li>
                     ))}
+
+                    {fillerVisibility(trending.length).map(
+                        (visibility, index) => (
+                            <li
+                                key={`filler-${index}`}
+                                aria-hidden="true"
+                                data-slot="trending-filler"
+                                className={cn(boardCellClasses, visibility)}
+                            />
+                        ),
+                    )}
                 </ul>
             ) : null}
 

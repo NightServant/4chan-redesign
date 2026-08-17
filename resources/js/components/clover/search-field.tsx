@@ -1,3 +1,4 @@
+import { usePage } from '@inertiajs/react';
 import { Search } from 'lucide-react';
 import {
     useEffect,
@@ -61,6 +62,7 @@ export function SearchField({
     placeholder = 'Search boards and threads',
     className,
 }: SearchFieldProps) {
+    const { auth } = usePage().props;
     const [query, setQuery] = useState('');
     const [open, setOpen] = useState(false);
 
@@ -142,7 +144,10 @@ export function SearchField({
     }, []);
 
     function submit(term: string): void {
-        runSearch(term);
+        /* The history below this field is a signed-in convenience, so only a
+           signed-in anon writes to it. The list itself is still read and still
+           shown, because nothing here deletes what is already stored. */
+        runSearch(term, { signedIn: Boolean(auth.user) });
         setOpen(false);
     }
 

@@ -11,17 +11,29 @@ import {
     vi,
 } from 'vitest';
 import { makeBoard, makeCommentResult, makeThread } from '@/fixtures/factories';
-import { rememberSearch } from '@/lib/search-history';
+import { readSearchHistory, rememberSearch } from '@/lib/search-history';
 import Search from '@/pages/search';
 
-const { router } = vi.hoisted(() => ({
+const { router, mockPage } = vi.hoisted(() => ({
     router: { visit: vi.fn(), post: vi.fn(), delete: vi.fn() },
+    /**
+     * Mutable, and signed out by default. The suggestions screen writes search
+     * history only for a signed-in anon (task 13, fix 1), so this has to be a
+     * fixture the tests can move rather than a frozen `null`.
+     */
+    mockPage: {
+        props: { auth: { user: null as { id: number } | null } },
+        url: '/search',
+    },
 }));
+
+/** Enough of a user for `Boolean(auth.user)`, which is all the page reads. */
+const SIGNED_IN = { id: 7 };
 
 vi.mock('@inertiajs/react', () => ({
     router,
     Head: () => null,
-    usePage: () => ({ props: { auth: { user: null } } }),
+    usePage: () => mockPage,
     Link: ({
         href,
         children,
@@ -75,6 +87,7 @@ beforeEach(() => {
     vi.useRealTimers();
     localStorage.clear();
     router.visit.mockClear();
+    mockPage.props.auth.user = null;
 });
 
 afterEach(() => {
@@ -256,6 +269,43 @@ describe('Search — the suggestions screen, below `md`', () => {
         );
 
         expect(router.visit).toHaveBeenCalledWith('/search?q=init%20systems');
+    });
+
+    /**
+     * Task 13, fix 1, on the second of `runSearch`'s two callers. This screen
+     * is the one that shows the history back, so a signed-out anon searching
+     * here was the most visible half of the bug.
+     */
+    it('records no history for a signed-out anon', async () => {
+        mockFetch();
+        const user = userEvent.setup();
+
+        render(<Search {...searchProps()} />);
+        await user.type(
+            screen.getByRole('combobox', {
+                name: /search boards and threads/i,
+            }),
+            'init systems{Enter}',
+        );
+
+        expect(readSearchHistory()).toEqual([]);
+        expect(router.visit).toHaveBeenCalledWith('/search?q=init%20systems');
+    });
+
+    it('records history for a signed-in anon', async () => {
+        mockFetch();
+        mockPage.props.auth.user = SIGNED_IN;
+        const user = userEvent.setup();
+
+        render(<Search {...searchProps()} />);
+        await user.type(
+            screen.getByRole('combobox', {
+                name: /search boards and threads/i,
+            }),
+            'init systems{Enter}',
+        );
+
+        expect(readSearchHistory()).toEqual(['init systems']);
     });
 });
 
