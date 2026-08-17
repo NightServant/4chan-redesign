@@ -156,16 +156,22 @@ const MAX_BOX_WIDTH = 'max-w-[560px]';
  */
 const VARIANT_BOX_CLASSES: Record<PostImageVariant, string> = {
     card: `aspect-[4/3] ${MAX_BOX_WIDTH}`,
-    /* No cap. The thread column already caps itself at
-       `--measure-column`, so a second 560px cap inside it left the image
-       fixed while the column grew -- the gap Gabe kept seeing. The image
-       takes the column and stops at its own natural size. */
-    post: 'w-full',
+    /* The box hugs the file, and sits in the middle of the column.
+
+       Three earlier attempts all left a gap, each for its own reason: a
+       560px cap kept the image small while the column grew; removing the cap
+       made the box full width, and `object-contain` then painted a portrait
+       file centred inside it with empty bands either side. So the box is
+       sized to what it holds -- `w-fit`, bounded by the column -- and
+       centred in the flex column both its parents are. */
+    post: 'w-fit max-w-full self-center',
 };
 
 const VARIANT_IMAGE_CLASSES: Record<PostImageVariant, string> = {
     card: 'h-full w-full object-cover object-top',
-    post: 'h-auto max-h-[720px] w-full object-contain',
+    /* `w-auto`, so the file keeps its own proportions inside a box already
+       sized to it. `w-full` here is what letterboxed a portrait image. */
+    post: 'h-auto max-h-[720px] w-auto max-w-full object-contain',
 };
 
 type PostImageProps = {

@@ -30,12 +30,16 @@ describe('PostImage', () => {
     );
 
     /**
-     * The image fills the column, which is what stops a ragged margin down
-     * one side of the feed. Sizing from the height cap instead leaves every
-     * landscape image short of the right edge by however much its aspect
-     * ratio happens to differ.
+     * A feed row's image fills its box, which is what stops a ragged margin
+     * down one side of the feed: the box is a uniform grid cell and the
+     * picture is cropped to it.
+     *
+     * The thread page is the opposite case and deliberately so -- there the
+     * box is sized to the file rather than the file to the box, because that
+     * screen exists to show the picture whole. See the post-variant tests
+     * below.
      */
-    it.each(['card', 'post'] as const)(
+    it.each(['card'] as const)(
         'fills the column width on a %s rather than sizing from its height',
         (variant) => {
             render(<PostImage media={makeAttachment()} variant={variant} />);
@@ -163,13 +167,20 @@ describe('PostImage', () => {
             expect(screen.getByRole('button')).toHaveClass('max-w-[560px]');
         });
 
-        it('lets a post box take its column', () => {
+        /* Sized to the file, bounded by the column, centred in it. A fixed
+           cap left the image small while the column grew; `w-full` made the
+           box full width and let `object-contain` paint a portrait file
+           centred inside it with empty bands. */
+        it('sizes a post box to its image and centres it', () => {
             render(<PostImage media={makeAttachment()} variant="post" />);
 
             const box = screen.getByRole('button');
 
-            expect(box).toHaveClass('w-full');
+            expect(box).toHaveClass('w-fit');
+            expect(box).toHaveClass('self-center');
             expect(box.className).not.toMatch(/max-w-\[560px\]/);
+            expect(box.className).not.toMatch(/(^|\s)w-full(\s|$)/);
+            expect(screen.getByRole('img')).toHaveClass('w-auto');
         });
 
         /**
