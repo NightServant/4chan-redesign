@@ -47,19 +47,17 @@ function mockPage({
 
 describe('MobileNav', () => {
     /**
-     * The bar became Home, Community Rules, Notifications, You after task 4:
+     * The bar became Home, Rules, Notifications, You after task 4:
      * Popular and Latest are reachable from the drawer (the sidebar's own
      * list below `lg`), and History moved onto the account screen.
      */
-    it('renders Home, Community Rules and the sign-in slot when signed out, and no Notifications', () => {
+    it('renders Home, Rules and the sign-in slot when signed out, and no Notifications', () => {
         mockPage({ signedIn: false });
 
         render(<MobileNav />);
 
         expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
-        expect(
-            screen.getByRole('link', { name: 'Community Rules' }),
-        ).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'Rules' })).toBeInTheDocument();
         expect(
             screen.queryByRole('link', { name: 'Notifications' }),
         ).not.toBeInTheDocument();
@@ -98,7 +96,7 @@ describe('MobileNav', () => {
 
         expect(
             screen.getAllByRole('link', {
-                name: /Home|Community Rules|Notifications|You/,
+                name: /Home|Rules|Notifications|You/,
             }),
         ).toHaveLength(4);
         expect(
@@ -117,14 +115,15 @@ describe('MobileNav', () => {
         );
     });
 
-    it('points Community Rules at the existing /rules page', () => {
+    it('points Rules at the existing /rules page', () => {
         mockPage({ signedIn: false });
 
         render(<MobileNav />);
 
-        expect(
-            screen.getByRole('link', { name: 'Community Rules' }),
-        ).toHaveAttribute('href', toUrl(rules()));
+        expect(screen.getByRole('link', { name: 'Rules' })).toHaveAttribute(
+            'href',
+            toUrl(rules()),
+        );
     });
 
     it('points Notifications at /notifications when signed in', () => {
@@ -150,9 +149,9 @@ describe('MobileNav', () => {
             'aria-current',
             'page',
         );
-        expect(
-            screen.getByRole('link', { name: 'Community Rules' }),
-        ).not.toHaveAttribute('aria-current');
+        expect(screen.getByRole('link', { name: 'Rules' })).not.toHaveAttribute(
+            'aria-current',
+        );
     });
 
     it('does not convey the active state by colour alone', () => {
@@ -160,7 +159,7 @@ describe('MobileNav', () => {
 
         render(<MobileNav />);
 
-        const active = screen.getByRole('link', { name: 'Community Rules' });
+        const active = screen.getByRole('link', { name: 'Rules' });
         const rest = screen.getByRole('link', { name: 'Home' });
 
         expect(active).toHaveAttribute('aria-current', 'page');
@@ -172,7 +171,7 @@ describe('MobileNav', () => {
 
         render(<MobileNav />);
 
-        for (const name of ['Home', 'Community Rules', 'Log in']) {
+        for (const name of ['Home', 'Rules', 'Log in']) {
             const link = screen.getByRole('link', { name });
             expect(link).toHaveAccessibleName(name);
         }

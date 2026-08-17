@@ -63,10 +63,10 @@ describe('MOBILE_NAV', () => {
         expect(MOBILE_NAV.length).toBeLessThanOrEqual(5);
     });
 
-    it('lists Home, Community Rules, Notifications and the sign-in slot, in that order', () => {
+    it('lists Home, Rules, Notifications and the sign-in slot, in that order', () => {
         expect(MOBILE_NAV.map((item) => item.title)).toEqual([
             'Home',
-            'Community Rules',
+            'Rules',
             'Notifications',
             'Log in',
         ]);

@@ -92,11 +92,17 @@ const ACCOUNT_MENU: readonly CloverNavItem[] = [
  * understudy for those two. History is gone because it moved onto the
  * account screen below `md` (see `AccountController`); the bar's own "You"
  * slot is where it is read from now.
+ *
+ * The label is "Rules", not "Community Rules": the longer form wrapped to a
+ * second line in an 80px slot (four items in a 320px bar) and set that row's
+ * label on a different baseline from its three neighbours, none of which
+ * wrap. Only the bar's own label changed — `/rules` keeps its own page
+ * heading and title.
  */
 const MOBILE_NAV: readonly CloverNavItem[] = [
     { title: 'Home', href: home(), authedHref: dashboard(), icon: HouseIcon },
     {
-        title: 'Community Rules',
+        title: 'Rules',
         href: rules(),
         icon: ScrollTextIcon,
     },

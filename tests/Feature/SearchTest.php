@@ -129,6 +129,46 @@ it('renders the results page with no query without erroring', function (): void 
         ->assertInertia(fn ($page) => $page->component('search')->where('query', ''));
 });
 
+/**
+ * The empty-query suggestions screen below `md` (task 6) reads the busiest
+ * boards straight off the page's own props rather than fetching them
+ * client-side a second time -- the same query `suggest` already runs for an
+ * empty query, shared rather than written twice. `boards` and `threads`
+ * stay empty for an empty query either way: that prop pair drives the
+ * unrelated, unchanged results sections at `md` and up, and changing what
+ * they hold for an empty query would change what that view shows.
+ */
+it('sends the busiest boards to the search page, matching what suggest sends for an empty query', function (): void {
+    searchFixture();
+
+    $suggested = $this->getJson('/search/suggest?q=')
+        ->assertOk()
+        ->json('boards');
+
+    $this->get('/search')
+        ->assertOk()
+        ->assertInertia(
+            fn ($page) => $page
+                ->component('search')
+                ->where('query', '')
+                ->has('boards', 0)
+                ->has('threads', 0)
+                ->where('busiestBoards.0.slug', $suggested[0]['slug'])
+        );
+});
+
+it('sends the busiest boards for a search with a query too, unaffected by it', function (): void {
+    searchFixture();
+
+    $this->get('/search?q=RISC')
+        ->assertOk()
+        ->assertInertia(
+            fn ($page) => $page
+                ->component('search')
+                ->has('busiestBoards')
+        );
+});
+
 /** `search/suggest` must not be swallowed by the board route or the page route. */
 it('keeps the suggest endpoint distinct from the page', function (): void {
     searchFixture();

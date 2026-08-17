@@ -1,25 +1,21 @@
-import { Link, router } from '@inertiajs/react';
-import { Clock, Search, X } from 'lucide-react';
+import { Search } from 'lucide-react';
 import {
-    useCallback,
     useEffect,
     useId,
     useRef,
     useState,
     useSyncExternalStore,
 } from 'react';
-import { BoardAvatar } from '@/components/clover/board-avatar';
-import { MachineValue } from '@/components/clover/machine-value';
+import { SearchResultsList } from '@/components/clover/search-results-list';
+import { useSearchSuggestions } from '@/hooks/use-search-suggestions';
+import { runSearch } from '@/lib/run-search';
 import {
     forgetSearch,
-    rememberSearch,
     searchHistoryServerSnapshot,
     searchHistorySnapshot,
     subscribeToSearchHistory,
 } from '@/lib/search-history';
 import { cn } from '@/lib/utils';
-import { board as boardRoute, search as searchRoute } from '@/routes';
-import type { Board, Thread } from '@/types/clover';
 
 /**
  * Header search: a real input with a dropdown under it.
@@ -35,28 +31,27 @@ import type { Board, Thread } from '@/types/clover';
  * call one if there were, since 4chan sends no CORS headers. What is searchable
  * is what has been synced, which is every board and eleven thousand threads.
  *
- * ## Why `fetch` rather than an Inertia visit
+ * ## Two callers now, one set of moving parts
+ *
+ * The search page's below-`md` suggestions screen (task 6) needs the exact
+ * same fetch, debounce, abort and history reading this field already has —
+ * the field an anon types into there behaves identically, just full-screen
+ * instead of in a popover. Those pieces live in `useSearchSuggestions` and
+ * `runSearch` now, not here, so this component and that screen share one
+ * implementation of each rather than two that could drift the way the
+ * history list once did before task 4 undid exactly that. `SearchResultsList`
+ * is the same split applied to the rendered list itself: this component owns
+ * the input and the popover it opens into; that component owns the groups
+ * inside it.
+ *
+ * ## Why `fetch` rather than an Inertia visit, for the suggestions themselves
  *
  * A list that updates while an anon types is not a page visit: it must not push
  * history, must not replace the page under them, and must cancel the request
- * that is already in flight the moment another keystroke lands. That is a
- * debounce and an `AbortController`, which is what this is. Pressing Enter is a
- * navigation and goes through Inertia, because that one *is* a page visit.
+ * that is already in flight the moment another keystroke lands. Pressing Enter
+ * is a navigation and goes through Inertia (`runSearch`), because that one *is*
+ * a page visit.
  */
-type Suggestions = {
-    boards: Board[];
-    threads: Thread[];
-};
-
-const EMPTY: Suggestions = { boards: [], threads: [] };
-
-/** Long enough that a fast typist makes one request, not eight. */
-const DEBOUNCE_MS = 180;
-
-function boardHref(slug: string): string {
-    return boardRoute.url(slug.replaceAll('/', ''));
-}
-
 export interface SearchFieldProps {
     placeholder?: string;
     className?: string;
@@ -68,8 +63,6 @@ export function SearchField({
 }: SearchFieldProps) {
     const [query, setQuery] = useState('');
     const [open, setOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [results, setResults] = useState<Suggestions>(EMPTY);
 
     /**
      * What this anon searched for before, on this device.
@@ -90,46 +83,16 @@ export function SearchField({
         searchHistoryServerSnapshot,
     );
 
+    /**
+     * The fetch, debounce and abort live in this hook now, shared with the
+     * search page's suggestions screen. `open` is what "active" means here:
+     * a closed dropdown has nothing to show, so there is nothing to fetch.
+     */
+    const { results, loading } = useSearchSuggestions(query, open);
+
     const input = useRef<HTMLInputElement>(null);
     const wrapper = useRef<HTMLDivElement>(null);
     const listId = useId();
-
-    /**
-     * One request per pause, and never two answers racing. Without the abort a
-     * slow response for `ge` can land after a fast one for `gen` and overwrite
-     * it, so the list shows results for a query the anon has already finished
-     * typing past.
-     */
-    useEffect(() => {
-        if (!open) {
-            return;
-        }
-
-        const controller = new AbortController();
-        const timer = setTimeout(() => {
-            setLoading(true);
-
-            fetch(`/search/suggest?q=${encodeURIComponent(query)}`, {
-                signal: controller.signal,
-                headers: { Accept: 'application/json' },
-            })
-                .then((response) => (response.ok ? response.json() : null))
-                .then((data: Suggestions | null) => {
-                    setResults(data ?? EMPTY);
-                    setLoading(false);
-                })
-                .catch(() => {
-                    /* An abort is the normal case here, not a failure: it means
-                       another keystroke arrived. Either way the list keeps what
-                       it has rather than flashing empty. */
-                });
-        }, DEBOUNCE_MS);
-
-        return () => {
-            controller.abort();
-            clearTimeout(timer);
-        };
-    }, [query, open]);
 
     /** Closing on outside pointer down rather than on blur, so a click on a result lands. */
     useEffect(() => {
@@ -163,27 +126,10 @@ export function SearchField({
         return () => document.removeEventListener('keydown', onKeyDown);
     }, []);
 
-    const runSearch = useCallback((term: string) => {
-        const trimmed = term.trim();
-
-        if (trimmed === '') {
-            return;
-        }
-
-        rememberSearch(trimmed);
+    function submit(term: string): void {
+        runSearch(term);
         setOpen(false);
-        router.visit(`${searchRoute.url()}?q=${encodeURIComponent(trimmed)}`);
-    }, []);
-
-    const submit = useCallback(() => {
-        runSearch(query);
-    }, [query, runSearch]);
-
-    /* Only while the box is empty. Once an anon is typing, what they want is
-       the results, not the past. */
-    const showsHistory = query.trim() === '' && history.length > 0;
-
-    const hasResults = results.boards.length > 0 || results.threads.length > 0;
+    }
 
     return (
         <div ref={wrapper} className={cn('relative', className)}>
@@ -211,7 +157,7 @@ export function SearchField({
                         onFocus={() => setOpen(true)}
                         onKeyDown={(event) => {
                             if (event.key === 'Enter') {
-                                submit();
+                                submit(query);
                             }
 
                             if (event.key === 'Escape') {
@@ -249,154 +195,18 @@ export function SearchField({
             </div>
 
             {open ? (
-                <div
-                    id={listId}
-                    role="listbox"
-                    aria-label="Search results"
-                    data-slot="search-results"
+                <SearchResultsList
+                    listId={listId}
+                    query={query}
+                    loading={loading}
+                    results={results}
+                    history={history}
+                    onSelectHistory={submit}
+                    onForgetHistory={forgetSearch}
+                    onSelectResult={() => setOpen(false)}
                     className="absolute inset-x-0 top-[calc(100%+6px)] z-50 max-h-[70vh] overflow-y-auto rounded-md border border-border bg-surface-elevated py-2 shadow-lift"
-                >
-                    {showsHistory ? (
-                        <SearchGroup heading="Recent searches">
-                            {history.map((term) => (
-                                <li
-                                    key={term}
-                                    role="presentation"
-                                    className="flex items-center gap-1 pr-1 hover:bg-surface-hover"
-                                >
-                                    <button
-                                        type="button"
-                                        role="option"
-                                        aria-selected="false"
-                                        onClick={() => runSearch(term)}
-                                        className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2 text-left"
-                                    >
-                                        <Clock
-                                            aria-hidden="true"
-                                            className="size-4 shrink-0 text-faint"
-                                        />
-                                        <span className="truncate text-body-sm text-foreground">
-                                            {term}
-                                        </span>
-                                    </button>
-
-                                    {/* Its own button rather than an icon
-                                        inside the row: a control nested in
-                                        another control is invalid, and this
-                                        one must not run the search it is
-                                        removing. */}
-                                    <button
-                                        type="button"
-                                        aria-label={`Remove "${term}" from recent searches`}
-                                        onClick={() => forgetSearch(term)}
-                                        className="grid size-7 shrink-0 place-items-center rounded-sm text-faint hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                                    >
-                                        <X
-                                            aria-hidden="true"
-                                            className="size-3.5"
-                                        />
-                                    </button>
-                                </li>
-                            ))}
-                        </SearchGroup>
-                    ) : null}
-
-                    {results.boards.length > 0 ? (
-                        <SearchGroup
-                            heading={query === '' ? 'Busiest boards' : 'Boards'}
-                        >
-                            {results.boards.map((board) => (
-                                <li key={board.slug} role="presentation">
-                                    <Link
-                                        role="option"
-                                        aria-selected="false"
-                                        href={boardHref(board.slug)}
-                                        onClick={() => setOpen(false)}
-                                        className="flex items-center gap-2.5 px-3 py-2 hover:bg-surface-hover"
-                                    >
-                                        <BoardAvatar
-                                            slug={board.slug}
-                                            size={24}
-                                            decorative
-                                        />
-                                        <span className="truncate text-body-sm text-foreground">
-                                            {board.name}
-                                        </span>
-                                        <MachineValue className="ml-auto shrink-0">
-                                            {board.slug}
-                                        </MachineValue>
-                                    </Link>
-                                </li>
-                            ))}
-                        </SearchGroup>
-                    ) : null}
-
-                    {results.threads.length > 0 ? (
-                        <SearchGroup heading="Threads">
-                            {results.threads.map((thread) => (
-                                <li key={thread.no} role="presentation">
-                                    <Link
-                                        role="option"
-                                        aria-selected="false"
-                                        href={`${thread.board}${thread.no}`}
-                                        onClick={() => setOpen(false)}
-                                        className="flex flex-col gap-0.5 px-3 py-2 hover:bg-surface-hover"
-                                    >
-                                        <span className="line-clamp-1 text-body-sm text-foreground">
-                                            {thread.title}
-                                        </span>
-                                        <MachineValue className="text-faint">
-                                            {thread.board} · {thread.replies}{' '}
-                                            replies
-                                        </MachineValue>
-                                    </Link>
-                                </li>
-                            ))}
-                        </SearchGroup>
-                    ) : null}
-
-                    {!hasResults ? (
-                        <p className="px-3 py-6 text-center text-body-sm text-muted-foreground">
-                            {loading
-                                ? 'Searching.'
-                                : query === ''
-                                  ? 'Type to search boards and threads.'
-                                  : `Nothing matches "${query}".`}
-                        </p>
-                    ) : null}
-                </div>
+                />
             ) : null}
-        </div>
-    );
-}
-
-/**
- * One labelled section of the dropdown.
- *
- * The heading was a bare `<p>`: visible, and invisible to assistive tech,
- * which got a flat run of options with nothing to say which were boards, which
- * were threads and which were things this anon had searched for before. Inside
- * a listbox that grouping is exactly what `role="group"` with a name is for,
- * and the name is the heading already on screen.
- */
-function SearchGroup({
-    heading,
-    children,
-}: {
-    heading: string;
-    children: React.ReactNode;
-}) {
-    const headingId = useId();
-
-    return (
-        <div role="group" aria-labelledby={headingId} className="py-1">
-            <p
-                id={headingId}
-                className="px-3 pb-1 text-label font-semibold tracking-[1.2px] text-faint uppercase"
-            >
-                {heading}
-            </p>
-            <ul>{children}</ul>
         </div>
     );
 }

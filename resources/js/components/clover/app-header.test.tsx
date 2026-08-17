@@ -1,3 +1,4 @@
+import { router } from '@inertiajs/react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
@@ -107,6 +108,7 @@ vi.mock('@inertiajs/react', () => ({
     usePage: () => mockPage,
     router: {
         patch: vi.fn(),
+        visit: vi.fn(),
     },
     Link: ({
         href,
@@ -166,6 +168,7 @@ beforeEach(() => {
     };
     mockPage.url = '/';
     document.documentElement.classList.remove('dark');
+    vi.mocked(router.visit).mockClear();
 });
 
 afterEach(() => {
@@ -570,5 +573,93 @@ describe('AppHeader', () => {
         expect(header).not.toHaveClass('min-h-16');
         expect(row).toHaveClass('h-16');
         expect(row).not.toHaveClass('flex-wrap');
+    });
+
+    /**
+     * Task 6: below `md`, the header field no longer opens the dropdown in
+     * place -- there is not enough room to make that dropdown useful, which
+     * is why Reddit's mobile search screen was the reference. It navigates
+     * instead. The real, dropdown-capable field stays exactly as it is at
+     * `md` and up, where the dropdown already works; this is a second,
+     * `md:hidden` control living beside it, not a change to it.
+     */
+    describe('below `md`, the search field', () => {
+        it('is a real button, distinct from the dropdown-capable field beside it', () => {
+            renderHeader();
+
+            const trigger = screen.getByRole('button', {
+                name: 'Search boards and threads',
+            });
+
+            expect(trigger.tagName).toBe('BUTTON');
+            expect(trigger).toHaveClass('md:hidden');
+
+            /* The real field is still there for `md` and up, untouched --
+               only visible below `md` as a decoy. */
+            expect(
+                screen.getByRole('combobox', {
+                    name: 'Search boards and threads',
+                }),
+            ).toBeInTheDocument();
+        });
+
+        it('visits the search page on click', async () => {
+            const user = userEvent.setup();
+            renderHeader();
+
+            await user.click(
+                screen.getByRole('button', {
+                    name: 'Search boards and threads',
+                }),
+            );
+
+            expect(router.visit).toHaveBeenCalledWith('/search');
+        });
+
+        /** "Tapping or focusing" — both have to trigger it, not just one. */
+        it('also visits the search page on focus, not only on click', () => {
+            renderHeader();
+
+            const trigger = screen.getByRole('button', {
+                name: 'Search boards and threads',
+            });
+
+            trigger.focus();
+
+            expect(router.visit).toHaveBeenCalledWith('/search');
+        });
+    });
+
+    /**
+     * On the search page itself below `md`, the page supplies its own app
+     * bar (back control + the field, focused on arrival) in the header's
+     * place, so the real header has to step aside there rather than stack a
+     * second bar above it. At `md` and up nothing about the search page is
+     * different from any other page, so the header stays exactly as it is.
+     */
+    describe('on the search page', () => {
+        it('hides the whole header below `md`, unchanged at `md` and up', () => {
+            mockPage.url = '/search';
+            renderHeader();
+
+            const header = document.querySelector('[data-slot="app-header"]');
+            expect(header).toHaveClass('hidden', 'md:block');
+        });
+
+        it('still hides below `md` once a query is in the URL, not only for the bare suggestions page', () => {
+            mockPage.url = '/search?q=g';
+            renderHeader();
+
+            const header = document.querySelector('[data-slot="app-header"]');
+            expect(header).toHaveClass('hidden', 'md:block');
+        });
+
+        it('does not hide the header on any other page', () => {
+            mockPage.url = '/g/';
+            renderHeader();
+
+            const header = document.querySelector('[data-slot="app-header"]');
+            expect(header?.className).not.toMatch(/(^|\s)hidden(\s|$)/);
+        });
     });
 });

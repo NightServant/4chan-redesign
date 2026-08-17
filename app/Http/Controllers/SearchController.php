@@ -52,6 +52,20 @@ class SearchController extends Controller
                     ? collect()
                     : $this->threads($query, $showsMature)->limit(self::PAGE_THREADS)->get(),
             ),
+
+            /**
+             * The empty-query suggestions screen below `md` (task 6). Sent
+             * unconditionally rather than only when `query` is empty: the
+             * query behind it does not depend on what was searched, and a
+             * client-side `query === ''` branch reading it is simpler than a
+             * prop that sometimes is not there. `boards` and `threads` above
+             * stay empty for an empty query regardless -- that pair drives
+             * the unrelated results sections at `md` and up, unchanged by
+             * this task.
+             */
+            'busiestBoards' => BoardResource::collection(
+                $this->busiestBoards($showsMature)->limit(self::SUGGEST_BOARDS)->get(),
+            ),
         ]);
     }
 
@@ -68,7 +82,7 @@ class SearchController extends Controller
         $showsMature = $this->showsMatureBoards($request);
 
         $boards = $query === ''
-            ? Board::query()->visible($showsMature)->withCount('threads')->orderByDesc('threads_count')
+            ? $this->busiestBoards($showsMature)
             : $this->boards($query, $showsMature);
 
         return response()->json([
@@ -80,6 +94,23 @@ class SearchController extends Controller
                     $this->threads($query, $showsMature)->limit(self::SUGGEST_THREADS)->get(),
                 ),
         ]);
+    }
+
+    /**
+     * The busiest boards, offered before an anon has typed anything — to
+     * `suggest`'s own empty-query branch, and to the search page's
+     * empty-query suggestions screen below `md`. One query, two callers,
+     * rather than the same `Board::query()->visible(...)->withCount(...)`
+     * written out twice.
+     *
+     * @return Builder<Board>
+     */
+    private function busiestBoards(bool $showsMature): Builder
+    {
+        return Board::query()
+            ->visible($showsMature)
+            ->withCount('threads')
+            ->orderByDesc('threads_count');
     }
 
     /**

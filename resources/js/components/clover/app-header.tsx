@@ -7,6 +7,7 @@ import {
     MenuIcon,
     MessageSquareIcon,
     MoonIcon,
+    SearchIcon,
     ShieldIcon,
     SunIcon,
     UserIcon,
@@ -28,9 +29,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { SheetTrigger } from '@/components/ui/sheet';
 import { useAppearance } from '@/hooks/use-appearance';
+import { useCurrentUrl } from '@/hooks/use-current-url';
 import { ACCOUNT_MENU, PRIMARY_NAV } from '@/lib/navigation';
 import { cn, plural } from '@/lib/utils';
-import { account, login, logout, register } from '@/routes';
+import { account, login, logout, register, search } from '@/routes';
 import { update as boardPreference } from '@/routes/board-preference';
 import { edit as editTwoFactor } from '@/routes/two-factor';
 import type { CloverNavItem } from '@/types/navigation';
@@ -82,6 +84,28 @@ import type { CloverNavItem } from '@/types/navigation';
  * minimum. `gap-4` (16px) spends 32, leaving 164px, comfortably over it.
  * `md:gap-7` restores the wider gap at `md` and up, where the field is
  * already the larger inline one this same arithmetic does not apply to.
+ *
+ * Below `md`, tapping or focusing that field no longer opens the dropdown in
+ * place (task 6): Reddit's mobile search screen was the reference, so a real
+ * `<button>` sits beside the dropdown-capable `SearchField` instead —
+ * visible only below `md`, where the field itself is not — and visits
+ * `/search` on either interaction. `/search` with no query is a
+ * suggestions page (recent searches, busiest boards), the same two sources
+ * the dropdown already draws from; see `pages/search.tsx`. That page draws
+ * its own app bar (back control, the real field, focused on arrival) below
+ * `md`, in this header's place, so this header hides itself entirely below
+ * `md` while `usePage().url` matches `/search` — including
+ * `/search?q=...`, since `useCurrentUrl` compares by pathname and the query
+ * string does not change it. At `md` and up the search page is not
+ * special: the header, and its dropdown, are unchanged there.
+ *
+ * `⌘K` stays the desktop field's own shortcut, decided rather than left to
+ * fall out however it fell: `SearchField` stays mounted below `md` (only
+ * its wrapper is `hidden`, not the component), so the listener is still
+ * live, but `input.current.focus()` on a `display: none` element focuses
+ * nothing in a real browser. Below `md` the shortcut is inert instead of
+ * doing something surprising, without this file needing to know `⌘K`
+ * exists at all.
  */
 
 /** Bounded to what the notifications menu previews before "See all". */
@@ -136,6 +160,15 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
     const { resolvedAppearance, updateAppearance } = useAppearance();
     const isDark = resolvedAppearance === 'dark';
 
+    /**
+     * `/search` and `/search?q=...` both have the pathname `/search` —
+     * `isCurrentUrl` compares by pathname, so a query string does not
+     * defeat this. The search page supplies its own app bar below `md`
+     * whenever this is true; see the docblock above.
+     */
+    const { isCurrentUrl } = useCurrentUrl();
+    const onSearchPage = isCurrentUrl(search());
+
     const bookmarksItem = findNavItem('Bookmarks');
     const historyItem = findNavItem('History');
     const notificationsItem = findNavItem('Notifications');
@@ -154,6 +187,10 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
             data-slot="app-header"
             className={cn(
                 'sticky top-0 z-30 h-16 border-b border-border bg-bg',
+                /* The search page draws its own app bar in this header's
+                   place below `md`; see the docblock above. Unaffected at
+                   `md` and up, where the search page is not special. */
+                onSearchPage && 'hidden md:block',
                 className,
             )}
             {...props}
@@ -187,14 +224,34 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                         </Button>
                     </SheetTrigger>
 
-                    {/* A real field at every width, not an icon that expands
-                        into one. See `SearchField` for the ghost placeholder
-                        that answers "Search" below `md` and "Search boards
-                        and threads" at `md` and up, and this file's own
-                        docblock for the `gap-4`/`gap-7` arithmetic that gives
-                        it at least 160px below `md`. */}
+                    {/* Two controls sharing one slot, not one control
+                        changing behaviour by width: the dropdown-capable
+                        `SearchField` (`md` and up, unchanged) and a plain
+                        button beside it (`md:hidden`) that visits the
+                        search page instead of opening a dropdown in ~164px.
+                        See this file's own docblock for why, and
+                        `SearchField` for the ghost placeholder that answers
+                        "Search" below `md` and "Search boards and threads"
+                        at `md` and up -- matched here so the same accessible
+                        name reaches an anon whichever control is on screen. */}
                     <div className="max-w-(--measure-column) min-w-0 flex-1">
-                        <SearchField />
+                        <button
+                            type="button"
+                            aria-label="Search boards and threads"
+                            onClick={() => router.visit(search().url)}
+                            onFocus={() => router.visit(search().url)}
+                            className="flex h-9.5 w-full items-center gap-2 rounded-md border border-border bg-surface px-3 text-left text-body-sm text-muted-foreground md:hidden"
+                        >
+                            <SearchIcon
+                                aria-hidden="true"
+                                className="size-4 shrink-0 text-faint"
+                            />
+                            Search
+                        </button>
+
+                        <div className="hidden md:block">
+                            <SearchField />
+                        </div>
                     </div>
 
                     {/* Hidden below `md`: the bell has its own bottom-bar
