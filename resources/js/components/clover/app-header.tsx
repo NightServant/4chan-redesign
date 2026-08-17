@@ -38,8 +38,8 @@ import { edit as editTwoFactor } from '@/routes/two-factor';
 import type { CloverNavItem } from '@/types/navigation';
 
 /**
- * The sticky bar across the top of the app: search, a compose action, icon
- * actions and the account. It sits above content on `z-30`, one above the
+ * The sticky bar across the top of the app: search, icon actions and the
+ * account. It sits above content on `z-30`, one above the
  * sidebar's `z-20`, and reads its destinations from `PRIMARY_NAV` rather than
  * holding a second copy of the chrome's nav.
  *
@@ -68,14 +68,16 @@ import type { CloverNavItem } from '@/types/navigation';
  * every one of these is back, unchanged: the bell, the avatar, the dropdown,
  * the auth buttons, the wider gap.
  *
- * The field itself is a real field at rest below `md`, not an icon that
- * expands into one — an early cut at this task tried that, and Gabe's
- * response to the result was "make the search bar visible." `SearchField`
- * supplies its own bordered, rounded box with the magnifier inside it and a
- * ghost placeholder that reads "Search" below `md` and "Search boards and
- * threads" at `md` and up (see that component for why a real `placeholder`
- * attribute cannot hold both), so this header only has to give it room and
- * change nothing else about it.
+ * The search control below `md` is a button drawn as a search bar — border,
+ * radius, magnifier inside, the word "Search" — that visits `/search`, where
+ * the whole screen is the field. It is not the `SearchField` beside it: a
+ * dropdown inside a 164px control was the shape Gabe rejected, and a field
+ * that opens a panel over the row it lives in is not what a phone wants
+ * anyway. `SearchField` is still here, gated `hidden md:block`, and is the
+ * control at `md` and up.
+ *
+ * The button carries the same accessible name as the field, so an anon
+ * reaches "Search boards and threads" whichever one their width renders.
  *
  * Giving it room is the arithmetic `gap-4 md:gap-7` exists for. At a 320px
  * viewport: 320 − 48 (`px-6`) − 76 (two 38px icon buttons, hamburger and
@@ -85,11 +87,11 @@ import type { CloverNavItem } from '@/types/navigation';
  * `md:gap-7` restores the wider gap at `md` and up, where the field is
  * already the larger inline one this same arithmetic does not apply to.
  *
- * Below `md`, tapping or focusing that field no longer opens the dropdown in
- * place (task 6): Reddit's mobile search screen was the reference, so a real
- * `<button>` sits beside the dropdown-capable `SearchField` instead —
- * visible only below `md`, where the field itself is not — and visits
- * `/search` on either interaction. `/search` with no query is a
+ * Pressing that button visits `/search`. Only pressing: it carried an
+ * `onFocus` doing the same thing, which on a control that takes focus only
+ * from Tab or a screen reader meant tabbing off the hamburger left the
+ * header before the theme toggle could be reached. `/search` with no query
+ * is a
  * suggestions page (recent searches, busiest boards), the same two sources
  * the dropdown already draws from; see `pages/search.tsx`. That page draws
  * its own app bar (back control, the real field, focused on arrival) below
@@ -235,12 +237,23 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                         at `md` and up -- matched here so the same accessible
                         name reaches an anon whichever control is on screen. */}
                     <div className="max-w-(--measure-column) min-w-0 flex-1">
+                        {/* Click only. This carried an `onFocus` that visited
+                            the same page, on the reading that "tapping or
+                            focusing the search field" meant both -- but that
+                            is a button, and the only ways a button takes
+                            focus are Tab and a screen reader's swipe. Below
+                            `md` the tab order is hamburger, this, theme
+                            toggle, so tabbing off the hamburger navigated
+                            away before the toggle could ever be reached, and
+                            a swipe did the same thing to a VoiceOver user
+                            every time they came back. A tap fires `focus`
+                            then `click`, so it also issued two visits per
+                            press. */}
                         <button
                             type="button"
                             aria-label="Search boards and threads"
                             onClick={() => router.visit(search().url)}
-                            onFocus={() => router.visit(search().url)}
-                            className="flex h-9.5 w-full items-center gap-2 rounded-md border border-border bg-surface px-3 text-left text-body-sm text-muted-foreground md:hidden"
+                            className="touch-target-44 flex h-9.5 w-full items-center gap-2 rounded-md border border-border bg-surface px-3 text-left text-body-sm text-muted-foreground md:hidden"
                         >
                             <SearchIcon
                                 aria-hidden="true"

@@ -49,7 +49,12 @@ const menuContentAnimationClassName = [
  */
 const menuItemVariants = cva(
     [
-        'relative flex h-8 w-full cursor-default items-center gap-2.5 rounded-md px-2 text-body-sm text-foreground outline-hidden select-none',
+        /* 32px at rest, 44px on a coarse pointer. A stacked list grows
+           rather than overlaps, so these rows take the height route instead
+           of `touch-target-44`: a 44px hit area hung off a 32px row would
+           reach 6px into each neighbour, and in a menu that means the tap
+           lands on the row above the one being looked at. */
+        'relative flex h-8 w-full cursor-default items-center gap-2.5 rounded-md px-2 text-body-sm text-foreground outline-hidden select-none pointer-coarse:h-11',
         'transition-colors duration-[var(--duration-hover)] ease-[var(--ease-standard)]',
         'hover:bg-surface-hover focus:bg-surface-hover data-[highlighted]:bg-surface-hover',
         'aria-disabled:pointer-events-none aria-disabled:opacity-60 data-[disabled]:pointer-events-none data-[disabled]:opacity-60',

@@ -136,7 +136,12 @@ export default function Search({
                             <ArrowLeftIcon aria-hidden="true" />
                         </button>
 
-                        <div className="flex h-9.5 w-full min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-surface px-3 focus-within:border-border-strong">
+                        {/* 44px on a coarse pointer, and the input stretches
+                            to fill it -- this is the phone's search field, so
+                            a row that grows while the only tappable thing in
+                            it stays a ~20px strip of text would be the same
+                            defect wearing a taller box. */}
+                        <div className="flex h-9.5 w-full min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-surface px-3 focus-within:border-border-strong pointer-coarse:h-11">
                             <SearchIcon
                                 aria-hidden="true"
                                 className="size-4 shrink-0 text-faint"
@@ -144,13 +149,28 @@ export default function Search({
                             <input
                                 type="search"
                                 role="combobox"
-                                aria-expanded="true"
-                                aria-controls={listId}
+                                /* Both of these describe the suggestions
+                                   list, which only renders while the
+                                   server-side query is empty. Hardcoding
+                                   `true` and pointing `aria-controls` at an
+                                   id nothing carries told a screen reader
+                                   there was an open listbox to move into on
+                                   the results page, where there is not. */
+                                aria-expanded={query === ''}
+                                aria-controls={
+                                    query === '' ? listId : undefined
+                                }
                                 aria-autocomplete="list"
                                 aria-label="Search boards and threads"
                                 placeholder="Search boards and threads"
                                 value={mobileQuery}
-                                autoFocus
+                                /* On arrival at the suggestions screen only.
+                                   Inertia remounts the page on each visit, so
+                                   an unconditional `autoFocus` re-focused the
+                                   field after a search was submitted and
+                                   reopened the keyboard over the results the
+                                   anon had just asked for. */
+                                autoFocus={query === ''}
                                 onChange={(event) =>
                                     setMobileQuery(event.target.value)
                                 }
@@ -159,7 +179,7 @@ export default function Search({
                                         submit(mobileQuery);
                                     }
                                 }}
-                                className="w-full min-w-0 bg-transparent text-body-sm text-foreground outline-none placeholder:text-muted-foreground"
+                                className="h-full w-full min-w-0 self-stretch bg-transparent text-body-sm text-foreground outline-none placeholder:text-muted-foreground"
                             />
                         </div>
                     </div>

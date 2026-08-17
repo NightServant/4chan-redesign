@@ -179,6 +179,26 @@ export default function Account({
                                         }
                                     />
                                 ))}
+
+                                {/* Present whenever the tab has anything in
+                                    it, not only when it is empty. This tab
+                                    is capped at `AccountController::SAVED`,
+                                    and below `md` it is the whole of what an
+                                    anon can reach: the avatar dropdown that
+                                    used to carry a Bookmarks row is hidden
+                                    there, and the drawer renders
+                                    `PRIMARY_NAV`, which has none. An anon
+                                    with twenty saved threads saw six of them
+                                    and no way to the rest. */}
+                                <Button
+                                    variant="ghost"
+                                    asChild
+                                    className="self-start"
+                                >
+                                    <Link href={bookmarks()}>
+                                        View all bookmarks
+                                    </Link>
+                                </Button>
                             </div>
                         )}
                     </TabsContent>
@@ -214,9 +234,9 @@ export default function Account({
 
                                 {/* The tab is always capped, so there is
                                     always potentially "the rest" once it has
-                                    anything in it at all -- unlike the Saved
-                                    tab's link, which only has somewhere to
-                                    send an anon once the tab is empty. */}
+                                    anything in it at all. The Saved tab
+                                    carries the same link for the same
+                                    reason. */}
                                 <Button
                                     variant="ghost"
                                     asChild

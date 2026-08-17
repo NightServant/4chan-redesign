@@ -116,15 +116,27 @@ vi.mock('@inertiajs/react', () => ({
         children,
         ...props
     }: {
-        href: string | { url: string };
+        href: string | { url: string; method?: string };
         as?: string;
         children: ReactNode;
     } & Record<string, unknown>) => {
         const url = typeof href === 'string' ? href : href.url;
+        /* The method, not only the URL. A bare string carries none, so
+           Inertia sends GET; `logout()` is `{ url, method: 'post' }`. The
+           double threw both away and rendered the tag, which let
+           `href="/logout"` -- a GET to a POST-only route, and sign out dead
+           on every screen -- pass every assertion in this file. */
+        const method =
+            typeof href === 'string' ? 'get' : (href.method ?? 'get');
 
         if (as === 'button') {
             return (
-                <button type="button" {...props}>
+                <button
+                    type="button"
+                    data-href={url}
+                    data-method={method}
+                    {...props}
+                >
                     {children}
                 </button>
             );
@@ -175,9 +187,40 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 
-/** Any control with a `hidden` token that is not part of an `md:...` pair. */
-function hasBareHidden(el: Element): boolean {
-    return /(^|\s)hidden(\s|$)/.test(el.className);
+/**
+ * Whether a control is hidden below `md` -- by its own classes or by any
+ * ancestor's.
+ *
+ * This read `el.className` alone, which cannot see a wrapper. The field moved
+ * inside `<div className="hidden md:block">` in task 6 and three assertions in
+ * this file went on certifying it as reachable below `md` while it was
+ * `display: none` on every phone, including one that typed into it.
+ *
+ * jsdom evaluates no media query, so this is the class-level statement of the
+ * same fact: somewhere between the control and the document there is a
+ * `hidden` that an `md:` variant lifts.
+ */
+function isGatedBelowMd(el: Element): boolean {
+    for (
+        let node: Element | null = el;
+        node !== null;
+        node = node.parentElement
+    ) {
+        const classes = node.className;
+
+        if (typeof classes !== 'string') {
+            continue;
+        }
+
+        if (
+            /(^|\s)hidden(\s|$)/.test(classes) &&
+            /(^|\s)md:(block|flex|inline-flex|grid)(\s|$)/.test(classes)
+        ) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 describe('AppHeader', () => {
@@ -246,11 +289,17 @@ describe('AppHeader', () => {
      * what this task exists to answer, so the signed-in case is the one that
      * actually matters here.
      */
-    it('below `md`, signed out, reaches exactly the hamburger, the search field and the theme toggle', () => {
+    it('below `md`, signed out, reaches exactly the hamburger, the search control and the theme toggle', () => {
         renderHeader();
 
         const hamburger = screen.getByRole('button', { name: /open sidebar/i });
-        const search = screen.getByRole('combobox', {
+        /* The button, not the combobox. Below `md` the search control is a
+           button styled as a search bar that visits the search page; the
+           combobox is the `md`-and-up control and is gated away here. */
+        const search = screen.getByRole('button', {
+            name: /search boards and threads/i,
+        });
+        const field = screen.getByRole('combobox', {
             name: /search boards and threads/i,
         });
         const theme = screen.getByRole('button', {
@@ -262,21 +311,23 @@ describe('AppHeader', () => {
         });
 
         for (const control of [hamburger, search, theme]) {
-            expect(hasBareHidden(control)).toBe(false);
+            expect(isGatedBelowMd(control)).toBe(false);
         }
 
+        expect(isGatedBelowMd(field)).toBe(true);
+
         for (const control of [logIn, createAccount]) {
-            expect(hasBareHidden(control)).toBe(true);
+            expect(isGatedBelowMd(control)).toBe(true);
             expect(control.className).toMatch(/md:inline-flex/);
         }
     });
 
-    it('below `md`, signed in, reaches exactly the hamburger, the search field and the theme toggle -- no bell, no avatar', () => {
+    it('below `md`, signed in, reaches exactly the hamburger, the search control and the theme toggle -- no bell, no avatar', () => {
         mockPage.props.auth.user = SIGNED_IN_USER;
         renderHeader();
 
         const hamburger = screen.getByRole('button', { name: /open sidebar/i });
-        const search = screen.getByRole('combobox', {
+        const search = screen.getByRole('button', {
             name: /search boards and threads/i,
         });
         const theme = screen.getByRole('button', {
@@ -288,50 +339,66 @@ describe('AppHeader', () => {
         const avatar = screen.getByRole('button', { name: 'Account menu' });
 
         for (const control of [hamburger, search, theme]) {
-            expect(hasBareHidden(control)).toBe(false);
+            expect(isGatedBelowMd(control)).toBe(false);
         }
 
         for (const control of [notifications, avatar]) {
-            expect(hasBareHidden(control)).toBe(true);
+            expect(isGatedBelowMd(control)).toBe(true);
             expect(control.className).toMatch(/md:inline-flex/);
         }
     });
 
     /**
-     * The icon that used to stand in for the field below `md` -- tap it,
-     * get a button 110px from centre with nothing to type into -- is gone
-     * outright, not merely hidden. There is exactly one search control at
-     * every width now: the field itself.
+     * Two controls, one slot, split by width.
+     *
+     * This file used to assert the opposite -- "there is exactly one search
+     * control at every width now: the field itself" -- and went on passing
+     * after task 6 added the button three lines away in the component,
+     * because the matcher was anchored to `/^search$/i` and the button is
+     * named "Search boards and threads". Both carry that name deliberately,
+     * so the assertion has to separate them by role, not by text.
      */
-    it('offers no separate search button at any width -- the field is the control', () => {
+    it('below `md` the control is a button and the field is gated; at `md` and up the field is the control', () => {
         renderHeader();
 
-        expect(
-            screen.queryByRole('button', { name: /^search$/i }),
-        ).not.toBeInTheDocument();
-        expect(
-            screen.getByRole('combobox', {
-                name: /search boards and threads/i,
-            }),
-        ).toBeInTheDocument();
-    });
-
-    /**
-     * No prior tap, because there is nothing left to tap: the field is a
-     * real, typable input from the first render, at the narrowest width
-     * this header supports.
-     */
-    it('is typable at 320px with no prior tap', async () => {
-        const user = userEvent.setup();
-        renderHeader();
-
+        const button = screen.getByRole('button', {
+            name: /search boards and threads/i,
+        });
         const field = screen.getByRole('combobox', {
             name: /search boards and threads/i,
         });
 
-        await user.type(field, 'g');
+        expect(button.className).toMatch(/md:hidden/);
+        expect(isGatedBelowMd(button)).toBe(false);
+        expect(isGatedBelowMd(field)).toBe(true);
+    });
 
-        expect(field).toHaveValue('g');
+    /**
+     * A press goes to the search page. Focus does not.
+     *
+     * This control carried `onFocus={() => router.visit(...)}` as well, on
+     * the reading that "tapping or focusing" meant both. It is a button: the
+     * only ways it takes focus are Tab and a screen reader's swipe, so
+     * tabbing off the hamburger navigated away before the theme toggle could
+     * be reached, and a tap -- which fires `focus` then `click` -- issued two
+     * visits for one press.
+     */
+    it('visits the search page when pressed, and does nothing on focus alone', async () => {
+        const user = userEvent.setup();
+        renderHeader();
+
+        const button = screen.getByRole('button', {
+            name: /search boards and threads/i,
+        });
+
+        button.focus();
+
+        expect(router.visit).not.toHaveBeenCalled();
+
+        await user.click(button);
+
+        expect(router.visit).toHaveBeenCalledTimes(1);
+        expect(vi.mocked(router.visit).mock.calls[0]?.[0]).toContain('/search');
     });
 
     /**
@@ -389,6 +456,8 @@ describe('AppHeader', () => {
 
         const signOut = screen.getByRole('menuitem', { name: /sign out/i });
         expect(signOut.tagName).toBe('BUTTON');
+        expect(signOut).toHaveAttribute('data-href', '/logout');
+        expect(signOut).toHaveAttribute('data-method', 'post');
     });
 
     /**
@@ -616,8 +685,18 @@ describe('AppHeader', () => {
             expect(router.visit).toHaveBeenCalledWith('/search');
         });
 
-        /** "Tapping or focusing" — both have to trigger it, not just one. */
-        it('also visits the search page on focus, not only on click', () => {
+        /**
+         * Focus alone must not navigate.
+         *
+         * The brief said "tapping or focusing the search field", and this
+         * was read as both -- but the control is a button, and a button
+         * takes focus only from Tab or a screen reader's swipe. Below `md`
+         * the tab order is hamburger, this, theme toggle: navigating on
+         * focus meant tabbing off the hamburger left the header before the
+         * toggle could be reached, every time. It also double-fired on a
+         * tap, which raises `focus` and then `click`.
+         */
+        it('does not visit on focus alone, which would trap the keyboard', () => {
             renderHeader();
 
             const trigger = screen.getByRole('button', {
@@ -626,7 +705,17 @@ describe('AppHeader', () => {
 
             trigger.focus();
 
-            expect(router.visit).toHaveBeenCalledWith('/search');
+            expect(router.visit).not.toHaveBeenCalled();
+        });
+
+        it('carries a 44px touch target, being the phone’s search control', () => {
+            renderHeader();
+
+            expect(
+                screen.getByRole('button', {
+                    name: 'Search boards and threads',
+                }),
+            ).toHaveClass('touch-target-44');
         });
     });
 

@@ -115,6 +115,21 @@ export function SearchField({
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent): void => {
             if (event.key === 'k' && (event.metaKey || event.ctrlKey)) {
+                /* Nothing at all when this field is not on screen. Below
+                   `md` it sits inside `hidden md:block`, so `focus()` on a
+                   `display: none` input does nothing in a browser -- but
+                   `setOpen(true)` still ran, firing a `/search/suggest`
+                   request and mounting a dropdown nobody could see.
+
+                   `checkVisibility` asks the browser rather than restating
+                   the breakpoint here, and it answers for ancestors too,
+                   which is where the `hidden` actually lives. jsdom applies
+                   no stylesheet, so it reports this field visible there and
+                   the shortcut stays testable. */
+                if (input.current?.checkVisibility?.() === false) {
+                    return;
+                }
+
                 event.preventDefault();
                 input.current?.focus();
                 setOpen(true);
@@ -133,12 +148,19 @@ export function SearchField({
 
     return (
         <div ref={wrapper} className={cn('relative', className)}>
-            <div className="flex h-9.5 w-full items-center gap-2 rounded-md border border-border bg-surface px-3 focus-within:border-border-strong">
+            {/* 38px at rest, 44px on a coarse pointer -- a tablet at `md` and
+                up is where this field lives, and a finger's target is the
+                whole bar. The input stretches to fill it rather than sitting
+                at its own line height in the middle: without that, the row
+                grew and the only thing actually tappable stayed a ~20px strip
+                of text, which is the shape of hit-area bug this codebase has
+                shipped before. */}
+            <div className="flex h-9.5 w-full items-center gap-2 rounded-md border border-border bg-surface px-3 focus-within:border-border-strong pointer-coarse:h-11">
                 <Search
                     aria-hidden="true"
                     className="size-4 shrink-0 text-faint"
                 />
-                <div className="relative min-w-0 flex-1">
+                <div className="relative min-w-0 flex-1 self-stretch">
                     <input
                         ref={input}
                         type="search"
@@ -148,6 +170,15 @@ export function SearchField({
                         aria-autocomplete="list"
                         aria-keyshortcuts="Meta+K"
                         aria-label={placeholder}
+                        /* A plain native placeholder again. This wore a
+                           `before:content-['Search'] md:before:content-[...]`
+                           ghost span so the wording could shorten below `md`,
+                           where the field had ~160px. Task 6 moved that width
+                           out from under it: below `md` the header renders a
+                           button that visits the search page, and this
+                           component is inside `hidden md:block`, so the short
+                           branch was styling nobody could ever see. */
+                        placeholder={placeholder}
                         value={query}
                         data-slot="search-field"
                         onChange={(event) => {
@@ -164,27 +195,8 @@ export function SearchField({
                                 setOpen(false);
                             }
                         }}
-                        className="w-full bg-transparent text-body-sm text-foreground outline-none"
+                        className="h-full w-full bg-transparent text-body-sm text-foreground outline-none"
                     />
-                    {/* A native `placeholder` attribute can only ever hold one
-                        string, and "Search boards and threads" does not fit the
-                        ~160px this field gets below `md` -- the browser's own
-                        clipping is a word cut in half with no ellipsis to say
-                        so, which reads as broken rather than short. This is a
-                        second, purely visual copy of the same idea rather than
-                        the real placeholder, so its wording can answer to
-                        `md:` the way the input's own attribute cannot: short
-                        below `md`, the full sentence at `md` and up, both
-                        pinned in one span via `content-[...]` rather than a
-                        second element that could drift out of sync with it.
-                        `aria-label` above still carries the one accessible
-                        name at every width. */}
-                    {query === '' && (
-                        <span
-                            aria-hidden="true"
-                            className="pointer-events-none absolute inset-0 flex items-center text-body-sm text-muted-foreground before:content-['Search'] md:before:content-['Search_boards_and_threads']"
-                        />
-                    )}
                 </div>
                 <span
                     aria-hidden="true"

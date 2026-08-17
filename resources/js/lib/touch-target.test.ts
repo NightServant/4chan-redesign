@@ -165,14 +165,40 @@ function stringLiterals(source: string): string[] {
 }
 
 const SMALL_SIZE = /size-(\d+(?:\.5)?)\b/;
+/**
+ * Both notations, because this codebase uses both.
+ *
+ * This matched `h-[36px]` alone. Every 34-38px control here is written on
+ * the spacing scale instead -- `h-9.5` is 38px -- so the scan was blind to
+ * the notation it was built to catch, and walked straight past the phone's
+ * own search control, which is the one control this whole branch exists to
+ * make usable. A fresh `h-9.5 items-center` button dropped into
+ * `components/clover/` left the guard green.
+ *
+ * The scale is 4px per unit: `h-9.5` is 38px, `h-11` is 44px.
+ */
 const SMALL_HEIGHT = /\bh-\[(\d+)px\]/;
+const SMALL_HEIGHT_SCALE = /(?<![\w-])h-(\d+(?:\.5)?)\b/;
 /** This codebase's own shape for a box that centres its own single glyph or its own row content -- an icon button, an icon-shaped control, or a nav row. */
 const SELF_CENTRING = /items-center|place-items-center/;
 /** A control that cannot itself receive a pointer event needs no hit area. */
 const INERT = /pointer-events-none/;
+/**
+ * The other way to satisfy this rule: grow the control itself on coarse
+ * pointers rather than hanging a pseudo-element off it. Text fields take this
+ * route, because a hit area their input does not fill is a taller box with the
+ * same ~20px of tappable text in the middle of it.
+ */
+const COARSE_HEIGHT = /pointer-coarse:h-(\d+(?:\.5)?)\b/;
 
 function isUndersizedControl(literal: string): boolean {
     if (INERT.test(literal) || !SELF_CENTRING.test(literal)) {
+        return false;
+    }
+
+    const coarseMatch = literal.match(COARSE_HEIGHT);
+
+    if (coarseMatch && parseFloat(coarseMatch[1]) * 4 >= 44) {
         return false;
     }
 
@@ -184,7 +210,13 @@ function isUndersizedControl(literal: string): boolean {
 
     const heightMatch = literal.match(SMALL_HEIGHT);
 
-    return Boolean(heightMatch) && parseInt(heightMatch![1], 10) < 44;
+    if (heightMatch && parseInt(heightMatch[1], 10) < 44) {
+        return true;
+    }
+
+    const scaleMatch = literal.match(SMALL_HEIGHT_SCALE);
+
+    return Boolean(scaleMatch) && parseFloat(scaleMatch![1]) * 4 < 44;
 }
 
 /**
@@ -209,11 +241,20 @@ const ALLOWED_FILES = new Set([
     // bookmark buttons, the search field) -- flagged in the task 5 report.
     'resources/js/components/ui/dialog.tsx',
     'resources/js/components/clover/comment-tree.tsx',
-    'resources/js/components/clover/switch.tsx',
     // Already has its own hit-area mechanism (`before:-inset-[5px]`), just
     // gated on `md:` viewport width rather than `pointer-coarse:` -- flagged
     // as the follow-up this task's own guard is meant to prevent recurring.
     'resources/js/components/clover/pagination.tsx',
+    // The switch's 22x40 track. It is painted, not aimed at: the control is
+    // the checkbox covering it, and the hit area lives on the `<label>` that
+    // wraps both, which carries `touch-target-44`. The scan sees the track's
+    // literal and cannot see the label two elements up.
+    'resources/js/components/clover/switch.tsx',
+    // A fixed grid of one-character slots, sized to each other and to the
+    // code's length. Height alone can grow; width cannot without breaking
+    // the group's geometry, and neither route makes a 36px slot a 44px
+    // target. It is also a two-factor form field, not app chrome. Follow-up.
+    'resources/js/components/ui/input-otp.tsx',
 ]);
 
 describe('every icon-sized, self-centring control carries touch-target-44', () => {

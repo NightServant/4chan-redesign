@@ -78,15 +78,28 @@ vi.mock('@inertiajs/react', () => ({
         children,
         ...props
     }: {
-        href: string | { url: string };
+        href: string | { url: string; method?: string };
         as?: string;
         children: ReactNode;
     } & Record<string, unknown>) => {
         const url = typeof href === 'string' ? href : href.url;
+        /* A bare string carries no method, so Inertia sends GET. Wayfinder's
+           route objects carry their own -- `logout()` is `{ url, method:
+           'post' }` -- and that difference is the whole of whether sign out
+           works. The double used to throw both away and render the tag, so a
+           `Link` pointed at the string "/logout" passed every assertion here
+           while issuing a GET to a POST-only route in a browser. */
+        const method =
+            typeof href === 'string' ? 'get' : (href.method ?? 'get');
 
         if (as === 'button') {
             return (
-                <button type="button" {...props}>
+                <button
+                    type="button"
+                    data-href={url}
+                    data-method={method}
+                    {...props}
+                >
                     {children}
                 </button>
             );
@@ -439,11 +452,15 @@ describe('Account', () => {
          * rather than a plain link a signed-in anon could bookmark or share.
          */
         /**
-         * `tagName` rather than an `href`, matching the assertion
-         * `app-header.test.tsx` already makes for the same row in the
-         * dropdown: a real `<button>` has no `href` to check, and that
-         * absence is exactly the point -- it posts through Inertia's own
-         * submit handling rather than navigating like a link.
+         * Both halves of the contract, because only one of them was guarded.
+         *
+         * The tag was: dropping `as="button"` turned this red. The
+         * destination was not -- `href` never reached the double, so
+         * `href="/logout"` in place of `href={logout()}` passed here and in
+         * `app-header.test.tsx`, forty-five tests green over a GET to a
+         * POST-only route and sign out dead on every screen. `/logout` is
+         * the URL and `post` is the method, and the method is the half that
+         * a plain string silently loses.
          */
         it('still posts to sign out, kept a real button rather than a plain link', () => {
             render(<Account {...accountProps()} />);
@@ -451,6 +468,8 @@ describe('Account', () => {
             const signOut = screen.getByRole('button', { name: /sign out/i });
 
             expect(signOut.tagName).toBe('BUTTON');
+            expect(signOut).toHaveAttribute('data-href', '/logout');
+            expect(signOut).toHaveAttribute('data-method', 'post');
         });
     });
 });

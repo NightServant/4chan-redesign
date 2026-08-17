@@ -61,7 +61,14 @@ export function useSearchSuggestions(
                 .catch(() => {
                     /* An abort is the normal case here, not a failure: it
                        means another keystroke arrived. Either way the list
-                       keeps what it has rather than flashing empty. */
+                       keeps what it has rather than flashing empty.
+
+                       `loading` still has to come down. A request that is
+                       aborted because the component is going away is
+                       harmless, but one aborted by the last keystroke before
+                       an anon stops typing left a spinner up over a list
+                       that was never going to change again. */
+                    setLoading(false);
                 });
         }, DEBOUNCE_MS);
 

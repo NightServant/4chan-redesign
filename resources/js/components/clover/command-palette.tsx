@@ -223,7 +223,10 @@ function CommandItem({
                 ...(typeof children === 'string' ? [children] : []),
             ]}
             className={cn(
-                'flex h-8 cursor-default items-center gap-2.5 rounded-md px-2 text-body-sm',
+                /* Same treatment as `menu-surface`'s rows, for the same
+                   reason: a stacked list grows on coarse pointers rather
+                   than hanging overlapping hit areas into its neighbours. */
+                'flex h-8 cursor-default items-center gap-2.5 rounded-md px-2 text-body-sm pointer-coarse:h-11',
                 'transition-colors duration-[var(--duration-hover)] ease-[var(--ease-standard)]',
                 'data-[selected=true]:bg-surface-hover data-[selected=true]:text-foreground',
                 'data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-60',

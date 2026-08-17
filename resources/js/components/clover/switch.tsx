@@ -32,10 +32,17 @@ function Switch({
     className,
     ...props
 }: SwitchProps) {
+    /* The hit area belongs to the label, not to the 22x40 track: a click
+       anywhere in a label toggles the control it wraps, so this is already
+       the surface a finger aims at, and growing it needs no second copy of
+       the switch's own geometry. Since task 4 that matters on a phone --
+       this switch is how the account screen reaches the adult-boards
+       setting, which the task 5 report still describes as living in a
+       dropdown. */
     return (
         <label
             className={cn(
-                'inline-flex items-center gap-2',
+                'touch-target-44 inline-flex items-center gap-2',
                 disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
                 className,
             )}

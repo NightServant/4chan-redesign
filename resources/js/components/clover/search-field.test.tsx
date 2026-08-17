@@ -79,42 +79,27 @@ describe('SearchField', () => {
     });
 
     /**
-     * Below `md` this field gets roughly 160px, and "Search boards and
-     * threads" does not fit it -- a native `placeholder` attribute can only
-     * hold one string, and the browser's own clipping is a word cut in half
-     * with no ellipsis to say so. A second, purely visual span carries the
-     * text instead, so its wording can answer to `md:` the way the real
-     * attribute cannot: short below `md`, the long sentence at `md` and up.
-     * jsdom cannot evaluate the media query itself, so this pins the classes
-     * that carry both strings rather than which one is actually painted.
+     * A plain native placeholder, and no ghost span.
+     *
+     * This field wore a `before:content-['Search']` /
+     * `md:before:content-['Search boards and threads']` span so the wording
+     * could shorten below `md`, where the field had roughly 160px to work
+     * with. Task 6 removed that case: below `md` the header renders a button
+     * that visits the search page, and this component sits inside
+     * `hidden md:block`. The short branch was styling for a width this
+     * component is never painted at.
      */
-    it('carries a short placeholder below `md` and the full one at `md` and up, in one ghost span', () => {
+    it('places its one placeholder on the input itself', () => {
         mockFetch();
 
         const { container } = render(<SearchField />);
 
         const input = screen.getByRole('combobox');
-        expect(input).not.toHaveAttribute('placeholder');
-        /* The one accessible name, unaffected by which string is visible. */
+        expect(input).toHaveAttribute(
+            'placeholder',
+            'Search boards and threads',
+        );
         expect(input).toHaveAccessibleName('Search boards and threads');
-
-        const ghost = container.querySelector(
-            '[class*="content-[\'Search\']"]',
-        );
-        expect(ghost).not.toBeNull();
-        expect(ghost).toHaveClass(
-            "before:content-['Search']",
-            "md:before:content-['Search_boards_and_threads']",
-        );
-        expect(ghost).toHaveAttribute('aria-hidden', 'true');
-    });
-
-    it('drops the ghost placeholder once there is a query, the same as a real one would', async () => {
-        mockFetch();
-
-        const { container } = render(<SearchField />);
-
-        await userEvent.type(screen.getByRole('combobox'), 'g');
 
         expect(
             container.querySelector('[class*="content-[\'Search\']"]'),

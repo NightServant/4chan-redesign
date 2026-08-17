@@ -152,8 +152,8 @@ describe('AppLayout', () => {
      * between visits, which is exactly why this has to be explicit.
      *
      * `AppHeader` registered a second `navigate` listener of its own for a
-     * while, to collapse a mobile search button that no longer exists — the
-     * field below `md` is a real one at rest now, with nothing to collapse.
+     * while, to collapse an expanded mobile search field. Nothing expands
+     * there now: below `md` the control is a button that visits `/search`.
      * One listener is expected here again, but this fires every callback
      * captured rather than assuming a specific count, since what this test
      * cares about is that the drawer's own listener is among them.

@@ -6,8 +6,10 @@ import { cn } from '@/lib/utils';
 
 /**
  * The bottom bar on small screens. It is one of two ways to navigate below
- * `lg` — the header's hamburger drawer is the other, reachable at every width
- * below `lg`, including here. This bar's own keyboard and screen-reader
+ * `lg` — the header's hamburger drawer is the other, on every screen that
+ * renders the header, which is all of them except `/search` below `md`,
+ * where the search page supplies its own app bar and this bar is the only
+ * chrome left. This bar's own keyboard and screen-reader
  * behaviour still carries as much weight as the sidebar's: it is what a
  * signed-in anon reaches for first below `md`, drawer or no drawer.
  *
