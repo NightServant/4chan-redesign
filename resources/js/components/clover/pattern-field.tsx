@@ -58,7 +58,7 @@ import { cn } from '@/lib/utils';
  * outside the box: it hid the header's search dropdown outright.
  */
 type PatternFieldProps = {
-    children: ReactNode;
+    children?: ReactNode;
     /**
      * How far the paper travels across the band, in pixels. Larger reads as
      * further away. Zero pins it, which is what reduced motion resolves to.
@@ -78,6 +78,10 @@ const FEATHER =
     'linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent)';
 
 function PatternField({
+    /* Optional, because the field is also used as a bare background layer --
+       `ui/card.tsx` positions one behind a card's own content rather than
+       wrapping it, so that a caller's layout classes still land on the card
+       itself. */
     children,
     depth = 60,
     feather = true,

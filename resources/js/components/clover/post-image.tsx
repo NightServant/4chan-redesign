@@ -1,4 +1,4 @@
-import { EyeIcon } from 'lucide-react';
+import { ExternalLink, EyeIcon } from 'lucide-react';
 import { useState } from 'react';
 import { MachineValue } from '@/components/clover/machine-value';
 import { MediaPlaceholder } from '@/components/clover/media-placeholder';
@@ -266,38 +266,80 @@ function PostImage({ media, variant = 'card', className }: PostImageProps) {
             </button>
 
             <Dialog open={expanded} onOpenChange={setExpanded}>
-                {/* Sized to whatever it holds rather than to a fixed column:
-                    the dialog exists to show one image at its own proportions,
-                    so a portrait shot should not sit in a landscape box with
-                    empty space either side of it. `w-fit` lets the panel
-                    shrink to the image; the viewport caps keep a large one on
-                    screen. */}
-                <DialogContent className="w-fit max-w-[min(94vw,1400px)] sm:max-w-[min(94vw,1400px)]">
+                {/* The whole screen on a phone, a panel on a desktop.
+                
+                    It was a centred card at every width, which on a phone
+                    gave the file *less* room than the thread page had already
+                    given it and put the only way out in a corner as a 24px
+                    cross. Below `md` it fills the viewport: the image takes
+                    the middle, and the controls sit in a bar at the bottom
+                    where a thumb is. At `md` and up the panel comes back,
+                    sized to the image rather than to a fixed column, so a
+                    portrait shot is not boxed in a landscape frame. */}
+                <DialogContent className="grid h-dvh w-screen max-w-none grid-rows-[auto_1fr_auto] gap-0 rounded-none border-0 bg-bg p-0 sm:max-w-none md:h-auto md:w-fit md:max-w-[min(94vw,1400px)] md:rounded-2xl md:border md:p-6">
                     <DialogTitle className="sr-only">
                         {media.filename}
                     </DialogTitle>
 
-                    <img
-                        src={media.fullUrl}
-                        alt={altFor(media)}
-                        width={media.width ?? undefined}
-                        height={media.height ?? undefined}
-                        referrerPolicy="no-referrer"
-                        onError={() => {
-                            setFailed(true);
-                            setExpanded(false);
-                        }}
-                        /* Both axes automatic, bounded by the viewport. The
-                           `width` and `height` attributes above are the file's
-                           real dimensions and would otherwise fix the rendered
-                           size, so `h-auto w-auto` is what actually hands the
-                           proportions back to the image. */
-                        className="h-auto max-h-[82vh] w-auto max-w-full justify-self-center rounded-md object-contain"
-                    />
+                    {/* The file's name, and room for the close control
+                        `DialogContent` draws in the corner. One way out, not
+                        two: a second close button of our own would have sat
+                        beside the built-in one at every width, and the built-in
+                        one now carries a 44px hit area of its own. */}
+                    <div className="flex items-center border-b border-border px-3 py-3 pr-14 md:hidden">
+                        <MachineValue className="min-w-0 truncate text-faint">
+                            {media.filename}
+                        </MachineValue>
+                    </div>
 
-                    <MachineValue className="text-center text-faint">
-                        {media.label}
-                    </MachineValue>
+                    <div className="flex min-h-0 items-center justify-center overflow-hidden p-2 md:p-0">
+                        <img
+                            src={media.fullUrl}
+                            alt={altFor(media)}
+                            width={media.width ?? undefined}
+                            height={media.height ?? undefined}
+                            referrerPolicy="no-referrer"
+                            onError={() => {
+                                setFailed(true);
+                                setExpanded(false);
+                            }}
+                            /* Both axes automatic, bounded by the box it sits
+                               in. The `width` and `height` attributes above
+                               are the file's real dimensions and would
+                               otherwise fix the rendered size, so `h-auto
+                               w-auto` is what hands the proportions back to
+                               the image. */
+                            className="h-auto max-h-full w-auto max-w-full rounded-md object-contain md:max-h-[82vh]"
+                        />
+                    </div>
+
+                    {/* The bottom bar. Every control in it is a real touch
+                        target rather than a line of small print: `label` is
+                        the file's own size and dimensions, and the link is
+                        the file itself on 4chan's CDN, which is the one
+                        action this component has any source for. Bookmarking
+                        and sharing belong to the post, not to its
+                        attachment, and this component has never been given
+                        one. */}
+                    <div className="flex items-center justify-between gap-3 border-t border-border px-3 py-2 md:mt-4 md:justify-center md:border-0 md:py-0">
+                        <MachineValue className="min-w-0 truncate text-faint">
+                            {media.label}
+                        </MachineValue>
+
+                        <a
+                            href={media.fullUrl}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            referrerPolicy="no-referrer"
+                            className="touch-target-44 inline-flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-body-sm text-muted-foreground hover:bg-surface-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:hidden"
+                        >
+                            <ExternalLink
+                                aria-hidden="true"
+                                className="size-4"
+                            />
+                            Original file
+                        </a>
+                    </div>
                 </DialogContent>
             </Dialog>
         </>

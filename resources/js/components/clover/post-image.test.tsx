@@ -284,6 +284,83 @@ describe('PostImage', () => {
         );
     });
 
+    /**
+     * The viewer is the whole screen on a phone, and its controls sit where a
+     * thumb is.
+     *
+     * Gabe's spec: tapping the post opens the full image with controls at the
+     * bottom, and those controls must be tappable. A centred card with a
+     * 24px close cross in its corner is a desktop dialog wearing a phone's
+     * viewport -- the image ends up smaller than it was in the thread, and
+     * the one control is the hardest thing on the screen to hit.
+     */
+    it('fills the screen below `md` and returns to a panel at `md` and up', async () => {
+        const user = userEvent.setup();
+        const media = makeAttachment();
+
+        render(<PostImage media={media} />);
+
+        await user.click(
+            screen.getByRole('button', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        );
+
+        const dialog = screen.getByRole('dialog');
+
+        expect(dialog).toHaveClass('h-dvh');
+        expect(dialog).toHaveClass('max-w-none');
+        expect(dialog.className).toMatch(/md:h-auto/);
+    });
+
+    it('carries a close control and a bottom bar of real touch targets', async () => {
+        const user = userEvent.setup();
+        const media = makeAttachment();
+
+        render(<PostImage media={media} />);
+
+        await user.click(
+            screen.getByRole('button', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        );
+
+        /* The dialog's own close control, not a second one beside it. It
+           carries the 44px hit area now -- task 5 scoped this file out and
+           the full-screen viewer is what brought it back. */
+        const close = screen.getByRole('button', { name: 'Close' });
+        const original = screen.getByRole('link', { name: /original file/i });
+
+        expect(close).toHaveClass('touch-target-44');
+        expect(original).toHaveClass('touch-target-44');
+        expect(original).toHaveAttribute('href', media.fullUrl);
+    });
+
+    /**
+     * Escape and the close control both work, because a full-screen viewer
+     * with one way out is a trap on the device that has no Escape key.
+     */
+    it('closes on the control and on Escape', async () => {
+        const user = userEvent.setup();
+        const media = makeAttachment();
+
+        render(<PostImage media={media} />);
+
+        const thumbnail = screen.getByRole('button', {
+            name: `Attached image: ${media.filename}`,
+        });
+
+        await user.click(thumbnail);
+        await user.click(screen.getByRole('button', { name: 'Close' }));
+
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+        await user.click(thumbnail);
+        await user.keyboard('{Escape}');
+
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
     it('opens the full image in a dialog when the thumbnail is pressed', async () => {
         const user = userEvent.setup();
         const media = makeAttachment();
@@ -346,7 +423,7 @@ describe('PostImage', () => {
             }),
         );
 
-        expect(screen.getByRole('dialog')).toHaveClass('w-fit');
+        expect(screen.getByRole('dialog').className).toMatch(/md:w-fit/);
     });
 
     it('is reachable and operable from the keyboard', async () => {

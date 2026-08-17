@@ -239,7 +239,6 @@ const ALLOWED_FILES = new Set([
     // Real, currently undersized controls outside this task's "app chrome"
     // scope (header, bottom bar, drawer/sidebar rows, ThreadCard's share and
     // bookmark buttons, the search field) -- flagged in the task 5 report.
-    'resources/js/components/ui/dialog.tsx',
     'resources/js/components/clover/comment-tree.tsx',
     // Already has its own hit-area mechanism (`before:-inset-[5px]`), just
     // gated on `md:` viewport width rather than `pointer-coarse:` -- flagged
