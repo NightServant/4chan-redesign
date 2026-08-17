@@ -10,9 +10,10 @@ import { SectionLabel } from '@/components/clover/section-label';
 import { OriginalPost } from '@/components/thread/original-post';
 import { ReplyComposer } from '@/components/thread/reply-composer';
 import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { plural } from '@/lib/utils';
 import { board } from '@/routes';
-import { store as storeReply } from '@/routes/replies';
+import { create as composeReply, store as storeReply } from '@/routes/replies';
 import {
     bookmark as bookmarkThread,
     read as recordRead,
@@ -56,6 +57,7 @@ export default function Thread({
 }: ThreadPageProps) {
     const { auth } = usePage().props;
     const signedIn = Boolean(auth.user);
+    const isMobile = useIsMobile();
 
     const [authGateAction, setAuthGateAction] = useState<string | null>(null);
 
@@ -115,6 +117,13 @@ export default function Thread({
             { preserveScroll: true },
         );
     }
+
+    /* Below `md` the reply control is a link into the composer page; at `md`
+       and up it is the inline form. Built once here rather than inline in the
+       markup, so the two branches cannot disagree about where it points. */
+    const composerHref = thread
+        ? composeReply({ board: boardToken(slug), thread: thread.no }).url
+        : '';
 
     function toggleBookmark() {
         if (!thread) {
@@ -193,7 +202,27 @@ export default function Thread({
                     replies
                 </SectionLabel>
 
-                {signedIn ? (
+                {/* Below `md` the composer is a page of its own, so this
+                    slot is a link into it rather than a field: a two-line
+                    textarea under two hundred comments, with the keyboard
+                    over the top of it, is what that page exists to replace.
+                    The comments now run straight on from the post, and the
+                    trigger sits at the foot of them.
+
+                    `useIsMobile` rather than a `md:` pair, because these are
+                    two different controls -- a link and a form -- and a
+                    CSS-hidden form would still be in the tab order, still
+                    submit on Enter, and still be found by a screen reader
+                    looking for a way to reply. */}
+                {signedIn && isMobile ? (
+                    <Button
+                        variant="outline"
+                        asChild
+                        className="sticky bottom-4 z-20 w-full justify-start"
+                    >
+                        <Link href={composerHref}>Join the conversation</Link>
+                    </Button>
+                ) : signedIn ? (
                     <ReplyComposer
                         threadNo={thread.no}
                         maxCommentChars={maxCommentChars}

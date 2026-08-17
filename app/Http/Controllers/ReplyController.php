@@ -14,6 +14,8 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
+use Inertia\Response;
 
 /**
  * Replying to a thread.
@@ -29,6 +31,48 @@ use Illuminate\Support\Facades\Storage;
  */
 class ReplyController extends Controller
 {
+    /**
+     * The composer as its own screen, for phones.
+     *
+     * A reply box at the foot of a thread is right with a mouse and a full
+     * window. On a phone it is a two-line textarea under two hundred comments,
+     * with the keyboard taking half of what is left. This gives the field the
+     * viewport, the attachment control somewhere to live, and Post somewhere a
+     * thumb can reach.
+     *
+     * It is a second surface onto `store` below, not a second implementation:
+     * same route, same validation, same numbering. The page it renders posts
+     * to the route that already existed.
+     */
+    public function create(Request $request, string $board, string $thread): Response
+    {
+        $model = $this->visibleBoard($request, $board);
+
+        $target = Thread::query()
+            ->where('board_id', $model->id)
+            ->where('no', (int) $thread)
+            ->firstOrFail();
+
+        return Inertia::render('reply', [
+            'thread' => [
+                'no' => $target->no,
+                'board' => '/'.$model->slug.'/',
+                /* Whatever the thread is actually called. A thread with no
+                   subject is ordinary on an imageboard, and the OP's opening
+                   line is what a reader recognises it by in that case -- the
+                   same fallback the thread page's own heading uses. */
+                'title' => $target->subject ?: $target->originalPost?->excerpt() ?? '',
+            ],
+            /**
+             * The board's own limit, not the shared fallback. It is 2000,
+             * 3000 or 5000 depending on where you are posting, so a counter
+             * built on a constant would either stop an anon short of what the
+             * server accepts or let them fill a field the request rejects.
+             */
+            'maxCommentChars' => $model->max_comment_chars,
+        ]);
+    }
+
     public function store(Request $request, string $board, string $thread): RedirectResponse
     {
         $model = $this->visibleBoard($request, $board);
