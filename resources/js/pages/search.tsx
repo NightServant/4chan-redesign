@@ -1,12 +1,21 @@
-import { Link } from '@inertiajs/react';
-import { ArrowLeftIcon, SearchIcon } from 'lucide-react';
-import { useId, useState, useSyncExternalStore } from 'react';
+import { Link, router } from '@inertiajs/react';
+import {
+    ArrowLeftIcon,
+    ChevronRightIcon,
+    SearchIcon,
+    XIcon,
+} from 'lucide-react';
+import { useId, useRef, useState, useSyncExternalStore } from 'react';
+import type { ReactNode } from 'react';
 import { BoardAvatar } from '@/components/clover/board-avatar';
+import { CommentResultRow } from '@/components/clover/comment-result-row';
 import { EmptyState } from '@/components/clover/empty-state';
 import { MachineValue } from '@/components/clover/machine-value';
 import { PageMeta } from '@/components/clover/page-meta';
 import { PatternField } from '@/components/clover/pattern-field';
+import { SearchFilterMenu } from '@/components/clover/search-filter-menu';
 import { SearchResultsList } from '@/components/clover/search-results-list';
+import { SearchTabs } from '@/components/clover/search-tabs';
 import { SectionLabel } from '@/components/clover/section-label';
 import { ThreadCard } from '@/components/clover/thread-card';
 import { useBookmark } from '@/hooks/use-bookmark';
@@ -18,8 +27,18 @@ import {
     searchHistorySnapshot,
     subscribeToSearchHistory,
 } from '@/lib/search-history';
+import {
+    SEARCH_SORT_LABELS,
+    SEARCH_TIMES,
+    SEARCH_TIME_LABELS,
+    SEARCH_TYPE_LABELS,
+    searchUrl,
+    sortOptionsFor,
+    timeAppliesTo,
+} from '@/lib/search-params';
+import type { SearchSort, SearchTime, SearchType } from '@/lib/search-params';
 import { board as boardRoute } from '@/routes';
-import type { Board, Thread } from '@/types/clover';
+import type { Board, CommentResult, Thread } from '@/types/clover';
 
 /**
  * Search results, for pressing Enter in the header field.
@@ -52,8 +71,20 @@ import type { Board, Thread } from '@/types/clover';
  */
 interface SearchProps {
     query: string;
+    /**
+     * The three URL controls, as the server resolved them — not as the URL
+     * spells them. An unknown `type`, or a sort the tab cannot apply, falls
+     * back there rather than erroring, and these are what the results in hand
+     * were actually produced with. Drawing the tabs from the URL instead
+     * would mark `?type=videos` as the current tab over a list of everything.
+     */
+    type: SearchType;
+    sort: SearchSort;
+    time: SearchTime;
     boards: Board[];
     threads: Thread[];
+    /** Replies. Never opening posts — those are the Posts tab's rows. */
+    comments: CommentResult[];
     /**
      * The same busiest-boards query `SearchController::suggest` runs for an
      * empty query, sent once as a prop rather than fetched again on
@@ -64,13 +95,17 @@ interface SearchProps {
 
 export default function Search({
     query,
+    type,
+    sort,
+    time,
     boards,
     threads,
+    comments,
     busiestBoards,
 }: SearchProps) {
     const { toggleBookmark, authGate } = useBookmark();
 
-    const total = boards.length + threads.length;
+    const total = boards.length + threads.length + comments.length;
 
     /**
      * The mobile field's own live text, seeded from the URL so a search
@@ -81,6 +116,19 @@ export default function Search({
      */
     const [mobileQuery, setMobileQuery] = useState(query);
     const listId = useId();
+    const fieldRef = useRef<HTMLInputElement>(null);
+
+    /**
+     * Whether this screen is offering suggestions rather than results.
+     *
+     * Two ways in: arriving with no query at all, and emptying the field with
+     * the clear control. The second is why this is not simply `query === ''` —
+     * clearing the box returns an anon to where they started, which is the
+     * recent searches and the busiest boards, rather than leaving results for
+     * a term no longer on screen. It only governs what shows below `md`: at
+     * `md` and up the field belongs to the header and the results stay put.
+     */
+    const suggesting = query === '' || mobileQuery.trim() === '';
 
     const history = useSyncExternalStore(
         subscribeToSearchHistory,
@@ -106,6 +154,53 @@ export default function Search({
 
     function submit(term: string): void {
         runSearch(term);
+    }
+
+    /**
+     * A control changed: same query, same everything else, one value
+     * different. A real visit rather than local state, because the tab, the
+     * sort and the time are the URL and the server is what applies them —
+     * and `searchUrl` drops whatever the destination cannot honour, so the
+     * page never asks for an ordering it will then be told it did not get.
+     */
+    function refine(next: {
+        type?: SearchType;
+        sort?: SearchSort;
+        time?: SearchTime;
+    }): void {
+        router.visit(searchUrl({ q: query, type, sort, time, ...next }));
+    }
+
+    /** The heading a section gets, and where it leads. See `ResultSection`. */
+    function sectionHeading(section: SearchType): ReactNode {
+        const label = SEARCH_TYPE_LABELS[section];
+
+        if (type !== 'all') {
+            return <SectionLabel>{label}</SectionLabel>;
+        }
+
+        return (
+            <Link
+                href={searchUrl({ q: query, type: section, sort, time })}
+                /* Named apart from the tab of the same word above it. Two
+                   links reading "Posts" on one screen is a list a screen
+                   reader cannot tell apart, and this one means "the rest of
+                   them" rather than "this tab". */
+                aria-label={`All ${label.toLowerCase()}`}
+                className="rounded-sm text-faint transition-colors duration-[var(--duration-hover)] ease-standard hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+                <SectionLabel
+                    action={
+                        <ChevronRightIcon
+                            aria-hidden="true"
+                            className="size-4"
+                        />
+                    }
+                >
+                    {label}
+                </SectionLabel>
+            </Link>
+        );
     }
 
     return (
@@ -147,19 +242,20 @@ export default function Search({
                                 className="size-4 shrink-0 text-faint"
                             />
                             <input
+                                ref={fieldRef}
                                 type="search"
                                 role="combobox"
                                 /* Both of these describe the suggestions
-                                   list, which only renders while the
-                                   server-side query is empty. Hardcoding
+                                   list, and follow it exactly: hardcoding
                                    `true` and pointing `aria-controls` at an
                                    id nothing carries told a screen reader
                                    there was an open listbox to move into on
-                                   the results page, where there is not. */
-                                aria-expanded={query === ''}
-                                aria-controls={
-                                    query === '' ? listId : undefined
-                                }
+                                   the results page, where there is not. The
+                                   list is back once the field is cleared, so
+                                   this tracks `suggesting` rather than the
+                                   query the server answered. */
+                                aria-expanded={suggesting}
+                                aria-controls={suggesting ? listId : undefined}
                                 aria-autocomplete="list"
                                 aria-label="Search boards and threads"
                                 placeholder="Search boards and threads"
@@ -181,6 +277,30 @@ export default function Search({
                                 }}
                                 className="h-full w-full min-w-0 self-stretch bg-transparent text-body-sm text-foreground outline-none placeholder:text-muted-foreground"
                             />
+
+                            {/* Clearing is not searching for nothing. It
+                                empties the field and hands the screen back to
+                                the suggestions it opened with, without a visit
+                                -- an anon who has just deleted their query has
+                                not asked for a page of results for the empty
+                                string. Absent while there is nothing to
+                                clear. */}
+                            {mobileQuery !== '' ? (
+                                <button
+                                    type="button"
+                                    aria-label="Clear search"
+                                    onClick={() => {
+                                        setMobileQuery('');
+                                        fieldRef.current?.focus();
+                                    }}
+                                    className="touch-target-44 grid size-6 shrink-0 place-items-center rounded-full text-faint hover:bg-surface-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                >
+                                    <XIcon
+                                        aria-hidden="true"
+                                        className="size-4"
+                                    />
+                                </button>
+                            ) : null}
                         </div>
                     </div>
                 </PatternField>
@@ -190,10 +310,11 @@ export default function Search({
                 {/* The suggestions screen below `md`: recent searches, then
                     the busiest boards or, once typed into, live matches —
                     exactly what the header dropdown already offers, nothing
-                    this codebase has no source for. Only for an empty
-                    server-side query: a real one renders the ordinary
-                    results below at every width instead. */}
-                {query === '' ? (
+                    this codebase has no source for. Shown while there is
+                    nothing to show results for: an empty query on arrival, or
+                    a field the anon has just cleared. A real query renders the
+                    ordinary results below at every width instead. */}
+                {suggesting ? (
                     <SearchResultsList
                         listId={listId}
                         query={mobileQuery}
@@ -208,7 +329,7 @@ export default function Search({
 
                 <div
                     className={
-                        query === ''
+                        suggesting
                             ? 'hidden flex-col gap-2 md:flex'
                             : 'flex flex-col gap-2'
                     }
@@ -226,6 +347,59 @@ export default function Search({
                     ) : null}
                 </div>
 
+                {/* The tabs, then the two menus under them — the reference's
+                    stack, and the order they read in: which results, then how
+                    they are ordered and how far back they go. Only over a real
+                    query: there is nothing to slice four ways on the
+                    suggestions screen, and a row of filters over the busiest
+                    boards would be four controls that change nothing. */}
+                {query !== '' ? (
+                    <div
+                        className={
+                            suggesting
+                                ? 'hidden flex-col gap-3 md:flex'
+                                : 'flex flex-col gap-3'
+                        }
+                    >
+                        <SearchTabs
+                            query={query}
+                            type={type}
+                            sort={sort}
+                            time={time}
+                        />
+
+                        <div className="flex flex-wrap items-center gap-4">
+                            <SearchFilterMenu
+                                name="Sort by"
+                                value={sort}
+                                options={sortOptionsFor(type).map((value) => ({
+                                    value,
+                                    label: SEARCH_SORT_LABELS[value],
+                                }))}
+                                onSelect={(chosen) => refine({ sort: chosen })}
+                            />
+
+                            {/* Absent on Communities rather than present and
+                                inert: a board's only date here is when this
+                                mirror first synced it, which says nothing
+                                about the board. */}
+                            {timeAppliesTo(type) ? (
+                                <SearchFilterMenu
+                                    name="Time"
+                                    value={time}
+                                    options={SEARCH_TIMES.map((value) => ({
+                                        value,
+                                        label: SEARCH_TIME_LABELS[value],
+                                    }))}
+                                    onSelect={(chosen) =>
+                                        refine({ time: chosen })
+                                    }
+                                />
+                            ) : null}
+                        </div>
+                    </div>
+                ) : null}
+
                 {query === '' ? (
                     <EmptyState
                         icon={<SearchIcon />}
@@ -237,13 +411,32 @@ export default function Search({
                     <EmptyState
                         icon={<SearchIcon />}
                         title="No matches"
-                        body={`Nothing on Clover matches "${query}". Only synced boards and threads are searchable.`}
+                        body={`Nothing on Clover matches "${query}" on this tab. Only synced boards, threads and replies are searchable.`}
+                        className={suggesting ? 'hidden md:flex' : undefined}
                     />
+                ) : null}
+
+                {/* Posts, Communities, Comments — the tab order, so the All
+                    tab reads as the tabs above it do. */}
+                {threads.length > 0 ? (
+                    <section className="flex flex-col gap-3">
+                        {sectionHeading('posts')}
+                        <div className="flex flex-col">
+                            {threads.map((thread) => (
+                                <ThreadCard
+                                    key={thread.no}
+                                    thread={thread}
+                                    mediaLayout="thumbnail"
+                                    onBookmark={() => toggleBookmark(thread)}
+                                />
+                            ))}
+                        </div>
+                    </section>
                 ) : null}
 
                 {boards.length > 0 ? (
                     <section className="flex flex-col gap-3">
-                        <SectionLabel>Boards</SectionLabel>
+                        {sectionHeading('communities')}
                         <ul className="flex flex-col divide-y divide-border border-y border-border">
                             {boards.map((board) => (
                                 <li key={board.slug}>
@@ -272,15 +465,14 @@ export default function Search({
                     </section>
                 ) : null}
 
-                {threads.length > 0 ? (
+                {comments.length > 0 ? (
                     <section className="flex flex-col gap-3">
-                        <SectionLabel>Threads</SectionLabel>
-                        <div className="flex flex-col gap-4">
-                            {threads.map((thread) => (
-                                <ThreadCard
-                                    key={thread.no}
-                                    thread={thread}
-                                    onBookmark={() => toggleBookmark(thread)}
+                        {sectionHeading('comments')}
+                        <div className="flex flex-col">
+                            {comments.map((comment) => (
+                                <CommentResultRow
+                                    key={comment.id}
+                                    comment={comment}
                                 />
                             ))}
                         </div>

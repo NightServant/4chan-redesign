@@ -4,6 +4,7 @@ import type { ComponentProps, ReactNode } from 'react';
 import { BoardAvatar } from '@/components/clover/board-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
 import { PostAttachment } from '@/components/clover/post-image';
+import { ResultThumbnail } from '@/components/clover/result-thumbnail';
 import { ShareControl } from '@/components/clover/share-control';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -53,6 +54,19 @@ type ThreadCardProps = Omit<ComponentProps<'div'>, 'onClick' | 'children'> & {
      * row still reads as the same object it is everywhere else.
      */
     meta?: ReactNode;
+    /**
+     * How the attachment is drawn. `full` is the feed's own image under the
+     * title; `thumbnail` puts it at the trailing edge of the row and is what
+     * the search results page asks for (task 7), where four sections of
+     * results have to stay scannable and a full-width image every third row
+     * is not.
+     *
+     * A layout switch rather than a second row component: the results page
+     * shows the same threads the feed does, with the same links, the same
+     * share and the same bookmark, and a copy of this file with the image
+     * moved is how those quietly drift apart.
+     */
+    mediaLayout?: 'full' | 'thumbnail';
 };
 
 const iconButtonClasses = cn(
@@ -66,10 +80,33 @@ function ThreadCard({
     href,
     onBookmark,
     meta,
+    mediaLayout = 'full',
     className,
     ...props
 }: ThreadCardProps) {
     const titleHref = href ?? `${thread.board}${thread.no}`;
+
+    /* The feed's rows are inset from the card's own hairline; the results
+       register is flush, so a thread row lines up with the board rows and the
+       reply rows beside it on the same page. The hairline itself spans the
+       full width in both. */
+    const inset = mediaLayout === 'thumbnail' ? '' : 'px-5';
+
+    /* One title, drawn in both layouts. The hover lives on it and nowhere
+       else: the row used to tint entirely, which is a lot of movement for a
+       pointer that happens to cross a feed, and it made thirty rows flicker on
+       the way down the page. The stretched pseudo-element still makes the
+       whole row clickable; it just no longer announces itself. */
+    const title = (
+        <h3 className="font-display text-[17px] leading-snug font-semibold text-balance text-foreground">
+            <Link
+                href={titleHref}
+                className="static transition-colors duration-[var(--duration-hover)] ease-standard after:absolute after:inset-0 after:content-[''] hover:text-primary"
+            >
+                {thread.title}
+            </Link>
+        </h3>
+    );
 
     return (
         <div
@@ -80,7 +117,7 @@ function ThreadCard({
             )}
             {...props}
         >
-            <div className="flex flex-wrap items-center gap-2 px-5">
+            <div className={cn('flex flex-wrap items-center gap-2', inset)}>
                 <BoardAvatar slug={thread.board} size={20} decorative />
                 <MachineValue className="text-foreground">
                     {thread.board}
@@ -113,34 +150,33 @@ function ThreadCard({
                 ) : null}
             </div>
 
-            <h3 className="px-5 font-display text-[17px] leading-snug font-semibold text-balance text-foreground">
-                {/* The hover lives on the title and nowhere else.
-                    
-                    The row used to tint entirely, which is a lot of movement
-                    for a pointer that happens to cross a feed, and it made
-                    thirty rows flicker on the way down the page. The title is
-                    the thing being pointed at and the only thing that
-                    navigates, so it is the only thing that reacts. The
-                    stretched pseudo-element still makes the whole row
-                    clickable; it just no longer announces itself. */}
-                <Link
-                    href={titleHref}
-                    className="static transition-colors duration-[var(--duration-hover)] ease-standard after:absolute after:inset-0 after:content-[''] hover:text-primary"
-                >
-                    {thread.title}
-                </Link>
-            </h3>
-
-            {/* Thumbnail only. A feed of thirty rows fetching originals would
-                pull tens of megabytes for images most anons scroll past; the
-                full file loads when one is opened. */}
-            {thread.media ? (
-                <div className="relative px-5">
-                    <PostAttachment media={thread.media} />
+            {mediaLayout === 'thumbnail' ? (
+                /* The results register: title on the left, attachment as a
+                   small square at the trailing edge. The thumbnail is
+                   decorative and unlinked -- the stretched title link already
+                   covers the whole row, and a second control inside that
+                   stretch would be a link inside a link. */
+                <div className={cn('flex items-start gap-3', inset)}>
+                    <div className="min-w-0 flex-1">{title}</div>
+                    <ResultThumbnail media={thread.media} />
                 </div>
-            ) : null}
+            ) : (
+                <>
+                    <div className={inset}>{title}</div>
 
-            <div className="relative flex items-center gap-5 px-5">
+                    {/* A feed of thirty rows fetching originals would pull tens
+                        of megabytes for images most anons scroll past, so every
+                        one of these is lazy; the full file loads when one is
+                        opened. */}
+                    {thread.media ? (
+                        <div className={cn('relative', inset)}>
+                            <PostAttachment media={thread.media} />
+                        </div>
+                    ) : null}
+                </>
+            )}
+
+            <div className={cn('relative flex items-center gap-5', inset)}>
                 {/* Both stats name their own unit. An icon plus a bare number
                     reads as "318" to a screen reader, which is a figure with no
                     subject; the icon carries the meaning for sighted anons only. */}

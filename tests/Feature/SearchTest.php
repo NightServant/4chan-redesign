@@ -175,3 +175,294 @@ it('keeps the suggest endpoint distinct from the page', function (): void {
 
     $this->get('/search/suggest?q=g')->assertHeader('content-type', 'application/json');
 });
+
+/**
+ * Tabs, sort and time (task 7).
+ *
+ * Two threads on one board, each with an opening post and one reply, and
+ * every body matching the same term — so a tab that says it holds replies
+ * and quietly includes the OP is caught by the count rather than passing on
+ * a fixture where the OP happened not to match.
+ *
+ * @return array{0: Board, 1: Thread, 2: Thread}
+ */
+function tabFixture(): array
+{
+    $tech = Board::factory()->slug('g')->create(['title' => 'Technology']);
+
+    $old = Thread::factory()->for($tech)->create([
+        'subject' => 'RISC-V laptops',
+        'replies_count' => 2,
+        'posted_at' => now()->subMonths(2),
+        'bumped_at' => now()->subMonths(2),
+    ]);
+    Post::factory()->for($old)->op()->create([
+        'body' => 'RISC-V opening post, two months old',
+        'posted_at' => now()->subMonths(2),
+    ]);
+    Post::factory()->for($old)->create([
+        'body' => 'RISC-V reply from two months ago',
+        'posted_at' => now()->subMonths(2),
+    ]);
+
+    $fresh = Thread::factory()->for($tech)->create([
+        'subject' => null,
+        'replies_count' => 400,
+        'posted_at' => now()->subHours(3),
+        'bumped_at' => now()->subHour(),
+    ]);
+    Post::factory()->for($fresh)->op()->create([
+        'body' => 'RISC-V opening post from today',
+        'posted_at' => now()->subHours(3),
+    ]);
+    Post::factory()->for($fresh)->create([
+        'body' => 'RISC-V reply from today',
+        'posted_at' => now()->subHour(),
+    ]);
+
+    return [$tech, $old, $fresh];
+}
+
+it('defaults to the all tab, relevance and all time', function (): void {
+    tabFixture();
+
+    $this->get('/search?q=RISC')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('search')
+            ->where('type', 'all')
+            ->where('sort', 'relevant')
+            ->where('time', 'all'));
+});
+
+it('carries the tab, the sort and the time back from the URL', function (): void {
+    tabFixture();
+
+    $this->get('/search?q=RISC&type=comments&sort=latest&time=week')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('type', 'comments')
+            ->where('sort', 'latest')
+            ->where('time', 'week'));
+});
+
+/**
+ * The comments tab is replies and only replies. Every body in the fixture
+ * matches, so an implementation that forgets `is_op` returns four rows here
+ * rather than two.
+ */
+it('searches replies on the comments tab and never the opening post', function (): void {
+    tabFixture();
+
+    $response = $this->get('/search?q=RISC&type=comments')->assertOk();
+
+    $response->assertInertia(fn ($page) => $page
+        ->has('comments', 2)
+        ->has('threads', 0)
+        ->has('boards', 0));
+
+    expect(collect($response->viewData('page')['props']['comments'])->pluck('body'))
+        ->each->toContain('reply');
+});
+
+it('sends a reply with the thread and board it sits in', function (): void {
+    tabFixture();
+
+    $this->get('/search?q=today&type=comments')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('comments', 1)
+            ->where('comments.0.board', '/g/')
+            ->where('comments.0.boardName', 'Technology')
+            ->has('comments.0.threadNo')
+            ->has('comments.0.threadTitle')
+            ->has('comments.0.time')
+            ->has('comments.0.no'));
+});
+
+/** The mature gate is on reading, so it is on searching replies too. */
+it('hides replies on a mature board from a signed-out anon', function (): void {
+    $adult = Board::factory()->slug('d')->state(['worksafe' => false])->create();
+    $thread = Thread::factory()->for($adult)->create();
+    Post::factory()->for($thread)->op()->create(['body' => 'opening']);
+    Post::factory()->for($thread)->create(['body' => 'RISC-V but adult']);
+
+    $this->get('/search?q=RISC&type=comments')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->has('comments', 0));
+
+    $user = User::factory()->create(['shows_mature_boards' => true]);
+
+    $this->actingAs($user)
+        ->get('/search?q=RISC&type=comments')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->has('comments', 1));
+});
+
+it('returns threads alone on the posts tab', function (): void {
+    tabFixture();
+
+    $this->get('/search?q=RISC&type=posts')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('threads', 2)
+            ->has('boards', 0)
+            ->has('comments', 0));
+});
+
+it('returns boards alone on the communities tab', function (): void {
+    tabFixture();
+
+    $this->get('/search?q=Technology&type=communities')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('boards', 1)
+            ->has('threads', 0)
+            ->has('comments', 0));
+});
+
+it('bounds each section on the all tab rather than returning a whole page of one', function (): void {
+    [$tech] = tabFixture();
+
+    foreach (range(1, 6) as $index) {
+        $thread = Thread::factory()->for($tech)->create(['subject' => "RISC-V thread {$index}"]);
+        Post::factory()->for($thread)->op()->create(['body' => 'RISC-V']);
+        Post::factory()->for($thread)->create(['body' => 'RISC-V reply']);
+    }
+
+    $this->get('/search?q=RISC')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('threads', 3)
+            ->has('comments', 3));
+
+    $this->get('/search?q=RISC&type=posts')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->has('threads', 8));
+});
+
+it('falls back rather than erroring on an unknown tab, sort or time', function (): void {
+    tabFixture();
+
+    $this->get('/search?q=RISC&type=videos&sort=top&time=decade')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('type', 'all')
+            ->where('sort', 'relevant')
+            ->where('time', 'all'));
+});
+
+/**
+ * Reddit's "Top" has no source here — Clover has no votes — and "Most
+ * replies" is the honest replacement, which means it is honest only where
+ * there are replies to count. Asked for on a tab that cannot answer it, the
+ * server reports the sort it actually applied rather than echoing one the
+ * page would then draw as selected.
+ */
+it('reports relevance when most replies is asked for where it cannot apply', function (): void {
+    tabFixture();
+
+    foreach (['comments', 'communities'] as $type) {
+        $this->get("/search?q=RISC&type={$type}&sort=replies")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('sort', 'relevant'));
+    }
+
+    $this->get('/search?q=RISC&type=posts&sort=replies')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('sort', 'replies'));
+});
+
+it('orders threads by the latest bump, by reply count, and by relevance', function (): void {
+    tabFixture();
+
+    $titles = fn (string $sort): array => collect(
+        $this->get("/search?q=RISC&type=posts&sort={$sort}")
+            ->assertOk()
+            ->viewData('page')['props']['threads']
+    )->pluck('title')->all();
+
+    /* Bumped an hour ago, against two months. */
+    expect($titles('latest')[0])->toBe('RISC-V opening post from today');
+
+    /* 400 replies against 2. */
+    expect($titles('replies')[0])->toBe('RISC-V opening post from today');
+
+    /* The subject says it, rather than only the body — the same rule that
+       puts a slug match above a description match for a board. */
+    expect($titles('relevant')[0])->toBe('RISC-V laptops');
+});
+
+it('orders replies by recency on latest', function (): void {
+    tabFixture();
+
+    $bodies = collect(
+        $this->get('/search?q=RISC&type=comments&sort=latest')
+            ->assertOk()
+            ->viewData('page')['props']['comments']
+    )->pluck('body');
+
+    expect($bodies->first())->toContain('today');
+});
+
+it('orders boards by their most recent activity on latest', function (): void {
+    $quiet = Board::factory()->slug('po')->create(['title' => 'Papercraft matters']);
+    Thread::factory()->for($quiet)->create(['bumped_at' => now()->subYear()]);
+
+    $busy = Board::factory()->slug('wg')->create(['title' => 'Wallpapers matter']);
+    Thread::factory()->for($busy)->create(['bumped_at' => now()->subMinute()]);
+
+    $response = $this->get('/search?q=matter&type=communities&sort=latest')->assertOk();
+
+    expect(collect($response->viewData('page')['props']['boards'])->pluck('slug')->first())
+        ->toBe('/wg/');
+});
+
+it('filters threads and replies by time', function (): void {
+    tabFixture();
+
+    $this->get('/search?q=RISC&type=posts&time=today')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->has('threads', 1));
+
+    $this->get('/search?q=RISC&type=comments&time=week')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->has('comments', 1));
+
+    $this->get('/search?q=RISC&type=posts&time=all')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->has('threads', 2));
+});
+
+/**
+ * A board's `created_at` is when this mirror first saw it, which means
+ * nothing to an anon, so the time filter does not apply to communities and
+ * the page hides the control. The server has to agree: filtering here would
+ * empty a tab whose control is not on screen to undo it.
+ */
+it('does not apply the time filter to communities', function (): void {
+    $board = Board::factory()->slug('g')->create(['title' => 'Technology']);
+    Thread::factory()->for($board)->create(['bumped_at' => now()->subYear()]);
+
+    $this->get('/search?q=Technology&type=communities&time=today')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->has('boards', 1));
+});
+
+it('resolves every combination of tab, sort and time', function (): void {
+    tabFixture();
+
+    foreach (['all', 'posts', 'communities', 'comments'] as $type) {
+        foreach (['relevant', 'latest', 'replies'] as $sort) {
+            foreach (['all', 'today', 'week', 'month'] as $time) {
+                $this->get("/search?q=RISC&type={$type}&sort={$sort}&time={$time}")
+                    ->assertOk()
+                    ->assertInertia(fn ($page) => $page
+                        ->component('search')
+                        ->has('boards')
+                        ->has('threads')
+                        ->has('comments'));
+            }
+        }
+    }
+});

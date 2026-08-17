@@ -5,6 +5,7 @@ import type {
     BoardDirectoryEntry,
     Bookmark,
     Comment,
+    CommentResult,
     HistoryEntry,
     Profile,
     ProfileComment,
@@ -118,6 +119,29 @@ export function makeDirectoryEntry(
         description: 'Hardware, software and the arguments between them.',
         category: 'Interests',
         worksafe: true,
+        ...overrides,
+    };
+}
+
+/**
+ * A reply as the search results page receives it. Distinct from
+ * `makeComment`: that one nests inside a thread, this one names the thread it
+ * came out of.
+ */
+export function makeCommentResult(
+    overrides: Partial<CommentResult> = {},
+): CommentResult {
+    return {
+        id: nextPostNumber(),
+        no: nextPostNumber(),
+        board: '/g/',
+        boardName: 'Technology',
+        threadNo: nextPostNumber(),
+        threadTitle: 'Anons are still arguing about init systems',
+        time: '7 hr ago',
+        body: 'The toolchain is the hard part.',
+        nsfw: false,
+        media: null,
         ...overrides,
     };
 }

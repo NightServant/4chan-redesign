@@ -308,3 +308,62 @@ describe('ThreadCard', () => {
         );
     });
 });
+
+/**
+ * The search results page draws the same row in a denser register (task 7):
+ * the attachment becomes a thumbnail at the trailing edge instead of a
+ * full-width image under the title. Same row, same controls, same links —
+ * the results page does not grow a second thread row of its own.
+ */
+describe('ThreadCard — the results layout', () => {
+    it('draws the attachment as a thumbnail rather than at full width', () => {
+        const media = makeAttachment();
+
+        render(
+            <ThreadCard
+                thread={{ ...baseThread, media }}
+                mediaLayout="thumbnail"
+            />,
+        );
+
+        /* The 250px thumbnail, which is the right source at this size and
+           the wrong one at full width. */
+        expect(screen.getByRole('presentation')).toHaveAttribute(
+            'src',
+            media.thumbnailUrl,
+        );
+        expect(
+            screen.queryByRole('button', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        ).not.toBeInTheDocument();
+    });
+
+    it('keeps the title link and the controls it always had', () => {
+        render(
+            <ThreadCard
+                thread={{ ...baseThread, media: makeAttachment() }}
+                mediaLayout="thumbnail"
+            />,
+        );
+
+        expect(
+            screen.getByRole('link', { name: baseThread.title }),
+        ).toHaveAttribute('href', '/g/58210441');
+        expect(
+            screen.getByRole('button', { name: /bookmark thread/i }),
+        ).toBeInTheDocument();
+    });
+
+    it('still draws the full-width image by default', () => {
+        const media = makeAttachment();
+
+        render(<ThreadCard thread={{ ...baseThread, media }} />);
+
+        expect(
+            screen.getByRole('img', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        ).toHaveAttribute('src', media.fullUrl);
+    });
+});

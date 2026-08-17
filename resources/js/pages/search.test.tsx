@@ -1,8 +1,16 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { makeBoard, makeThread } from '@/fixtures/factories';
+import {
+    afterEach,
+    beforeAll,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    vi,
+} from 'vitest';
+import { makeBoard, makeCommentResult, makeThread } from '@/fixtures/factories';
 import { rememberSearch } from '@/lib/search-history';
 import Search from '@/pages/search';
 
@@ -44,12 +52,24 @@ const BUSIEST_BOARDS = [
 function searchProps(overrides: Partial<Parameters<typeof Search>[0]> = {}) {
     return {
         query: '',
+        type: 'all' as const,
+        sort: 'relevant' as const,
+        time: 'all' as const,
         boards: [],
         threads: [],
+        comments: [],
         busiestBoards: BUSIEST_BOARDS,
         ...overrides,
     };
 }
+
+/** Radix's menu needs these; jsdom has none of them. */
+beforeAll(() => {
+    Element.prototype.hasPointerCapture = () => false;
+    Element.prototype.setPointerCapture = () => {};
+    Element.prototype.releasePointerCapture = () => {};
+    Element.prototype.scrollIntoView = () => {};
+});
 
 beforeEach(() => {
     vi.useRealTimers();
@@ -273,5 +293,279 @@ describe('Search — at `md` and up, unchanged', () => {
 
         const back = screen.getByRole('button', { name: /back/i });
         expect(back.closest('[class*="md:hidden"]')).not.toBeNull();
+    });
+});
+
+describe('Search — the tabs and the two dropdowns, at every width', () => {
+    /** Task 7 is a feature at every width, not a small-screen fix. */
+    it('renders the tab row outside the below-`md` app bar', () => {
+        mockFetch();
+        render(<Search {...searchProps({ query: 'risc' })} />);
+
+        const tabs = screen.getByRole('navigation', {
+            name: /search results/i,
+        });
+
+        expect(tabs.closest('[class*="md:hidden"]')).toBeNull();
+        expect(
+            within(tabs).getByRole('link', { name: 'Communities' }),
+        ).toHaveAttribute('href', '/search?q=risc&type=communities');
+    });
+
+    it('renders both dropdowns reading as their current value', () => {
+        mockFetch();
+        render(
+            <Search
+                {...searchProps({
+                    query: 'risc',
+                    sort: 'latest',
+                    time: 'week',
+                })}
+            />,
+        );
+
+        expect(
+            screen.getByRole('button', { name: /sort by/i }),
+        ).toHaveTextContent('Latest');
+        expect(screen.getByRole('button', { name: /time/i })).toHaveTextContent(
+            'This week',
+        );
+    });
+
+    it('visits a new URL when a sort is chosen, keeping the query and the tab', async () => {
+        mockFetch();
+        const user = userEvent.setup();
+
+        render(<Search {...searchProps({ query: 'risc', type: 'posts' })} />);
+
+        await user.click(screen.getByRole('button', { name: /sort by/i }));
+        await user.click(
+            await screen.findByRole('menuitemradio', { name: 'Most replies' }),
+        );
+
+        expect(router.visit).toHaveBeenCalledWith(
+            '/search?q=risc&type=posts&sort=replies',
+        );
+    });
+
+    it('visits a new URL when a time window is chosen', async () => {
+        mockFetch();
+        const user = userEvent.setup();
+
+        render(<Search {...searchProps({ query: 'risc' })} />);
+
+        await user.click(screen.getByRole('button', { name: /time/i }));
+        await user.click(
+            await screen.findByRole('menuitemradio', { name: 'This week' }),
+        );
+
+        expect(router.visit).toHaveBeenCalledWith('/search?q=risc&time=week');
+    });
+
+    /** Clover has no votes, so Reddit's Top has no source and no alias. */
+    it('offers exactly three sorts and nothing resembling Top', async () => {
+        mockFetch();
+        const user = userEvent.setup();
+
+        render(<Search {...searchProps({ query: 'risc' })} />);
+        await user.click(screen.getByRole('button', { name: /sort by/i }));
+
+        const options = (await screen.findAllByRole('menuitemradio')).map(
+            (option) => option.textContent,
+        );
+
+        expect(options).toEqual(['Relevance', 'Latest', 'Most replies']);
+    });
+
+    it.each(['comments', 'communities'] as const)(
+        'drops most replies from the menu on the %s tab',
+        async (type) => {
+            mockFetch();
+            const user = userEvent.setup();
+
+            render(<Search {...searchProps({ query: 'risc', type })} />);
+            await user.click(screen.getByRole('button', { name: /sort by/i }));
+
+            expect(await screen.findAllByRole('menuitemradio')).toHaveLength(2);
+            expect(
+                screen.queryByRole('menuitemradio', { name: 'Most replies' }),
+            ).not.toBeInTheDocument();
+        },
+    );
+
+    /**
+     * A board's `created_at` is when this mirror first saw it. Filtering
+     * communities by it would be a control that filters on nothing an anon
+     * can reason about, so it is not on screen at all.
+     */
+    it('hides the time control entirely on the communities tab', () => {
+        mockFetch();
+        render(
+            <Search {...searchProps({ query: 'risc', type: 'communities' })} />,
+        );
+
+        expect(
+            screen.queryByRole('button', { name: /time/i }),
+        ).not.toBeInTheDocument();
+        expect(
+            screen.getByRole('button', { name: /sort by/i }),
+        ).toBeInTheDocument();
+    });
+
+    it('shows no tabs or dropdowns on the suggestions screen, where there is nothing to filter', () => {
+        mockFetch();
+        render(<Search {...searchProps()} />);
+
+        expect(
+            screen.queryByRole('navigation', { name: /search results/i }),
+        ).not.toBeInTheDocument();
+        expect(
+            screen.queryByRole('button', { name: /sort by/i }),
+        ).not.toBeInTheDocument();
+    });
+});
+
+describe('Search — the results themselves', () => {
+    it('renders replies on the comments tab', () => {
+        mockFetch();
+
+        render(
+            <Search
+                {...searchProps({
+                    query: 'risc',
+                    type: 'comments',
+                    comments: [
+                        makeCommentResult({
+                            board: '/g/',
+                            threadNo: 58210441,
+                            no: 58210500,
+                            threadTitle: 'RISC-V laptops',
+                            body: 'The toolchain is the hard part.',
+                        }),
+                    ],
+                })}
+            />,
+        );
+
+        expect(
+            screen.getByRole('link', { name: /RISC-V laptops/ }),
+        ).toHaveAttribute('href', '/g/58210441#p58210500');
+        expect(
+            screen.getByText('The toolchain is the hard part.'),
+        ).toBeInTheDocument();
+    });
+
+    /**
+     * Each section of the All tab heads itself and leads to its own tab,
+     * which is how the reference links the two.
+     */
+    it('heads each section on the all tab with a link to that tab', () => {
+        mockFetch();
+
+        render(
+            <Search
+                {...searchProps({
+                    query: 'risc',
+                    boards: [makeBoard({ slug: '/g/', name: 'Technology' })],
+                    threads: [makeThread({ title: 'RISC-V laptops' })],
+                    comments: [makeCommentResult()],
+                })}
+            />,
+        );
+
+        expect(screen.getByRole('link', { name: 'All posts' })).toHaveAttribute(
+            'href',
+            '/search?q=risc&type=posts',
+        );
+        expect(
+            screen.getByRole('link', { name: 'All communities' }),
+        ).toHaveAttribute('href', '/search?q=risc&type=communities');
+        expect(
+            screen.getByRole('link', { name: 'All comments' }),
+        ).toHaveAttribute('href', '/search?q=risc&type=comments');
+    });
+
+    /** One tab, one section: no heading offering to go where it already is. */
+    it('does not head a single-tab result list with a link back to itself', () => {
+        mockFetch();
+
+        render(
+            <Search
+                {...searchProps({
+                    query: 'risc',
+                    type: 'posts',
+                    threads: [makeThread({ title: 'RISC-V laptops' })],
+                })}
+            />,
+        );
+
+        expect(
+            screen.queryByRole('link', { name: 'All posts' }),
+        ).not.toBeInTheDocument();
+    });
+
+    /**
+     * The reference carries an AI answer block and upvote counts. Clover
+     * summarises nothing and counts no votes, so neither is built.
+     */
+    it('invents no summary and no score', () => {
+        mockFetch();
+
+        render(
+            <Search
+                {...searchProps({
+                    query: 'risc',
+                    threads: [makeThread({ title: 'RISC-V laptops' })],
+                    comments: [makeCommentResult()],
+                })}
+            />,
+        );
+
+        for (const invented of [
+            /what people are saying/i,
+            /see answer/i,
+            /upvote/i,
+        ]) {
+            expect(screen.queryByText(invented)).not.toBeInTheDocument();
+        }
+    });
+});
+
+describe('Search — clearing the field', () => {
+    it('offers no clear control while the field is empty', () => {
+        mockFetch();
+        render(<Search {...searchProps()} />);
+
+        expect(
+            screen.queryByRole('button', { name: /clear search/i }),
+        ).not.toBeInTheDocument();
+    });
+
+    it('empties the field and returns to suggestions without running a search', async () => {
+        mockFetch();
+        const user = userEvent.setup();
+
+        render(
+            <Search
+                {...searchProps({
+                    query: 'risc',
+                    threads: [makeThread({ title: 'RISC-V laptops' })],
+                })}
+            />,
+        );
+
+        const field = screen.getByRole('combobox', {
+            name: /search boards and threads/i,
+        });
+        expect(field).toHaveValue('risc');
+
+        await user.click(screen.getByRole('button', { name: /clear search/i }));
+
+        expect(field).toHaveValue('');
+        expect(router.visit).not.toHaveBeenCalled();
+
+        /* Back to the suggestions this screen opens with. */
+        expect(screen.getByText('Video Games')).toBeInTheDocument();
+        expect(field).toHaveFocus();
     });
 });

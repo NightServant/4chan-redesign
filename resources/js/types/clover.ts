@@ -156,6 +156,35 @@ export interface Comment {
     replies: Comment[];
 }
 
+/**
+ * A reply as one row of search results (task 7's Comments tab).
+ *
+ * Not `Comment`. That type is a reply inside the thread that holds it, and it
+ * nests; this one comes back beside replies from other threads on other
+ * boards, so what it carries instead is where it lives — the board, the
+ * thread, and the post number the thread page anchors on (`#p{no}`).
+ *
+ * Only ever a reply: an opening post is already a result on the Posts tab,
+ * and listing it here as well would be one thread counted twice.
+ */
+export interface CommentResult {
+    /** This application's own id, distinct from the board's `no`. */
+    id: number;
+    no: number;
+    board: BoardSlug;
+    boardName: string;
+    /** The thread this reply sits in, for the link and the heading. */
+    threadNo: number;
+    threadTitle: string;
+    /** Relative and pre-formatted, e.g. `7 hr ago`. */
+    time: string;
+    /** Truncated server-side; a result row is one row. */
+    body: string;
+    /** Inherited from the board, exactly as `Thread.nsfw` is. */
+    nsfw: boolean;
+    media: Attachment | null;
+}
+
 export interface TrendingTag {
     tag: string;
     /** Pre-formatted, e.g. `4,182 posts`. */

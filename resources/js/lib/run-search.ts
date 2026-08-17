@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import { rememberSearch } from '@/lib/search-history';
-import { search as searchRoute } from '@/routes';
+import { searchUrl } from '@/lib/search-params';
 
 /**
  * Submitting a search: `rememberSearch`, then a real navigation to the
@@ -24,5 +24,10 @@ export function runSearch(term: string): void {
     }
 
     rememberSearch(trimmed);
-    router.visit(`${searchRoute.url()}?q=${encodeURIComponent(trimmed)}`);
+
+    /* One URL builder for the whole feature: submitting a search lands on the
+       All tab with the default ordering, which is exactly `searchUrl`'s own
+       defaults, so this produces the same string it always did without a
+       second copy of the query-string assembly (task 7). */
+    router.visit(searchUrl({ q: trimmed }));
 }
