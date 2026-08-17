@@ -229,6 +229,34 @@ describe('board subscriptions', function (): void {
     });
 
     /**
+     * The board page's Join control reports `aria-pressed` from this prop.
+     *
+     * It was `useState(false)` until task 8 — a control that reported a
+     * pressed state for something nothing recorded and forgot itself on
+     * reload, while this table and this endpoint had existed since task 18.
+     * The prop is what makes the control honest, so the page has to send it,
+     * and it has to be about the anon asking.
+     */
+    it('tells the board page whether this anon follows the board', function (): void {
+        [$board, , , $user] = accountFixture();
+        $other = User::factory()->create();
+
+        $user->subscribedBoards()->attach($board->id);
+
+        $this->actingAs($user)->get('/g')->assertInertia(
+            fn ($page) => $page->where('board.subscribed', true),
+        );
+
+        $this->actingAs($other)->get('/g')->assertInertia(
+            fn ($page) => $page->where('board.subscribed', false),
+        );
+
+        $this->get('/g')->assertInertia(
+            fn ($page) => $page->where('board.subscribed', false),
+        );
+    });
+
+    /**
      * A subscription puts a board in the sidebar, which is the one place the
      * mature filter has to hold hardest.
      */

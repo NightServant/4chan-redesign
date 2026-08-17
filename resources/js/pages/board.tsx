@@ -82,9 +82,23 @@ export default function Board({ board, threads }: BoardProps) {
                     value={sort}
                     onValueChange={(value) => setSort(value as SortOption)}
                 >
-                    <TabsList aria-label="Sort threads">
+                    {/* The row scrolls sideways rather than wrapping: three
+                        labels do not fit a 320px phone, and a second line of
+                        tabs under the first reads as two rows of controls
+                        rather than one. `w-full` replaces `TabsList`'s own
+                        `w-fit`, which sizes the row to its contents and so
+                        can never overflow anything to scroll. Same treatment
+                        task 7 gave the search tabs. */}
+                    <TabsList
+                        aria-label="Sort threads"
+                        className="w-full overflow-x-auto"
+                    >
                         {SORT_TABS.map((tab) => (
-                            <TabsTrigger key={tab.value} value={tab.value}>
+                            <TabsTrigger
+                                key={tab.value}
+                                value={tab.value}
+                                className="shrink-0"
+                            >
                                 {tab.label}
                             </TabsTrigger>
                         ))}
