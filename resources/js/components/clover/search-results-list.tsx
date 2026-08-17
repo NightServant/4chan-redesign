@@ -134,7 +134,7 @@ export function SearchResultsList({
             {results.threads.length > 0 ? (
                 <SearchGroup heading="Threads">
                     {results.threads.map((thread) => (
-                        <li key={thread.no} role="presentation">
+                        <li key={thread.id} role="presentation">
                             <Link
                                 role="option"
                                 aria-selected="false"

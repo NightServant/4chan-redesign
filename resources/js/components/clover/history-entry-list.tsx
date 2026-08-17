@@ -51,7 +51,7 @@ export function HistoryEntryList({
                         <div className="flex flex-col">
                             {inGroup.map((entry) => (
                                 <ThreadCard
-                                    key={entry.thread.no}
+                                    key={entry.thread.id}
                                     thread={entry.thread}
                                     meta={`Read ${entry.when}`}
                                     onBookmark={() => onBookmark(entry.thread)}

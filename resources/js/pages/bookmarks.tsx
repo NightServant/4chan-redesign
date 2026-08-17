@@ -159,7 +159,7 @@ export default function Bookmarks({ bookmarks: saved }: BookmarksProps) {
                     >
                         {visible.map((bookmark) => (
                             <li
-                                key={bookmark.thread.no}
+                                key={bookmark.thread.id}
                                 className="flex flex-col gap-2"
                             >
                                 {/* The card's own bookmark button is

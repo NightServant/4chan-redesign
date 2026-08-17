@@ -3,9 +3,7 @@ import {
     Bookmark,
     History as HistoryIcon,
     ImageIcon,
-    LogOutIcon,
     MessageSquare,
-    ShieldIcon,
 } from 'lucide-react';
 import { ProfileCommentList } from '@/components/account/profile-comment-list';
 import { ProfileHeader } from '@/components/account/profile-header';
@@ -14,12 +12,10 @@ import { HistoryEntryList } from '@/components/clover/history-entry-list';
 import { PageMeta } from '@/components/clover/page-meta';
 import { PostAttachment } from '@/components/clover/post-image';
 import { ThreadCard } from '@/components/clover/thread-card';
-import { MatureBoardsToggle } from '@/components/settings/mature-boards-toggle';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useBookmark } from '@/hooks/use-bookmark';
-import { bookmarks, history as historyRoute, logout } from '@/routes';
-import { edit as editTwoFactor } from '@/routes/two-factor';
+import { bookmarks, history as historyRoute } from '@/routes';
 import type {
     Attachment,
     HistoryEntry,
@@ -98,9 +94,24 @@ export default function Account({
                 <ProfileHeader profile={profile} stats={stats} />
 
                 <Tabs defaultValue="comments">
-                    <TabsList aria-label="Profile sections">
+                    {/* Scrolls rather than clipping. Four tabs did not fit
+                        a 320px row and "History" was cut off at the edge with
+                        nothing to say more existed. `w-full` is the
+                        load-bearing half: `TabsList`'s own base is `w-fit`,
+                        which sizes the row to its contents, so
+                        `overflow-x-auto` alone would have been a dead class --
+                        the same trap task 8 hit on the board page's sort
+                        tabs. */}
+                    <TabsList
+                        aria-label="Profile sections"
+                        className="w-full overflow-x-auto"
+                    >
                         {TABS.map((tab) => (
-                            <TabsTrigger key={tab.value} value={tab.value}>
+                            <TabsTrigger
+                                key={tab.value}
+                                value={tab.value}
+                                className="shrink-0"
+                            >
                                 {tab.label}
                             </TabsTrigger>
                         ))}
@@ -109,7 +120,10 @@ export default function Account({
                             there — the tab and its content both carry
                             `md:hidden` so neither survives a resize while
                             active. */}
-                        <TabsTrigger value="history" className="md:hidden">
+                        <TabsTrigger
+                            value="history"
+                            className="shrink-0 md:hidden"
+                        >
                             History
                         </TabsTrigger>
                     </TabsList>
@@ -172,7 +186,7 @@ export default function Account({
                             <div className="flex flex-col gap-4">
                                 {saved.map((thread) => (
                                     <ThreadCard
-                                        key={thread.no}
+                                        key={thread.id}
                                         thread={thread}
                                         onBookmark={() =>
                                             toggleBookmark(thread)
@@ -250,48 +264,6 @@ export default function Account({
                         )}
                     </TabsContent>
                 </Tabs>
-
-                {/* What the avatar dropdown carried that has nowhere else to
-                    go once it is hidden below `md` (see `app-header.tsx`).
-                    `Show adult boards` reuses the same `MatureBoardsToggle`
-                    `/settings` renders rather than a third copy of the
-                    control; `Two-factor authentication` and `Sign out` are
-                    new here -- the dropdown was the only route to either of
-                    them, and it does not exist below `md` any more. Hidden
-                    at `md` and up, where the dropdown still carries all
-                    three. */}
-                <section
-                    aria-label="Account settings"
-                    className="flex flex-col gap-4 border-t border-border pt-5 md:hidden"
-                >
-                    <MatureBoardsToggle />
-
-                    <Button
-                        variant="outline"
-                        asChild
-                        className="w-full justify-start gap-3"
-                    >
-                        <Link href={editTwoFactor()}>
-                            <ShieldIcon aria-hidden="true" />
-                            Two-factor authentication
-                        </Link>
-                    </Button>
-
-                    {/* A POST, not a navigation -- `as="button"` keeps it a
-                        real submitting control, exactly as the dropdown's
-                        own row has it, rather than a plain link a signed-in
-                        anon could bookmark or share. */}
-                    <Button
-                        variant="danger"
-                        asChild
-                        className="w-full justify-start gap-3"
-                    >
-                        <Link href={logout()} as="button">
-                            <LogOutIcon aria-hidden="true" />
-                            Sign out
-                        </Link>
-                    </Button>
-                </section>
             </div>
 
             {authGate}

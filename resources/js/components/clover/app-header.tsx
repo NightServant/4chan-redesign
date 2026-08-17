@@ -52,12 +52,16 @@ import type { CloverNavItem } from '@/types/navigation';
  * down as a prop, so this component does not need to know whether it is
  * mounted inside one until it actually renders.
  *
- * Below `md`, signed in or out, the row is exactly three controls: the
- * hamburger, the search field, the theme toggle. Nothing else fits, and
- * nothing else is meant to. Gabe's decision, made on a screenshot of the row
- * carrying five — hamburger, magnifier, bell, theme toggle, avatar — with the
- * search box squeezed into the ~96px between the hamburger and the
- * right-hand group, sitting at 110px instead of near the centre. The bell
+ * Below `md`, signed in or out, the row is exactly two controls: the
+ * hamburger and the search bar. It was three until the theme toggle moved to
+ * the account screen's Appearance row (Gabe, 2026-08-17) -- a theme is set
+ * once, and the search bar wanted the width back. Nothing else fits there,
+ * and nothing else is meant to.
+ *
+ * That started from a screenshot of this row carrying five — hamburger,
+ * magnifier, bell, theme toggle, avatar — with the search box squeezed into
+ * the ~96px between the hamburger and the right-hand group, sitting at 110px
+ * instead of near the centre. The bell
  * drops below `md` because Notifications has its own bottom-bar slot there;
  * the avatar and its dropdown drop because every row the dropdown carried has
  * a home below `md` on the account screen now (`Sign out` and `Two-factor
@@ -80,18 +84,18 @@ import type { CloverNavItem } from '@/types/navigation';
  * reaches "Search boards and threads" whichever one their width renders.
  *
  * Giving it room is the arithmetic `gap-4 md:gap-7` exists for. At a 320px
- * viewport: 320 − 48 (`px-6`) − 76 (two 38px icon buttons, hamburger and
- * theme toggle) = 196px before gaps. `gap-7` (28px) on both sides would spend
- * 56 of that, leaving the field 140px — under the field's own 160px
- * minimum. `gap-4` (16px) spends 32, leaving 164px, comfortably over it.
- * `md:gap-7` restores the wider gap at `md` and up, where the field is
- * already the larger inline one this same arithmetic does not apply to.
+ * viewport, with only the 38px hamburger beside it: 320 − 48 (`px-6`) − 38 =
+ * 234px before gaps, and `gap-4` (16px) spends 16 of that, leaving 218px.
+ * It was 164px while the theme toggle still sat on this row, which was over
+ * the field's own 160px minimum but not by much — moving the toggle to the
+ * account screen is what bought the rest. `md:gap-7` restores the wider gap
+ * at `md` and up, where the field is already the larger inline one this
+ * arithmetic does not apply to.
  *
  * Pressing that button visits `/search`. Only pressing: it carried an
  * `onFocus` doing the same thing, which on a control that takes focus only
- * from Tab or a screen reader meant tabbing off the hamburger left the
- * header before the theme toggle could be reached. `/search` with no query
- * is a
+ * from Tab or a screen reader meant tabbing off the hamburger left the header
+ * before anything beside it could be reached. `/search` with no query is a
  * suggestions page (recent searches, busiest boards), the same two sources
  * the dropdown already draws from; see `pages/search.tsx`. That page draws
  * its own app bar (back control, the real field, focused on arrival) below
@@ -358,9 +362,16 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                             </DropdownMenu>
                         )}
 
+                        {/* Hidden below `md`, where the theme lives on the
+                            account screen as an Appearance row instead.
+                            Gabe's decision, 2026-08-17: a hamburger and a
+                            search bar are how an anon moves through the app,
+                            a theme is set once, and the search bar wanted the
+                            ~50px this was holding. */}
                         <Button
                             variant="ghost"
                             size="icon"
+                            className="hidden md:inline-flex"
                             aria-label={
                                 isDark
                                     ? 'Switch to light theme'

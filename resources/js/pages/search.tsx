@@ -424,7 +424,7 @@ export default function Search({
                         <div className="flex flex-col">
                             {threads.map((thread) => (
                                 <ThreadCard
-                                    key={thread.no}
+                                    key={thread.id}
                                     thread={thread}
                                     mediaLayout="thumbnail"
                                     onBookmark={() => toggleBookmark(thread)}

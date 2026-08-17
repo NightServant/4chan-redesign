@@ -114,7 +114,7 @@ export default function Feed({ sort, threads, library }: FeedProps) {
                     <div className="flex flex-col gap-4">
                         {threads.map((thread) => (
                             <ThreadCard
-                                key={thread.no}
+                                key={thread.id}
                                 thread={thread}
                                 onBookmark={() => toggleBookmark(thread)}
                             />

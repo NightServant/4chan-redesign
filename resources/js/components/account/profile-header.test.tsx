@@ -54,6 +54,94 @@ const PROFILE_STATS = [
 ];
 
 describe('ProfileHeader', () => {
+    /**
+     * A bio is whatever an anon typed, and an anon can type
+     * "HAHAHAHAHAHAHAHAHAHAHAHA" with no space in it. Without a wrapping rule
+     * a single long word does not wrap: it runs straight out of its column and
+     * past the edge of the block, which is what the account screen was doing
+     * at 320px.
+     */
+    it('wraps a bio with no spaces in it rather than letting it escape', () => {
+        render(
+            <ProfileHeader
+                profile={makeProfile({
+                    bio: 'HAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHA',
+                })}
+                stats={PROFILE_STATS}
+            />,
+        );
+
+        expect(
+            screen.getByText('HAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHA'),
+        ).toHaveClass('break-words');
+    });
+
+    /**
+     * No box below `md`.
+     *
+     * A bordered block at the top of a page built on hairlines is a card
+     * inside a card, and on a phone it spends its two side borders on nothing.
+     * The border returns at `md`, where the block sits in a wider measure and
+     * reads as a panel rather than as the page.
+     */
+    it('draws its border only at `md` and up', () => {
+        const { container } = render(
+            <ProfileHeader profile={PROFILE} stats={PROFILE_STATS} />,
+        );
+
+        const block = container.querySelector('[data-slot="profile-header"]');
+
+        expect(block).toHaveClass('md:border');
+        expect(block?.className).not.toMatch(/(^|\s)border(\s|$)/);
+    });
+
+    /**
+     * The figures sit on one line at every width.
+     *
+     * They were a `flex-wrap` row with `basis-40` — 160px — so at 320px each
+     * figure claimed more than half the row and all three stacked, spending
+     * roughly 250px before the tabs. Narrowing the basis only moved the
+     * problem: at around 340px two sat up and the third dropped below them,
+     * which reads as a mistake rather than a layout. A grid cannot wrap.
+     */
+    it('lays the figures out as a grid, so they never wrap', () => {
+        const { container } = render(
+            <ProfileHeader profile={PROFILE} stats={PROFILE_STATS} />,
+        );
+
+        const list = container.querySelector('dl');
+
+        expect(list).toHaveClass('grid');
+        expect(list?.className).not.toMatch(/flex-wrap/);
+        expect(list?.querySelectorAll(':scope > div')).toHaveLength(
+            PROFILE_STATS.length,
+        );
+    });
+
+    /**
+     * Nothing shares the identity line with the chip.
+     *
+     * Avatar, handle and "Edit profile" were one `flex-wrap` row, and the
+     * chip does not shrink — so between roughly 340px and 440px it held the
+     * first line, the text column collapsed, the handle ran underneath the
+     * chip and the bio broke mid-word. The chip gets its own row now, and so
+     * does the bio.
+     */
+    it('keeps the chip out of the row the handle is on', () => {
+        const { container } = render(
+            <ProfileHeader profile={PROFILE} stats={PROFILE_STATS} />,
+        );
+
+        const heading = screen.getByRole('heading', { level: 1 });
+        const chip = screen.getByRole('button', { name: 'Edit profile' });
+
+        const headingRow = heading.closest('div')?.parentElement;
+
+        expect(headingRow?.contains(chip)).toBe(false);
+        expect(container.querySelector('[data-slot="profile-header"]')).toBe(
+            container.firstElementChild,
+        );
+    });
     it('renders the handle as the only first-level heading', () => {
         render(<ProfileHeader profile={PROFILE} stats={PROFILE_STATS} />);
 

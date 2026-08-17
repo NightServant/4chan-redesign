@@ -414,30 +414,68 @@ describe('Account', () => {
      * -- the dropdown itself is hidden below `md` in `app-header.tsx`, and
      * neither had any other home.
      */
-    describe('account settings section', () => {
-        it('is `md:hidden`, since the dropdown carrying the same rows is not hidden above it', () => {
-            const { container } = render(<Account {...accountProps()} />);
+    /**
+     * The four settings rows moved off the page and into a drawer opened from
+     * a control beside "Edit profile" (Gabe, 2026-08-17). They were stacked at
+     * the foot of a screen an anon opens to read their own replies, in three
+     * different idioms, with the loudest one being sign out.
+     *
+     * These guards open the drawer rather than asserting the rows are on the
+     * page, which is the point: a row nobody can reach is the defect this
+     * codebase keeps shipping, so each one is checked through the control an
+     * anon actually presses.
+     */
+    describe('account settings drawer', () => {
+        async function openSettings() {
+            const user = userEvent.setup();
 
-            const section = container.querySelector(
-                '[aria-label="Account settings"]',
+            await user.click(
+                screen.getByRole('button', { name: 'Account settings' }),
             );
 
-            expect(section).not.toBeNull();
-            expect(section).toHaveClass('md:hidden');
+            return screen.findByRole('dialog');
+        }
+
+        it('is reached from a control beside Edit profile, hidden at `md` and up', () => {
+            render(<Account {...accountProps()} />);
+
+            const trigger = screen.getByRole('button', {
+                name: 'Account settings',
+            });
+
+            expect(trigger).toHaveClass('md:hidden');
         });
 
-        it('renders the real adult-boards toggle, not a third copy of the control', () => {
+        it('rises from the bottom edge rather than opening centred', async () => {
+            render(<Account {...accountProps()} />);
+
+            const drawer = await openSettings();
+
+            expect(drawer.dataset.slot).toBe('sheet-content');
+            expect(drawer.dataset.side).toBe('bottom');
+        });
+
+        it('renders the real adult-boards toggle, not a third copy of the control', async () => {
             pageProps.showsMatureBoards = true;
 
             render(<Account {...accountProps()} />);
+            await openSettings();
 
             expect(
                 screen.getByRole('switch', { name: 'Show adult boards' }),
             ).toBeChecked();
         });
 
-        it('links to the two-factor page', () => {
+        it('offers the theme as a row, since the header no longer carries it below `md`', async () => {
             render(<Account {...accountProps()} />);
+            await openSettings();
+
+            expect(screen.getByText('Appearance')).toBeInTheDocument();
+        });
+
+        it('links to the two-factor page', async () => {
+            render(<Account {...accountProps()} />);
+            await openSettings();
 
             expect(
                 screen.getByRole('link', {
@@ -447,23 +485,17 @@ describe('Account', () => {
         });
 
         /**
-         * `Sign out` is a POST, not a navigation -- exactly as it is in the
-         * avatar dropdown -- so it has to stay a real submitting control
-         * rather than a plain link a signed-in anon could bookmark or share.
-         */
-        /**
          * Both halves of the contract, because only one of them was guarded.
          *
-         * The tag was: dropping `as="button"` turned this red. The
-         * destination was not -- `href` never reached the double, so
-         * `href="/logout"` in place of `href={logout()}` passed here and in
-         * `app-header.test.tsx`, forty-five tests green over a GET to a
-         * POST-only route and sign out dead on every screen. `/logout` is
-         * the URL and `post` is the method, and the method is the half that
-         * a plain string silently loses.
+         * The tag was: dropping `as="button"` turned this red. The destination
+         * was not -- `href` never reached the double, so `href="/logout"` in
+         * place of `href={logout()}` passed here and in `app-header.test.tsx`,
+         * forty-five tests green over a GET to a POST-only route and sign out
+         * dead on every screen.
          */
-        it('still posts to sign out, kept a real button rather than a plain link', () => {
+        it('still posts to sign out, kept a real button rather than a plain link', async () => {
             render(<Account {...accountProps()} />);
+            await openSettings();
 
             const signOut = screen.getByRole('button', { name: /sign out/i });
 

@@ -93,6 +93,48 @@ const THREADS = [
 ];
 
 describe('Feed', () => {
+    /**
+     * A feed mixes boards, and a post number does not identify a thread
+     * across them.
+     *
+     * `Thread`'s own docblock says why it carries an `id` at all: post
+     * numbering is a per-board sequence, so `/g/1234` and `/b/1234` can both
+     * exist. Every cross-board list here was keyed on `no` regardless, which
+     * hands React two children with the same key and lets it duplicate or
+     * drop either. The account screen was already logging that to
+     * `browser.log`, on the replies list, where local numbering makes the
+     * collision certain rather than merely possible.
+     */
+    it('keys rows so two boards can share a post number', () => {
+        const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        const collided = [
+            makeThread({
+                id: 1,
+                no: 1234,
+                board: '/g/',
+                title: 'The /g/ one',
+            }),
+            makeThread({
+                id: 2,
+                no: 1234,
+                board: '/b/',
+                title: 'The /b/ one',
+            }),
+        ];
+
+        render(<Feed sort="bumped" threads={collided} library={LIBRARY} />);
+
+        const warnings = error.mock.calls
+            .flat()
+            .filter(
+                (argument): argument is string => typeof argument === 'string',
+            )
+            .join(' ');
+
+        expect(warnings).not.toContain('same key');
+    });
+
     it('renders "Home" for the bumped sort', () => {
         render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
 

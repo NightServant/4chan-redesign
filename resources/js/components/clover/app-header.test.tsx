@@ -310,10 +310,14 @@ describe('AppHeader', () => {
             name: 'Create account',
         });
 
-        for (const control of [hamburger, search, theme]) {
+        for (const control of [hamburger, search]) {
             expect(isGatedBelowMd(control)).toBe(false);
         }
 
+        /* The theme toggle left this row on 2026-08-17 for the account
+           screen's Appearance row: a theme is set once, and the search bar
+           wanted the ~50px back. It is still here at `md` and up. */
+        expect(isGatedBelowMd(theme)).toBe(true);
         expect(isGatedBelowMd(field)).toBe(true);
 
         for (const control of [logIn, createAccount]) {
@@ -338,11 +342,11 @@ describe('AppHeader', () => {
         });
         const avatar = screen.getByRole('button', { name: 'Account menu' });
 
-        for (const control of [hamburger, search, theme]) {
+        for (const control of [hamburger, search]) {
             expect(isGatedBelowMd(control)).toBe(false);
         }
 
-        for (const control of [notifications, avatar]) {
+        for (const control of [theme, notifications, avatar]) {
             expect(isGatedBelowMd(control)).toBe(true);
             expect(control.className).toMatch(/md:inline-flex/);
         }

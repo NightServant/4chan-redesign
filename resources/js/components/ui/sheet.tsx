@@ -55,6 +55,11 @@ function SheetContent({
             <SheetOverlay />
             <SheetPrimitive.Content
                 data-slot="sheet-content"
+                /* Which edge it came from, readable from the DOM. The side is
+                   otherwise spelled only in the class list, where a guard
+                   would have to match a string of animation utilities to
+                   assert something the component already knows. */
+                data-side={side}
                 className={cn(
                     'fixed z-50 flex flex-col gap-4 bg-background shadow-lg transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500',
                     side === 'right' &&
