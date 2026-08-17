@@ -1,17 +1,28 @@
 import { Link } from '@inertiajs/react';
-import { Bookmark, ImageIcon, MessageSquare } from 'lucide-react';
+import {
+    Bookmark,
+    History as HistoryIcon,
+    ImageIcon,
+    LogOutIcon,
+    MessageSquare,
+    ShieldIcon,
+} from 'lucide-react';
 import { ProfileCommentList } from '@/components/account/profile-comment-list';
 import { ProfileHeader } from '@/components/account/profile-header';
 import { EmptyState } from '@/components/clover/empty-state';
+import { HistoryEntryList } from '@/components/clover/history-entry-list';
 import { PageMeta } from '@/components/clover/page-meta';
 import { PostAttachment } from '@/components/clover/post-image';
 import { ThreadCard } from '@/components/clover/thread-card';
+import { MatureBoardsToggle } from '@/components/settings/mature-boards-toggle';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useBookmark } from '@/hooks/use-bookmark';
-import { bookmarks } from '@/routes';
+import { bookmarks, history as historyRoute, logout } from '@/routes';
+import { edit as editTwoFactor } from '@/routes/two-factor';
 import type {
     Attachment,
+    HistoryEntry,
     Profile,
     ProfileComment,
     ProfileStat,
@@ -28,7 +39,7 @@ import type {
  * points at the real one instead.
  */
 /**
- * Three tabs, not five.
+ * Three tabs, not five, at `md` and up. Four below it.
  *
  * "Overview" and "Posts" went. Overview was a summary of the tabs beside it —
  * a recent-activity list and a "top thread" panel that read "No threads yet"
@@ -37,7 +48,10 @@ import type {
  * empty about.
  *
  * What is left is what an anon actually has here: what they wrote, what they
- * attached to it, and what they saved.
+ * attached to it, and what they saved — plus, below `md`, what they read.
+ * History is not in this array: it renders separately, `md:hidden`, since
+ * nothing else here is conditional on the viewport and folding it into the
+ * same `.map()` would hide that one row's gating among three that have none.
  */
 const TABS = [
     { value: 'comments', label: 'Comments' },
@@ -55,6 +69,12 @@ type AccountProps = {
     media: Attachment[];
     /** Threads they saved, as full cards. */
     saved: Thread[];
+    /**
+     * Threads they read, most recent first, capped at
+     * `AccountController::HISTORY`. Read only below `md`: at `md` and up
+     * `/history` is its own page, uncapped, reached from the avatar menu.
+     */
+    history: HistoryEntry[];
 };
 
 export default function Account({
@@ -63,6 +83,7 @@ export default function Account({
     comments,
     media,
     saved,
+    history,
 }: AccountProps) {
     const { toggleBookmark, authGate } = useBookmark();
 
@@ -83,6 +104,14 @@ export default function Account({
                                 {tab.label}
                             </TabsTrigger>
                         ))}
+                        {/* At `md` and up `/history` is its own page, reached
+                            from the avatar menu, and this tab does not exist
+                            there — the tab and its content both carry
+                            `md:hidden` so neither survives a resize while
+                            active. */}
+                        <TabsTrigger value="history" className="md:hidden">
+                            History
+                        </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="comments">
@@ -153,7 +182,96 @@ export default function Account({
                             </div>
                         )}
                     </TabsContent>
+
+                    {/* Below `md` only. `/history` sends every read with no
+                        limit; this is capped server-side
+                        (`AccountController::HISTORY`) because every client
+                        pays for these rows whether or not it ever renders
+                        the tab, and the tab is `md:hidden` -- invisible to
+                        the server deciding how many rows to send. */}
+                    <TabsContent value="history" className="md:hidden">
+                        {history.length === 0 ? (
+                            <EmptyState
+                                icon={<HistoryIcon />}
+                                title="No history yet"
+                                body="Threads you open appear here, most recent first."
+                                action={
+                                    <Button variant="outline" asChild>
+                                        <Link href={historyRoute()}>
+                                            Open history
+                                        </Link>
+                                    </Button>
+                                }
+                            />
+                        ) : (
+                            <div className="flex flex-col gap-4">
+                                <HistoryEntryList
+                                    entries={history}
+                                    onBookmark={(thread) =>
+                                        toggleBookmark(thread)
+                                    }
+                                />
+
+                                {/* The tab is always capped, so there is
+                                    always potentially "the rest" once it has
+                                    anything in it at all -- unlike the Saved
+                                    tab's link, which only has somewhere to
+                                    send an anon once the tab is empty. */}
+                                <Button
+                                    variant="ghost"
+                                    asChild
+                                    className="self-start"
+                                >
+                                    <Link href={historyRoute()}>
+                                        View full history
+                                    </Link>
+                                </Button>
+                            </div>
+                        )}
+                    </TabsContent>
                 </Tabs>
+
+                {/* What the avatar dropdown carried that has nowhere else to
+                    go once it is hidden below `md` (see `app-header.tsx`).
+                    `Show adult boards` reuses the same `MatureBoardsToggle`
+                    `/settings` renders rather than a third copy of the
+                    control; `Two-factor authentication` and `Sign out` are
+                    new here -- the dropdown was the only route to either of
+                    them, and it does not exist below `md` any more. Hidden
+                    at `md` and up, where the dropdown still carries all
+                    three. */}
+                <section
+                    aria-label="Account settings"
+                    className="flex flex-col gap-4 border-t border-border pt-5 md:hidden"
+                >
+                    <MatureBoardsToggle />
+
+                    <Button
+                        variant="outline"
+                        asChild
+                        className="w-full justify-start gap-3"
+                    >
+                        <Link href={editTwoFactor()}>
+                            <ShieldIcon aria-hidden="true" />
+                            Two-factor authentication
+                        </Link>
+                    </Button>
+
+                    {/* A POST, not a navigation -- `as="button"` keeps it a
+                        real submitting control, exactly as the dropdown's
+                        own row has it, rather than a plain link a signed-in
+                        anon could bookmark or share. */}
+                    <Button
+                        variant="danger"
+                        asChild
+                        className="w-full justify-start gap-3"
+                    >
+                        <Link href={logout()} as="button">
+                            <LogOutIcon aria-hidden="true" />
+                            Sign out
+                        </Link>
+                    </Button>
+                </section>
             </div>
 
             {authGate}

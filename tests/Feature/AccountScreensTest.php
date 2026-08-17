@@ -149,6 +149,61 @@ it('lists a read thread on the history screen', function (): void {
 });
 
 /**
+ * The account screen's History tab, below `md` only on the client, reads
+ * the same shape `/history` sends -- a thread exactly as the feed receives
+ * it, plus when this anon was last on it -- so both screens render the same
+ * `HistoryEntryList` component rather than two lists that could drift.
+ */
+it('sends the same shape of history entry to the account screen', function (): void {
+    [, $thread, , $user] = anonWithHistory();
+
+    $this->actingAs($user)->post("/threads/{$thread->id}/read", ['progress' => 40]);
+
+    $this->actingAs($user)->get('/account')->assertInertia(
+        fn ($page) => $page
+            ->component('account')
+            ->has('history', 1)
+            ->has('history.0.thread.id')
+            ->has('history.0.thread.replies')
+            ->has('history.0.thread.bookmarked')
+            ->where('history.0.thread.no', $thread->no)
+            ->where('history.0.day', 'Today'),
+    );
+});
+
+/**
+ * `/history` itself sends every read with no limit. The account screen's
+ * other tabs are all capped (COMMENTS = 20, MEDIA = 12, SAVED = 6) because
+ * every client pays for these rows whether or not it ever renders the tab
+ * that shows them -- the tab is `md:hidden`, which the server cannot see.
+ * History gets the same treatment rather than being the one uncapped list
+ * on the page.
+ */
+it('caps the history sent to the account screen, unlike /history itself', function (): void {
+    [, , , $user] = anonWithHistory();
+    $board = Board::factory()->slug('vg')->create();
+
+    foreach (range(1, 10) as $n) {
+        $thread = Thread::factory()->for($board)->create();
+        Post::factory()->for($thread)->op()->create();
+
+        ThreadRead::factory()->create([
+            'user_id' => $user->id,
+            'thread_id' => $thread->id,
+            'last_read_at' => now()->subMinutes($n),
+        ]);
+    }
+
+    $this->actingAs($user)->get('/account')->assertInertia(
+        fn ($page) => $page->has('history', 6),
+    );
+
+    $this->actingAs($user)->get('/history')->assertInertia(
+        fn ($page) => $page->has('entries', 10),
+    );
+});
+
+/**
  * The day is decided server-side. The screen used to parse the front of
  * `when` for the words `Today,` and `Yesterday,`, which worked only because a
  * fixture wrote them by hand.
@@ -296,7 +351,8 @@ it('sends no props for the tabs that were removed', function (): void {
             ->missing('activity')
             ->has('comments')
             ->has('media')
-            ->has('saved'),
+            ->has('saved')
+            ->has('history'),
     );
 });
 

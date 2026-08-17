@@ -151,11 +151,12 @@ describe('AppLayout', () => {
      * swapped in. `AppLayout` is a persistent layout that does not remount
      * between visits, which is exactly why this has to be explicit.
      *
-     * Two listeners register here, not one: `AppHeader` also listens for
-     * `navigate` now, to collapse its own mobile search button back down for
-     * the same persistent-layout reason. This test only cares that the
-     * drawer's listener is among them, so it fires every callback captured
-     * rather than assuming its own is the only one.
+     * `AppHeader` registered a second `navigate` listener of its own for a
+     * while, to collapse a mobile search button that no longer exists — the
+     * field below `md` is a real one at rest now, with nothing to collapse.
+     * One listener is expected here again, but this fires every callback
+     * captured rather than assuming a specific count, since what this test
+     * cares about is that the drawer's own listener is among them.
      */
     it('closes when an Inertia navigation completes', async () => {
         const user = userEvent.setup();

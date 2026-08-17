@@ -78,6 +78,49 @@ describe('SearchField', () => {
         expect(screen.queryByRole('button')).not.toBeInTheDocument();
     });
 
+    /**
+     * Below `md` this field gets roughly 160px, and "Search boards and
+     * threads" does not fit it -- a native `placeholder` attribute can only
+     * hold one string, and the browser's own clipping is a word cut in half
+     * with no ellipsis to say so. A second, purely visual span carries the
+     * text instead, so its wording can answer to `md:` the way the real
+     * attribute cannot: short below `md`, the long sentence at `md` and up.
+     * jsdom cannot evaluate the media query itself, so this pins the classes
+     * that carry both strings rather than which one is actually painted.
+     */
+    it('carries a short placeholder below `md` and the full one at `md` and up, in one ghost span', () => {
+        mockFetch();
+
+        const { container } = render(<SearchField />);
+
+        const input = screen.getByRole('combobox');
+        expect(input).not.toHaveAttribute('placeholder');
+        /* The one accessible name, unaffected by which string is visible. */
+        expect(input).toHaveAccessibleName('Search boards and threads');
+
+        const ghost = container.querySelector(
+            '[class*="content-[\'Search\']"]',
+        );
+        expect(ghost).not.toBeNull();
+        expect(ghost).toHaveClass(
+            "before:content-['Search']",
+            "md:before:content-['Search_boards_and_threads']",
+        );
+        expect(ghost).toHaveAttribute('aria-hidden', 'true');
+    });
+
+    it('drops the ghost placeholder once there is a query, the same as a real one would', async () => {
+        mockFetch();
+
+        const { container } = render(<SearchField />);
+
+        await userEvent.type(screen.getByRole('combobox'), 'g');
+
+        expect(
+            container.querySelector('[class*="content-[\'Search\']"]'),
+        ).toBeNull();
+    });
+
     it('opens the dropdown on focus and asks the server for suggestions', async () => {
         const fetchMock = mockFetch();
 
@@ -190,33 +233,6 @@ describe('SearchField', () => {
             'aria-keyshortcuts',
             'Meta+K',
         );
-    });
-
-    /**
-     * `AppHeader` needs to move focus into this field from a button that
-     * lives outside it, below `md` where the field is not on screen until
-     * something opens it. `focusRequested` is the whole of that contract: a
-     * boolean the field watches, not a DOM handle passed out for a caller to
-     * do anything with. Negative control first -- a prop that did nothing
-     * would pass a test that only checked the positive case.
-     */
-    it('does not focus itself while no focus is requested', () => {
-        mockFetch();
-
-        render(<SearchField />);
-
-        expect(screen.getByRole('combobox')).not.toHaveFocus();
-    });
-
-    it('focuses itself when focusRequested becomes true', () => {
-        mockFetch();
-
-        const { rerender } = render(<SearchField focusRequested={false} />);
-        expect(screen.getByRole('combobox')).not.toHaveFocus();
-
-        rerender(<SearchField focusRequested={true} />);
-
-        expect(screen.getByRole('combobox')).toHaveFocus();
     });
 
     /**

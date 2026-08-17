@@ -7,12 +7,10 @@ import {
     MenuIcon,
     MessageSquareIcon,
     MoonIcon,
-    SearchIcon,
     ShieldIcon,
     SunIcon,
     UserIcon,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import type { ComponentProps, ReactNode } from 'react';
 import { AnonAvatar } from '@/components/clover/anon-avatar';
 import { NotificationItem } from '@/components/clover/notification-item';
@@ -52,33 +50,38 @@ import type { CloverNavItem } from '@/types/navigation';
  * down as a prop, so this component does not need to know whether it is
  * mounted inside one until it actually renders.
  *
- * Below `md` there is no room left for the inline search field once the
- * hamburger and the account controls are on screen too: at 320px it measured
- * out to 355px of content in a 272px row, and the field — the one thing with
- * genuine flex-shrink — absorbed all of the deficit down to a literal 0px. A
- * bordered box with a magnifier `<svg>` remained, decorative and with no
- * handler, over an input nothing could type into. There was no way to search
- * on a phone.
+ * Below `md`, signed in or out, the row is exactly three controls: the
+ * hamburger, the search field, the theme toggle. Nothing else fits, and
+ * nothing else is meant to. Gabe's decision, made on a screenshot of the row
+ * carrying five — hamburger, magnifier, bell, theme toggle, avatar — with the
+ * search box squeezed into the ~96px between the hamburger and the
+ * right-hand group, sitting at 110px instead of near the centre. The bell
+ * drops below `md` because Notifications has its own bottom-bar slot there;
+ * the avatar and its dropdown drop because every row the dropdown carried has
+ * a home below `md` on the account screen now (`Sign out` and `Two-factor
+ * authentication` included — see `AccountController` and `pages/account.tsx`
+ * before assuming the dropdown can just disappear, the same thing this
+ * component's own history got wrong once already). `Log in` / `Create
+ * account` stay hidden below `md` as they already were. At `md` and up
+ * every one of these is back, unchanged: the bell, the avatar, the dropdown,
+ * the auth buttons, the wider gap.
  *
- * Below `md` a real button stands in the field's place now, and `Log in` /
- * `Create account` stay out of the markup's visible row there too: a
- * hamburger, a search control and a theme toggle already fill a 320px row on
- * their own, and two full-size auth buttons never fit alongside them at any
- * width this small. The design below `md` is exactly that row — hamburger,
- * search, theme toggle — and nothing past it; a signed-out anon on a phone
- * has no sign-in control anywhere in the app shell until task 4 settles that
- * on the bottom bar. At `md` and up both buttons, and the row itself, are
- * unchanged.
+ * The field itself is a real field at rest below `md`, not an icon that
+ * expands into one — an early cut at this task tried that, and Gabe's
+ * response to the result was "make the search bar visible." `SearchField`
+ * supplies its own bordered, rounded box with the magnifier inside it and a
+ * ghost placeholder that reads "Search" below `md` and "Search boards and
+ * threads" at `md` and up (see that component for why a real `placeholder`
+ * attribute cannot hold both), so this header only has to give it room and
+ * change nothing else about it.
  *
- * Pressing the mobile search button hides the hamburger and the right-hand
- * control group too, not only the button it replaces. Measured at 320px
- * signed in: the hamburger (38px), two `gap-7` separators (56px) and the
- * signed-in group — bell, theme toggle, avatar, ~130px — leave the expanded
- * field's `w-full` wrapper only 48px, the same defect this task exists to
- * kill wearing a different cause. Both step aside while the field is
- * expanded and come back the moment it collapses, with a `md:` override that
- * keeps them on screen at `md` and up regardless of that state, since the
- * field there is always the smaller, inline one and nothing is ever gated.
+ * Giving it room is the arithmetic `gap-4 md:gap-7` exists for. At a 320px
+ * viewport: 320 − 48 (`px-6`) − 76 (two 38px icon buttons, hamburger and
+ * theme toggle) = 196px before gaps. `gap-7` (28px) on both sides would spend
+ * 56 of that, leaving the field 140px — under the field's own 160px
+ * minimum. `gap-4` (16px) spends 32, leaving 164px, comfortably over it.
+ * `md:gap-7` restores the wider gap at `md` and up, where the field is
+ * already the larger inline one this same arithmetic does not apply to.
  */
 
 /** Bounded to what the notifications menu previews before "See all". */
@@ -133,23 +136,6 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
     const { resolvedAppearance, updateAppearance } = useAppearance();
     const isDark = resolvedAppearance === 'dark';
 
-    /**
-     * Whether the mobile search button has handed its slot to the field.
-     *
-     * Below `md` the button and the field occupy the same spot in the row
-     * rather than both being laid out at once — there is not the width to
-     * spare for that, and it is also the wrong picture: only one of them is
-     * ever the active control. Reset on navigation for the same reason
-     * `AppLayout` resets the drawer's open state on navigation: this header
-     * is part of a persistent layout, so nothing else unmounts it between
-     * visits to put the field back for the next page on its own.
-     */
-    const [mobileSearchExpanded, setMobileSearchExpanded] = useState(false);
-
-    useEffect(() => {
-        return router.on('navigate', () => setMobileSearchExpanded(false));
-    }, []);
-
     const bookmarksItem = findNavItem('Bookmarks');
     const historyItem = findNavItem('History');
     const notificationsItem = findNavItem('Notifications');
@@ -181,7 +167,7 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                     page. */}
                 <div
                     data-slot="app-header-row"
-                    className="mx-auto flex h-16 w-full max-w-(--measure-page) items-center gap-7 px-6"
+                    className="mx-auto flex h-16 w-full max-w-(--measure-page) items-center gap-4 px-6 md:gap-7"
                 >
                     {/* Below `lg` the sidebar is a drawer rather than a
                         persistent rail, so this is the only way back into it
@@ -189,101 +175,38 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                         "Collapse sidebar" / "Expand sidebar" toggles, since it
                         opens that same component. Hidden at `lg` and up,
                         where the rail is back and a trigger for a drawer
-                        nothing can reach would do nothing.
-
-                        Also hidden below `md` while the mobile field is
-                        expanded: see the comment on the right-hand group
-                        below, which hides for the same reason. `md:inline-flex`
-                        restores it at `md` and up regardless of that state,
-                        matching the field's own trigger button rather than
-                        interacting with `lg:hidden`, which still wins at `lg`
-                        and up because Tailwind emits breakpoints in ascending
-                        order and a later rule wins a tie. */}
+                        nothing can reach would do nothing. */}
                     <SheetTrigger asChild>
                         <Button
                             variant="ghost"
                             size="icon"
                             aria-label="Open sidebar"
-                            className={cn(
-                                'lg:hidden',
-                                mobileSearchExpanded && 'hidden',
-                                'md:inline-flex',
-                            )}
+                            className="lg:hidden"
                         >
                             <MenuIcon aria-hidden="true" />
                         </Button>
                     </SheetTrigger>
 
-                    {/* This wrapper is the row's actual flex item, sized
-                        exactly as the plain field wrapper it replaces was —
-                        the button and the field both live inside it rather
-                        than each carrying their own slot, since they trade
-                        places rather than coexisting. `justify-center` only
-                        matters below `md`, where it is usually the only
-                        visible child and centring it is the point; at `md`
-                        and up the field fills the box on its own and the
-                        alignment is moot. */}
-                    <div
-                        className="flex max-w-(--measure-column) min-w-0 flex-1 items-center justify-center"
-                        onBlur={(event) => {
-                            /* Tabbing or clicking to anything outside this box
-                               — the theme toggle, a link, the page itself —
-                               closes the field back down to the button.
-                               Clicking a result inside the dropdown does not:
-                               that click lands on a descendant of this same
-                               box, which `contains` still reports as inside
-                               it. */
-                            if (
-                                mobileSearchExpanded &&
-                                !event.currentTarget.contains(
-                                    event.relatedTarget as Node | null,
-                                )
-                            ) {
-                                setMobileSearchExpanded(false);
-                            }
-                        }}
-                    >
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Search"
-                            onClick={() => setMobileSearchExpanded(true)}
-                            className={cn(
-                                'md:hidden',
-                                mobileSearchExpanded && 'hidden',
-                            )}
-                        >
-                            <SearchIcon aria-hidden="true" />
-                        </Button>
-
-                        <SearchField
-                            focusRequested={mobileSearchExpanded}
-                            className={cn(
-                                'w-full',
-                                mobileSearchExpanded ? 'flex' : 'hidden',
-                                'md:flex',
-                            )}
-                        />
+                    {/* A real field at every width, not an icon that expands
+                        into one. See `SearchField` for the ghost placeholder
+                        that answers "Search" below `md` and "Search boards
+                        and threads" at `md` and up, and this file's own
+                        docblock for the `gap-4`/`gap-7` arithmetic that gives
+                        it at least 160px below `md`. */}
+                    <div className="max-w-(--measure-column) min-w-0 flex-1">
+                        <SearchField />
                     </div>
 
-                    {/* Hidden below `md` while the field is expanded, for the
-                        same reason the hamburger is: measured at a 320px
-                        viewport, signed in, this group (bell + theme toggle +
-                        avatar, ~130px) plus the hamburger (38px) plus two
-                        `gap-7` separators (56px) leaves the expanded field's
-                        `w-full` wrapper 48px to fill -- the original defect
-                        this task exists to kill, reappearing with icon
-                        buttons standing in for `Log in` / `Create account`
-                        as the cause. `md:flex` restores it at `md` and up
-                        regardless of `mobileSearchExpanded`, matching the
-                        hamburger's own override. */}
+                    {/* Hidden below `md`: the bell has its own bottom-bar
+                        slot there (Notifications), and every row the avatar
+                        dropdown carries below it has a home on the account
+                        screen instead (`Sign out` and `Two-factor
+                        authentication` included). `md:inline-flex` restores
+                        it at `md` and up, where the dropdown is still the
+                        only way to reach any of them. */}
                     <div
                         data-slot="app-header-actions"
-                        className={cn(
-                            'ml-auto items-center gap-2',
-                            mobileSearchExpanded ? 'hidden' : 'flex',
-                            'md:flex',
-                        )}
+                        className="ml-auto flex items-center gap-2"
                     >
                         {isSignedIn && (
                             <DropdownMenu>
@@ -291,7 +214,7 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="relative"
+                                        className="relative hidden md:inline-flex"
                                         aria-label={
                                             unreadCount === 0
                                                 ? 'Notifications, nothing new'
@@ -391,6 +314,7 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                                         variant="ghost"
                                         size="icon"
                                         aria-label="Account menu"
+                                        className="hidden md:inline-flex"
                                     >
                                         <AnonAvatar seed={String(user.id)} />
                                     </Button>

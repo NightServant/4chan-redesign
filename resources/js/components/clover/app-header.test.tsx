@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import {
@@ -103,27 +103,9 @@ const mockPage: {
     url: '/',
 };
 
-/**
- * `router.on` is captured the same way `app-layout.test.tsx` captures it, so
- * a test can fire a fake Inertia navigation without a real visit. `AppHeader`
- * needs this now too: it listens for `navigate` to collapse the mobile search
- * button back down, the same reason `AppLayout` listens for it to close the
- * sidebar drawer.
- */
-const { navigateCallbacks } = vi.hoisted(() => ({
-    navigateCallbacks: [] as Array<() => void>,
-}));
-
 vi.mock('@inertiajs/react', () => ({
     usePage: () => mockPage,
     router: {
-        on: (event: string, callback: () => void) => {
-            if (event === 'navigate') {
-                navigateCallbacks.push(callback);
-            }
-
-            return () => {};
-        },
         patch: vi.fn(),
     },
     Link: ({
@@ -184,12 +166,16 @@ beforeEach(() => {
     };
     mockPage.url = '/';
     document.documentElement.classList.remove('dark');
-    navigateCallbacks.length = 0;
 });
 
 afterEach(() => {
     vi.restoreAllMocks();
 });
+
+/** Any control with a `hidden` token that is not part of an `md:...` pair. */
+function hasBareHidden(el: Element): boolean {
+    return /(^|\s)hidden(\s|$)/.test(el.className);
+}
 
 describe('AppHeader', () => {
     /**
@@ -224,14 +210,12 @@ describe('AppHeader', () => {
     });
 
     /**
-     * Below `md` there is no room for a hamburger, a search control, a theme
-     * toggle *and* two full-size auth buttons in one row -- that is the
-     * overflow this task exists to fix. The brief describes that row as
-     * hamburger, search, theme toggle: nothing else. `AppSidebar` carries
-     * `Log in` / `Create account` below `md` instead (its own tests cover
-     * that), so the header keeps both here -- still real links, still
-     * reachable at `md` and up exactly as before -- and only stops showing
-     * them below it.
+     * Below `md` there is no room for a hamburger, a search field and a
+     * theme toggle *and* two full-size auth buttons in one row -- that is
+     * the overflow task 3 exists to fix. The bottom bar's fourth slot is the
+     * one route into signing in on a phone now (see `mobile-nav.test.tsx`),
+     * so the header keeps both links here -- still real, still reachable at
+     * `md` and up exactly as before -- and only stops showing them below it.
      */
     it('hides Log in and Create account below `md`, unchanged at `md` and up', () => {
         renderHeader();
@@ -246,20 +230,26 @@ describe('AppHeader', () => {
     });
 
     /**
-     * The contract below `md` for a signed-out anon, stated directly: the
-     * hamburger, the search control and the theme toggle carry no `md:`
-     * visibility gate at all -- unconditionally reachable at every width --
-     * while `Log in` and `Create account` carry exactly the opposite, a gate
-     * that keeps them out below `md` and back at `md` and up. jsdom cannot
-     * evaluate the media query itself, so this is the class-level version of
-     * that fact: the three that must always be there have no `hidden`/`md:`
-     * pair on them, and the two that must not have exactly one.
+     * The contract below `md`, stated directly: exactly the hamburger, the
+     * search field and the theme toggle carry no `md:` visibility gate at
+     * all -- unconditionally reachable at every width -- while everything
+     * else in the row carries exactly the opposite, a gate that keeps it out
+     * below `md` and back at `md` and up. jsdom cannot evaluate the media
+     * query itself, so this is the class-level version of that fact.
+     *
+     * Signed out, the gated pair is `Log in` / `Create account`. Signed in
+     * it is the bell and the avatar instead -- Gabe's rejection of the
+     * five-glyph row (hamburger, magnifier, bell, theme toggle, avatar) is
+     * what this task exists to answer, so the signed-in case is the one that
+     * actually matters here.
      */
-    it('below `md` a signed-out anon reaches exactly the hamburger, search and theme toggle', () => {
+    it('below `md`, signed out, reaches exactly the hamburger, the search field and the theme toggle', () => {
         renderHeader();
 
         const hamburger = screen.getByRole('button', { name: /open sidebar/i });
-        const search = screen.getByRole('button', { name: 'Search' });
+        const search = screen.getByRole('combobox', {
+            name: /search boards and threads/i,
+        });
         const theme = screen.getByRole('button', {
             name: /switch to (light|dark) theme/i,
         });
@@ -269,13 +259,90 @@ describe('AppHeader', () => {
         });
 
         for (const control of [hamburger, search, theme]) {
-            expect(control.className).not.toMatch(/(^|\s)hidden(\s|$)/);
+            expect(hasBareHidden(control)).toBe(false);
         }
 
         for (const control of [logIn, createAccount]) {
-            expect(control.className).toMatch(/(^|\s)hidden(\s|$)/);
+            expect(hasBareHidden(control)).toBe(true);
             expect(control.className).toMatch(/md:inline-flex/);
         }
+    });
+
+    it('below `md`, signed in, reaches exactly the hamburger, the search field and the theme toggle -- no bell, no avatar', () => {
+        mockPage.props.auth.user = SIGNED_IN_USER;
+        renderHeader();
+
+        const hamburger = screen.getByRole('button', { name: /open sidebar/i });
+        const search = screen.getByRole('combobox', {
+            name: /search boards and threads/i,
+        });
+        const theme = screen.getByRole('button', {
+            name: /switch to (light|dark) theme/i,
+        });
+        const notifications = screen.getByRole('button', {
+            name: /notifications/i,
+        });
+        const avatar = screen.getByRole('button', { name: 'Account menu' });
+
+        for (const control of [hamburger, search, theme]) {
+            expect(hasBareHidden(control)).toBe(false);
+        }
+
+        for (const control of [notifications, avatar]) {
+            expect(hasBareHidden(control)).toBe(true);
+            expect(control.className).toMatch(/md:inline-flex/);
+        }
+    });
+
+    /**
+     * The icon that used to stand in for the field below `md` -- tap it,
+     * get a button 110px from centre with nothing to type into -- is gone
+     * outright, not merely hidden. There is exactly one search control at
+     * every width now: the field itself.
+     */
+    it('offers no separate search button at any width -- the field is the control', () => {
+        renderHeader();
+
+        expect(
+            screen.queryByRole('button', { name: /^search$/i }),
+        ).not.toBeInTheDocument();
+        expect(
+            screen.getByRole('combobox', {
+                name: /search boards and threads/i,
+            }),
+        ).toBeInTheDocument();
+    });
+
+    /**
+     * No prior tap, because there is nothing left to tap: the field is a
+     * real, typable input from the first render, at the narrowest width
+     * this header supports.
+     */
+    it('is typable at 320px with no prior tap', async () => {
+        const user = userEvent.setup();
+        renderHeader();
+
+        const field = screen.getByRole('combobox', {
+            name: /search boards and threads/i,
+        });
+
+        await user.type(field, 'g');
+
+        expect(field).toHaveValue('g');
+    });
+
+    /**
+     * `gap-4`/`md:gap-7` is the arithmetic the header's own docblock states:
+     * at 320px, `gap-7` on both sides of the field would leave it under its
+     * 160px minimum, and `gap-4` does not. Pinned here as a guard against
+     * someone restoring the wider gap below `md` without re-checking the sum.
+     */
+    it('uses the narrower gap below `md` that keeps the field at its minimum width', () => {
+        renderHeader();
+
+        const row = document.querySelector('[data-slot="app-header-row"]');
+
+        expect(row).toHaveClass('gap-4', 'md:gap-7');
     });
 
     it('shows the account avatar trigger and opens the account menu on click, with items reachable', async () => {
@@ -436,9 +503,6 @@ describe('AppHeader', () => {
     it('aligns the search field with the thread column', () => {
         renderHeader();
 
-        /* The field is a combobox now, not a button, and it renders its own
-           positioning wrapper for the dropdown, so the constraint is two
-           levels up rather than one. */
         const search = screen.getByRole('combobox', {
             name: /search boards and threads/i,
         });
@@ -488,251 +552,13 @@ describe('AppHeader', () => {
     });
 
     /**
-     * Below `md` the field's wrapper used to collapse to a literal 0px: a
-     * bordered box with a magnifier `<svg>` that had no handler, sitting over
-     * an input nothing could type into. Tapping it did nothing, and nothing in
-     * the accessibility tree said otherwise either -- the decorative glyph and
-     * the zero-width input were the whole story. This button is the real
-     * control in its place: a real `<button>`, a real accessible name, hidden
-     * only once `md` and up hand the job back to the inline field.
-     */
-    describe('mobile search', () => {
-        it('offers a real, labelled search button below `md`', () => {
-            renderHeader();
-
-            const trigger = screen.getByRole('button', { name: 'Search' });
-
-            expect(trigger).toHaveClass('md:hidden');
-            expect(trigger.tagName).toBe('BUTTON');
-
-            /* The glyph inside carries no name of its own -- the button's
-               `aria-label` is what a screen reader announces, so the icon
-               being decorative here is correct rather than the bug the old
-               field had. */
-            const icon = trigger.querySelector('svg');
-            expect(icon).toHaveAttribute('aria-hidden', 'true');
-        });
-
-        it('is absent from the document before render finds nothing else named "Search" pretending to be it', () => {
-            renderHeader();
-
-            /* Only one control answers to this name: the button. The field
-               itself is named "Search boards and threads", not "Search", so
-               there is no ambiguity for a query this exact to resolve. */
-            expect(
-                screen.getAllByRole('button', { name: 'Search' }),
-            ).toHaveLength(1);
-        });
-
-        it('focuses the field and opens its dropdown when the button is pressed, then steps aside for it', async () => {
-            const user = userEvent.setup();
-            renderHeader();
-
-            expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
-
-            await user.click(screen.getByRole('button', { name: 'Search' }));
-
-            const field = screen.getByRole('combobox', {
-                name: /search boards and threads/i,
-            });
-
-            expect(field).toHaveFocus();
-            expect(screen.getByRole('listbox')).toBeInTheDocument();
-
-            /* The button and the field occupy the same slot below `md`; both
-               visible at once would be two controls claiming the same job.
-               Visibility itself is a CSS fact jsdom cannot see, so this reads
-               the class that carries it instead. */
-            expect(screen.getByRole('button', { name: 'Search' })).toHaveClass(
-                'hidden',
-            );
-        });
-
-        it('collapses back to the button once focus leaves the field', async () => {
-            const user = userEvent.setup();
-            renderHeader();
-
-            await user.click(screen.getByRole('button', { name: 'Search' }));
-            expect(screen.getByRole('button', { name: 'Search' })).toHaveClass(
-                'hidden',
-            );
-
-            /* Tabbing to the next control in the header -- the theme toggle
-               -- moves focus outside the search area entirely, which is what
-               should close it. A click inside the results dropdown must not:
-               that case is what the "opens ... then steps aside" test above
-               already covers by never leaving the field. */
-            await user.tab();
-
-            expect(
-                screen.getByRole('button', { name: 'Search' }),
-            ).not.toHaveClass('hidden');
-        });
-
-        it('collapses back to the button when an Inertia navigation completes', async () => {
-            const user = userEvent.setup();
-            renderHeader();
-
-            await user.click(screen.getByRole('button', { name: 'Search' }));
-            expect(screen.getByRole('button', { name: 'Search' })).toHaveClass(
-                'hidden',
-            );
-
-            expect(navigateCallbacks.length).toBeGreaterThan(0);
-            act(() => {
-                for (const callback of navigateCallbacks) {
-                    callback();
-                }
-            });
-
-            expect(
-                screen.getByRole('button', { name: 'Search' }),
-            ).not.toHaveClass('hidden');
-        });
-
-        /**
-         * Signed in, the collapsed row already carries a hamburger and three
-         * icon buttons (bell, theme toggle, avatar) alongside the search
-         * button -- tighter controls than the signed-out case's two
-         * full-size links, but real width all the same. Measured at 320px:
-         * 272px inner width, 38px hamburger + 130px of icon buttons + 56px
-         * of `gap-7` leaves the expanded field's `w-full` wrapper only 48px
-         * to fill -- the original defect ("a bordered box ... over an input
-         * nothing could type into") with a different cause. The hamburger
-         * and the right-hand group step aside while the field is expanded so
-         * it can have the row to itself, the same shape of fix already in
-         * this file for `Log in` / `Create account`.
-         */
-        describe('signed in', () => {
-            it('gives the field the whole row while expanded: hamburger and account controls step aside', async () => {
-                const user = userEvent.setup();
-                mockPage.props.auth.user = SIGNED_IN_USER;
-                renderHeader();
-
-                await user.click(
-                    screen.getByRole('button', { name: 'Search' }),
-                );
-
-                const hamburger = screen.getByRole('button', {
-                    name: /open sidebar/i,
-                });
-                const actions = document.querySelector(
-                    '[data-slot="app-header-actions"]',
-                );
-
-                expect(hamburger).toHaveClass('hidden');
-                expect(actions).toHaveClass('hidden');
-
-                const field = screen.getByRole('combobox', {
-                    name: /search boards and threads/i,
-                });
-                expect(field).toHaveFocus();
-            });
-
-            it('keeps the hamburger, bell, theme toggle and avatar reachable below `md` while collapsed', () => {
-                mockPage.props.auth.user = SIGNED_IN_USER;
-                renderHeader();
-
-                const hamburger = screen.getByRole('button', {
-                    name: /open sidebar/i,
-                });
-                const notifications = screen.getByRole('button', {
-                    name: /notifications/i,
-                });
-                const theme = screen.getByRole('button', {
-                    name: /switch to (light|dark) theme/i,
-                });
-                const avatar = screen.getByRole('button', {
-                    name: 'Account menu',
-                });
-
-                for (const control of [
-                    hamburger,
-                    notifications,
-                    theme,
-                    avatar,
-                ]) {
-                    expect(control.className).not.toMatch(/(^|\s)hidden(\s|$)/);
-                }
-            });
-
-            /**
-             * `md:` overrides are what make the `hidden` gate above a
-             * mobile-only fact rather than a permanent one. jsdom cannot
-             * evaluate the media query itself, so this pins the class that
-             * carries it, in both states -- collapsed, where nothing is
-             * hidden yet the override still belongs on the element, and
-             * expanded, where it is what undoes the hide at `md` and up.
-             */
-            it('carries the `md:` override that restores the hamburger and account controls, expanded or not', async () => {
-                const user = userEvent.setup();
-                mockPage.props.auth.user = SIGNED_IN_USER;
-                renderHeader();
-
-                const hamburger = screen.getByRole('button', {
-                    name: /open sidebar/i,
-                });
-                const actions = document.querySelector(
-                    '[data-slot="app-header-actions"]',
-                );
-
-                expect(hamburger).toHaveClass('md:inline-flex');
-                expect(actions).toHaveClass('md:flex');
-
-                await user.click(
-                    screen.getByRole('button', { name: 'Search' }),
-                );
-
-                expect(hamburger).toHaveClass('md:inline-flex');
-                expect(actions).toHaveClass('md:flex');
-            });
-
-            /**
-             * The `onBlur` collapse path lives on the field's own wrapper,
-             * not on the hamburger or the account group -- they are siblings
-             * of it, never inside the `contains` check it runs, so hiding
-             * them carries no risk of changing what that check sees. This is
-             * the behavioural half of that: focus leaving the field must
-             * still bring everything back, hamburger and account controls
-             * included, not just un-hide the search button.
-             */
-            it('brings the hamburger and account controls back when focus leaves the expanded field', async () => {
-                const user = userEvent.setup();
-                mockPage.props.auth.user = SIGNED_IN_USER;
-                renderHeader();
-
-                await user.click(
-                    screen.getByRole('button', { name: 'Search' }),
-                );
-
-                const hamburger = screen.getByRole('button', {
-                    name: /open sidebar/i,
-                });
-                const actions = document.querySelector(
-                    '[data-slot="app-header-actions"]',
-                );
-
-                expect(hamburger).toHaveClass('hidden');
-                expect(actions).toHaveClass('hidden');
-
-                await user.tab();
-
-                expect(hamburger).not.toHaveClass('hidden');
-                expect(actions).not.toHaveClass('hidden');
-            });
-        });
-    });
-
-    /**
-     * A wrapping row was the first cut at the overflow this task exists to
-     * fix, needed while `Log in` and `Create account` were still in the row
-     * below `md`. They render only at `md` and up now (see the test above),
-     * so below `md` the row is back to exactly three fixed-size controls --
-     * hamburger, the collapsed search button, the theme toggle -- comfortably
-     * inside 320px on their own, and the row is a fixed `h-16` again rather
-     * than a `min-h-16` that could grow to two lines it no longer needs.
-     * Measured live at 320px signed out: `scrollWidth` and `clientWidth` both
-     * 320, expanded and collapsed.
+     * The row is a fixed `h-16` at every width: three fixed-size controls
+     * below `md` (hamburger, field, theme toggle) fit 320px on their own by
+     * the arithmetic pinned above, so nothing here ever needs to wrap or
+     * grow to a second line. An earlier cut at this task used `flex-wrap` /
+     * `min-h-16` to cope with a row that carried more than three controls
+     * below `md`; once the bell, the avatar and the auth buttons are gone
+     * from that row, there is nothing left for a wrap fix to do.
      */
     it('keeps the header a fixed single-line height, not a wrapping row', () => {
         renderHeader();

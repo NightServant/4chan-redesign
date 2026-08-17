@@ -60,33 +60,11 @@ function boardHref(slug: string): string {
 export interface SearchFieldProps {
     placeholder?: string;
     className?: string;
-    /**
-     * A focus request from outside, not a DOM handle out.
-     *
-     * `AppHeader` needs to move focus into this field from a button that
-     * lives outside it, below `md` where the field is not on screen until
-     * something opens it. A `forwardRef`/`useImperativeHandle` pair was the
-     * first cut at this, and it worked, but it widened the component's public
-     * contract to an arbitrary DOM node for a job that only ever needed one
-     * verb: focus it. A caller holding the node itself could set its value,
-     * read its selection, anything — none of which is "focus the field" and
-     * all of which this component would then need to defend against. A
-     * boolean this component watches itself is the narrower shape: the only
-     * thing a caller can ask for is the one thing this was built to do.
-     *
-     * Rising edge, not level: set it `true` once per request rather than
-     * toggling it back to `false` immediately, since the effect below only
-     * needs the transition, and `AppHeader` already has a boolean of its own
-     * (whether the mobile field is the active control) that rises and falls
-     * at exactly the moments this should too.
-     */
-    focusRequested?: boolean;
 }
 
 export function SearchField({
     placeholder = 'Search boards and threads',
     className,
-    focusRequested,
 }: SearchFieldProps) {
     const [query, setQuery] = useState('');
     const [open, setOpen] = useState(false);
@@ -115,20 +93,6 @@ export function SearchField({
     const input = useRef<HTMLInputElement>(null);
     const wrapper = useRef<HTMLDivElement>(null);
     const listId = useId();
-
-    /**
-     * Calling `.focus()` here is a side effect kept inside the component that
-     * owns the node, not a state update propagating outward — it is not the
-     * `setState`-inside-`useEffect` shape this codebase has twice rewritten
-     * away from elsewhere (the reply composer's attachment preview, this
-     * field's own history reading above). Nothing here calls a setter; the
-     * DOM focus this produces is exactly what `useEffect` is for.
-     */
-    useEffect(() => {
-        if (focusRequested) {
-            input.current?.focus();
-        }
-    }, [focusRequested]);
 
     /**
      * One request per pause, and never two answers racing. Without the abort a
@@ -228,34 +192,54 @@ export function SearchField({
                     aria-hidden="true"
                     className="size-4 shrink-0 text-faint"
                 />
-                <input
-                    ref={input}
-                    type="search"
-                    role="combobox"
-                    aria-expanded={open}
-                    aria-controls={listId}
-                    aria-autocomplete="list"
-                    aria-keyshortcuts="Meta+K"
-                    aria-label={placeholder}
-                    placeholder={placeholder}
-                    value={query}
-                    data-slot="search-field"
-                    onChange={(event) => {
-                        setQuery(event.target.value);
-                        setOpen(true);
-                    }}
-                    onFocus={() => setOpen(true)}
-                    onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                            submit();
-                        }
+                <div className="relative min-w-0 flex-1">
+                    <input
+                        ref={input}
+                        type="search"
+                        role="combobox"
+                        aria-expanded={open}
+                        aria-controls={listId}
+                        aria-autocomplete="list"
+                        aria-keyshortcuts="Meta+K"
+                        aria-label={placeholder}
+                        value={query}
+                        data-slot="search-field"
+                        onChange={(event) => {
+                            setQuery(event.target.value);
+                            setOpen(true);
+                        }}
+                        onFocus={() => setOpen(true)}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                                submit();
+                            }
 
-                        if (event.key === 'Escape') {
-                            setOpen(false);
-                        }
-                    }}
-                    className="min-w-0 flex-1 bg-transparent text-body-sm text-foreground outline-none placeholder:text-muted-foreground"
-                />
+                            if (event.key === 'Escape') {
+                                setOpen(false);
+                            }
+                        }}
+                        className="w-full bg-transparent text-body-sm text-foreground outline-none"
+                    />
+                    {/* A native `placeholder` attribute can only ever hold one
+                        string, and "Search boards and threads" does not fit the
+                        ~160px this field gets below `md` -- the browser's own
+                        clipping is a word cut in half with no ellipsis to say
+                        so, which reads as broken rather than short. This is a
+                        second, purely visual copy of the same idea rather than
+                        the real placeholder, so its wording can answer to
+                        `md:` the way the input's own attribute cannot: short
+                        below `md`, the full sentence at `md` and up, both
+                        pinned in one span via `content-[...]` rather than a
+                        second element that could drift out of sync with it.
+                        `aria-label` above still carries the one accessible
+                        name at every width. */}
+                    {query === '' && (
+                        <span
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-0 flex items-center text-body-sm text-muted-foreground before:content-['Search'] md:before:content-['Search_boards_and_threads']"
+                        />
+                    )}
+                </div>
                 <span
                     aria-hidden="true"
                     className="hidden shrink-0 rounded-sm border border-border px-1.5 py-0.5 text-caption text-faint tabular-nums sm:block"

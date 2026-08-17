@@ -2,18 +2,15 @@ import { router } from '@inertiajs/react';
 import { Eraser, History as HistoryIcon, Search } from 'lucide-react';
 import { useState } from 'react';
 import { EmptyState } from '@/components/clover/empty-state';
+import { HistoryEntryList } from '@/components/clover/history-entry-list';
 import { PageHeader } from '@/components/clover/page-header';
 import { PageMeta } from '@/components/clover/page-meta';
 import { Pagination } from '@/components/clover/pagination';
-import { SectionLabel } from '@/components/clover/section-label';
-import { ThreadCard } from '@/components/clover/thread-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useBookmark } from '@/hooks/use-bookmark';
 import { destroy as clearHistory } from '@/routes/history';
 import type { HistoryEntry } from '@/types/clover';
-
-const GROUPS = ['Today', 'Yesterday', 'Earlier'] as const;
 
 const PAGE_SIZE = 8;
 
@@ -47,6 +44,11 @@ function matches(entry: HistoryEntry, query: string): boolean {
  *
  * What history knows and the feed does not is when this anon was last on a
  * thread. That is what the card's `meta` slot carries.
+ *
+ * The day-grouped rendering of that card lives in `HistoryEntryList` now,
+ * not here: the account screen's History tab needs the same grouped list
+ * below `md`, and a second copy of it is the same defect the paragraph above
+ * describes, one level up.
  *
  * ## What went
  *
@@ -134,38 +136,10 @@ export default function History({ entries }: HistoryProps) {
                     />
                 ) : (
                     <div className="flex flex-col gap-5">
-                        {GROUPS.map((group) => {
-                            const inGroup = visible.filter(
-                                (entry) => entry.day === group,
-                            );
-
-                            if (inGroup.length === 0) {
-                                return null;
-                            }
-
-                            return (
-                                <section
-                                    key={group}
-                                    aria-label={group}
-                                    className="flex flex-col gap-2.5"
-                                >
-                                    <SectionLabel>{group}</SectionLabel>
-
-                                    <div className="flex flex-col">
-                                        {inGroup.map((entry) => (
-                                            <ThreadCard
-                                                key={entry.thread.no}
-                                                thread={entry.thread}
-                                                meta={`Read ${entry.when}`}
-                                                onBookmark={() =>
-                                                    toggleBookmark(entry.thread)
-                                                }
-                                            />
-                                        ))}
-                                    </div>
-                                </section>
-                            );
-                        })}
+                        <HistoryEntryList
+                            entries={visible}
+                            onBookmark={(thread) => toggleBookmark(thread)}
+                        />
 
                         {pageCount > 1 ? (
                             <Pagination

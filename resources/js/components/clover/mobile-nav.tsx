@@ -1,7 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import type { ComponentProps } from 'react';
 import { useCurrentUrl } from '@/hooks/use-current-url';
-import { MOBILE_NAV, navHref } from '@/lib/navigation';
+import { MOBILE_NAV, navHref, navTitle } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 
 /**
@@ -13,8 +13,16 @@ import { cn } from '@/lib/utils';
  *
  * `requiresAuth` entries drop out for signed-out anons, which means the bar
  * renders a variable number of items. Distributing with `flex-1` rather than
- * a fixed five-column grid keeps two items and five items both looking
+ * a fixed four-column grid keeps two items and four items both looking
  * deliberate.
+ *
+ * The fourth slot is never filtered by `requiresAuth`, because it is not
+ * gated — it is the opposite: `navTitle` and `navHref` resolve it to "Log
+ * in" / `/login` for a signed-out anon and "You" / `/account` for a signed-in
+ * one, so the slot itself is always on the bar and only its label and
+ * destination change. Below `md` the header carries no auth buttons and the
+ * drawer carries none either, so this is the one control a signed-out anon
+ * on a phone has for signing in at all.
  */
 
 type MobileNavProps = Omit<ComponentProps<'nav'>, 'children'>;
@@ -39,6 +47,7 @@ function MobileNav({ className, ...props }: MobileNavProps) {
         >
             {items.map((item) => {
                 const href = navHref(item, signedIn);
+                const label = navTitle(item, signedIn);
                 const active = isCurrentUrl(href);
                 const Icon = item.icon;
 
@@ -54,9 +63,7 @@ function MobileNav({ className, ...props }: MobileNavProps) {
                         )}
                     >
                         <Icon aria-hidden="true" className="size-5" />
-                        <span className="text-label font-medium">
-                            {item.title}
-                        </span>
+                        <span className="text-label font-medium">{label}</span>
                     </Link>
                 );
             })}

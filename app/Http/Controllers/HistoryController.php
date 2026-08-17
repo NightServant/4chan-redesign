@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\ThreadReadTime;
 use App\Http\Resources\ThreadResource;
 use App\Models\Thread;
 use App\Models\ThreadRead;
-use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Inertia\Inertia;
@@ -51,7 +51,7 @@ class HistoryController extends Controller
              */
             'entries' => $reads->map(fn (ThreadRead $read): array => [
                 'thread' => ThreadResource::make($read->thread)->resolve($request),
-                'when' => $this->when($read->last_read_at, $now),
+                'when' => ThreadReadTime::when($read->last_read_at, $now),
 
                 /**
                  * The day decided here rather than parsed back off the front
@@ -59,43 +59,8 @@ class HistoryController extends Controller
                  * only because a fixture wrote `Today,` by hand — a real
                  * timestamp knows its own day.
                  */
-                'day' => $this->day($read->last_read_at, $now),
+                'day' => ThreadReadTime::day($read->last_read_at, $now),
             ])->all(),
         ]);
-    }
-
-    /**
-     * `Today, 14:02`, `Yesterday, 09:15`, or a date for anything older.
-     */
-    /**
-     * Typed to the interface, not to `Illuminate\Support\Carbon`.
-     *
-     * The models cast their timestamps to `CarbonImmutable`, so a concrete
-     * hint type-errors on every row — the same mistake `RelativeTime` made in
-     * task 11a, where it only surfaced on threads older than a day and so
-     * survived that resource's own tests.
-     */
-    private function when(CarbonInterface $moment, CarbonInterface $now): string
-    {
-        return match ($this->day($moment, $now)) {
-            'Today' => 'Today, '.$moment->format('H:i'),
-            'Yesterday' => 'Yesterday, '.$moment->format('H:i'),
-            default => $moment->format('j M Y, H:i'),
-        };
-    }
-
-    /**
-     * Calendar days, not elapsed ones: an anon reading "Yesterday" means the
-     * day before today, and thirty hours ago can be either.
-     */
-    private function day(CarbonInterface $moment, CarbonInterface $now): string
-    {
-        $days = $moment->copy()->startOfDay()->diffInDays($now->copy()->startOfDay(), absolute: true);
-
-        return match (true) {
-            $days < 1 => 'Today',
-            $days < 2 => 'Yesterday',
-            default => 'Earlier',
-        };
     }
 }

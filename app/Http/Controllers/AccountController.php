@@ -6,14 +6,17 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\AttachmentResource;
 use App\Http\Resources\RelativeTime;
+use App\Http\Resources\ThreadReadTime;
 use App\Http\Resources\ThreadResource;
 use App\Models\Post;
 use App\Models\Thread;
+use App\Models\ThreadRead;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -42,6 +45,15 @@ class AccountController extends Controller
 
     private const SAVED = 6;
 
+    /**
+     * Matches `SAVED`: both are full `ThreadCard` lists on the same screen,
+     * and `SAVED` is the smallest of the three original caps for exactly the
+     * reason this one needs a cap at all — every client pays for these rows
+     * whether or not it ever renders the tab that shows them, and the tab is
+     * `md:hidden`, which the server has no way to see.
+     */
+    private const HISTORY = 6;
+
     public function __invoke(Request $request): Response
     {
         $user = $request->user();
@@ -63,6 +75,7 @@ class AccountController extends Controller
             'comments' => $this->comments($user, $showsMature),
             'media' => $this->media($user, $showsMature, $request),
             'saved' => ThreadResource::collection($this->saved($request, $showsMature)),
+            'history' => $this->history($request, $showsMature),
         ]);
     }
 
@@ -201,6 +214,38 @@ class AccountController extends Controller
             ->orderByDesc('bumped_at')
             ->limit(self::SAVED)
             ->get();
+    }
+
+    /**
+     * Threads this anon read, most recent first, capped at `HISTORY`.
+     *
+     * The same shape `HistoryController` sends `/history` — a thread exactly
+     * as the feed receives it, plus when this anon was last on it — so the
+     * account screen's History tab renders the same `HistoryEntryList`
+     * component below `md` rather than a second list built to match it by
+     * hand. `/history` itself sends every read with no limit; this is capped
+     * because every client pays for these rows regardless of whether it ever
+     * renders the tab, which is `md:hidden` and invisible to the server.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function history(Request $request, bool $showsMature): array
+    {
+        $now = Date::now();
+
+        return ThreadRead::query()
+            ->where('user_id', $request->user()->id)
+            ->whereIn('thread_id', Thread::query()->onVisibleBoard($showsMature)->select('id'))
+            ->with(['thread.board', 'thread.originalPost', 'thread.bookmarks'])
+            ->orderByDesc('last_read_at')
+            ->limit(self::HISTORY)
+            ->get()
+            ->map(fn (ThreadRead $read): array => [
+                'thread' => ThreadResource::make($read->thread)->resolve($request),
+                'when' => ThreadReadTime::when($read->last_read_at, $now),
+                'day' => ThreadReadTime::day($read->last_read_at, $now),
+            ])
+            ->all();
     }
 
     /**

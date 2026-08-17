@@ -6,6 +6,7 @@ import {
     HouseIcon,
     HistoryIcon,
     LayoutGridIcon,
+    ScrollTextIcon,
     UserIcon,
 } from 'lucide-react';
 import {
@@ -14,10 +15,12 @@ import {
     communities,
     home,
     latest,
+    login,
     notifications,
     bookmarks,
     history,
     popular,
+    rules,
 } from '@/routes';
 import type { CloverNavItem } from '@/types/navigation';
 
@@ -81,29 +84,46 @@ const ACCOUNT_MENU: readonly CloverNavItem[] = [
 /**
  * The bottom bar on small screens. Five is the ceiling: past that the targets
  * get too narrow to hit reliably, so this is a deliberate subset rather than
- * the full nav squeezed down.
+ * the full nav squeezed down. Four fits.
  *
- * Compose is not a destination in `PRIMARY_NAV` because it opens the composer
- * rather than navigating, so it is added here on its own terms.
+ * Popular, Latest and History all had slots here once. Popular and Latest
+ * are gone because the drawer already carries them — it is the sidebar's own
+ * `PRIMARY_NAV` list below `lg`, so the bar no longer has to be the sidebar's
+ * understudy for those two. History is gone because it moved onto the
+ * account screen below `md` (see `AccountController`); the bar's own "You"
+ * slot is where it is read from now.
  */
 const MOBILE_NAV: readonly CloverNavItem[] = [
     { title: 'Home', href: home(), authedHref: dashboard(), icon: HouseIcon },
-    { title: 'Popular', href: popular(), icon: FlameIcon },
     {
-        title: 'History',
-        href: history(),
-        icon: HistoryIcon,
+        title: 'Community Rules',
+        href: rules(),
+        icon: ScrollTextIcon,
+    },
+    {
+        title: 'Notifications',
+        href: notifications(),
+        icon: BellIcon,
         requiresAuth: true,
     },
-    /* The account screen, not the settings page. "You" reading as settings
-       was always a stretch, and it is plainly wrong now that the profile is
-       edited from a dialog on the account screen rather than from a form on
-       the settings one. */
+    /**
+     * The fourth slot, and the only route into signing in that a phone has.
+     *
+     * Below `md` the header no longer carries `Log in` / `Create account`,
+     * and the drawer was deliberately never given them either — this slot is
+     * what is left. `requiresAuth` is not set here on purpose: every other
+     * gated item on this list disappears for a signed-out anon, and this one
+     * has to do the opposite, since a signed-out anon is exactly who needs
+     * to see it. Signed in it reads "You" and opens the account screen,
+     * exactly as it always has; signed out it reads "Log in" and opens the
+     * sign-in page instead of vanishing.
+     */
     {
-        title: 'You',
-        href: account(),
+        title: 'Log in',
+        href: login(),
+        authedTitle: 'You',
+        authedHref: account(),
         icon: UserIcon,
-        requiresAuth: true,
     },
 ];
 
@@ -118,10 +138,10 @@ const FOOTER_LINKS: readonly { title: string; href: string }[] = [
 /**
  * Where a nav item actually points for this anon.
  *
- * Only Home differs by auth state: signed out it is the marketing homepage,
- * signed in it is the feed. A signed-in anon pressing Home and landing back on
- * the sales pitch for a product they have already joined is the bug this
- * resolves. Everything else points at one place regardless.
+ * Home and the mobile bar's sign-in slot differ by auth state; everything
+ * else points at one place regardless. A signed-in anon pressing Home and
+ * landing back on the sales pitch for a product they have already joined is
+ * the bug that case resolves.
  */
 function navHref(
     item: CloverNavItem,
@@ -130,4 +150,23 @@ function navHref(
     return signedIn && item.authedHref ? item.authedHref : item.href;
 }
 
-export { ACCOUNT_MENU, FOOTER_LINKS, MOBILE_NAV, navHref, PRIMARY_NAV };
+/**
+ * What a nav item reads for this anon, mirroring `navHref`.
+ *
+ * Only the mobile bar's fourth slot differs by auth state today — "Log in"
+ * signed out, "You" signed in — but this exists as its own function rather
+ * than a component reading `item.authedTitle` directly, so a second consumer
+ * of `MOBILE_NAV` reads the same label rather than re-deriving it.
+ */
+function navTitle(item: CloverNavItem, signedIn: boolean): string {
+    return signedIn && item.authedTitle ? item.authedTitle : item.title;
+}
+
+export {
+    ACCOUNT_MENU,
+    FOOTER_LINKS,
+    MOBILE_NAV,
+    navHref,
+    navTitle,
+    PRIMARY_NAV,
+};

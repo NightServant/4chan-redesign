@@ -4,10 +4,11 @@ import {
     FOOTER_LINKS,
     MOBILE_NAV,
     navHref,
+    navTitle,
     PRIMARY_NAV,
 } from '@/lib/navigation';
 import { toUrl } from '@/lib/utils';
-import { account } from '@/routes';
+import { account, login } from '@/routes';
 
 /**
  * The sidebar, the mobile bar and the header all read their destinations from
@@ -56,31 +57,70 @@ describe('PRIMARY_NAV', () => {
 describe('MOBILE_NAV', () => {
     /**
      * Material caps a bottom bar at five destinations; past that the targets
-     * get too narrow to hit reliably.
+     * get too narrow to hit reliably. Four fits.
      */
     it('carries at most five destinations', () => {
         expect(MOBILE_NAV.length).toBeLessThanOrEqual(5);
     });
 
-    /**
-     * The phone bar is not the sidebar and no longer has to be a subset of it.
-     * History and the profile left the sidebar for the account menu, and a
-     * phone has no avatar menu to put them in, so the bar keeps them: five
-     * destinations along the bottom is the whole of small-screen navigation.
-     */
-    it('draws every destination from the sidebar or the account menu', () => {
-        const known = [
-            ...PRIMARY_NAV,
-            ...ACCOUNT_MENU,
-            /* The account screen is in neither list and is deliberately on the
-               phone bar: it is where the profile is read and, since the edit
-               dialog landed, where it is written. */
-            { href: account() },
-        ].map((item) => toUrl(item.href));
+    it('lists Home, Community Rules, Notifications and the sign-in slot, in that order', () => {
+        expect(MOBILE_NAV.map((item) => item.title)).toEqual([
+            'Home',
+            'Community Rules',
+            'Notifications',
+            'Log in',
+        ]);
+    });
 
-        for (const item of MOBILE_NAV) {
-            expect(known).toContain(toUrl(item.href));
+    /**
+     * Popular, Latest and History all had bar slots once. Popular and Latest
+     * are reachable from the drawer now (it is `PRIMARY_NAV`, the sidebar's
+     * own list, below `lg`); History moved onto the account screen. None of
+     * the three should still have a place on the bar.
+     */
+    it('drops Popular, Latest and History from the bar', () => {
+        const titles = MOBILE_NAV.map((item) => item.title);
+
+        for (const gone of ['Popular', 'Latest', 'History']) {
+            expect(titles).not.toContain(gone);
         }
+    });
+
+    /** Every destination on the bar has to resolve to a real route. */
+    it('gives every destination a resolvable href', () => {
+        for (const item of MOBILE_NAV) {
+            expect(toUrl(item.href), `${item.title} has no href`).toMatch(
+                /^\//,
+            );
+        }
+    });
+
+    /**
+     * Every other gated item on this list disappears for a signed-out anon.
+     * This one is the opposite on purpose: below `md` the header carries no
+     * auth buttons and the drawer carries none either, so this slot is the
+     * only route into signing in a signed-out phone has, and it must never
+     * be filtered out the way `requiresAuth` items are.
+     */
+    it('never marks the sign-in slot as requiring an account', () => {
+        const signInSlot = MOBILE_NAV.find((item) => item.title === 'Log in');
+
+        expect(signInSlot).toBeDefined();
+        expect(signInSlot?.requiresAuth).toBeFalsy();
+    });
+
+    it('reads "Log in" and points at /login for a signed-out anon', () => {
+        const signInSlot = MOBILE_NAV.find((item) => item.title === 'Log in')!;
+
+        expect(navTitle(signInSlot, false)).toBe('Log in');
+        expect(toUrl(navHref(signInSlot, false))).toBe(toUrl(login()));
+    });
+
+    it('reads "You" and points at /account for a signed-in anon', () => {
+        const signInSlot = MOBILE_NAV.find((item) => item.title === 'Log in')!;
+
+        expect(navTitle(signInSlot, true)).toBe('You');
+        expect(toUrl(navHref(signInSlot, true))).toBe(toUrl(account()));
     });
 });
 
@@ -138,6 +178,16 @@ describe('navHref', () => {
         for (const item of ACCOUNT_MENU) {
             expect(item.requiresAuth).toBe(true);
             expect(PRIMARY_NAV).not.toContainEqual(item);
+        }
+    });
+});
+
+/** `navTitle` mirrors `navHref`: same idea, the label instead of the URL. */
+describe('navTitle', () => {
+    it('leaves every item with no authedTitle reading the same in both states', () => {
+        for (const item of [...PRIMARY_NAV, ...ACCOUNT_MENU]) {
+            expect(navTitle(item, true)).toBe(item.title);
+            expect(navTitle(item, false)).toBe(item.title);
         }
     });
 });
