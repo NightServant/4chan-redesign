@@ -56,7 +56,7 @@ type ThreadCardProps = Omit<ComponentProps<'div'>, 'onClick' | 'children'> & {
 };
 
 const iconButtonClasses = cn(
-    'inline-flex size-8.5 shrink-0 items-center justify-center rounded-md text-muted-foreground',
+    'touch-target-44 inline-flex size-8.5 shrink-0 items-center justify-center rounded-md text-muted-foreground',
     'transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover',
     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
 );

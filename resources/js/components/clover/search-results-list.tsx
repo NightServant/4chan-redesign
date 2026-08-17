@@ -92,7 +92,7 @@ export function SearchResultsList({
                                 type="button"
                                 aria-label={`Remove "${term}" from recent searches`}
                                 onClick={() => onForgetHistory(term)}
-                                className="grid size-7 shrink-0 place-items-center rounded-sm text-faint hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                className="touch-target-44 grid size-7 shrink-0 place-items-center rounded-sm text-faint hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                             >
                                 <X aria-hidden="true" className="size-3.5" />
                             </button>

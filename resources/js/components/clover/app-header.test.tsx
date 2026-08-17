@@ -662,4 +662,39 @@ describe('AppHeader', () => {
             expect(header?.className).not.toMatch(/(^|\s)hidden(\s|$)/);
         });
     });
+
+    /**
+     * Task 5: every icon button in this header (the drawer trigger, the
+     * theme toggle, and at `md`+ the bell and avatar) goes through
+     * `<Button size="icon">`, so the fix lives entirely in that one variant
+     * (see `resources/js/lib/touch-target.test.ts` for the class contract on
+     * `touch-target-44` itself) rather than as four separate edits here.
+     * `jsdom` cannot render the pseudo-element `touch-target-44` adds or
+     * evaluate `pointer-coarse`, so this only asserts the class reaches
+     * every one of these buttons and that doing so left `h-16` alone --
+     * not that a coarse pointer's hit area is actually 44px on screen.
+     */
+    it('carries touch-target-44 on every header icon button, without growing the header', () => {
+        mockPage.props.auth.user = SIGNED_IN_USER;
+        renderHeader();
+
+        const hamburger = screen.getByRole('button', {
+            name: 'Open sidebar',
+        });
+        const themeToggle = screen.getByRole('button', {
+            name: /Switch to (dark|light) theme/,
+        });
+        const bell = screen.getByRole('button', {
+            name: /Notifications/,
+        });
+        const avatar = screen.getByRole('button', { name: 'Account menu' });
+
+        for (const button of [hamburger, themeToggle, bell, avatar]) {
+            expect(button).toHaveClass('touch-target-44');
+        }
+
+        const header = document.querySelector('[data-slot="app-header"]');
+        expect(header).toHaveClass('h-16');
+        expect(header).not.toHaveClass('min-h-16');
+    });
 });

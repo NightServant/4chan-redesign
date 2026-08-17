@@ -39,7 +39,7 @@ const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 const MAX_BOARD_ROWS = 5;
 
 const rowBaseClasses =
-    'flex h-[38px] items-center gap-3 rounded-lg text-body-sm transition-colors duration-[var(--duration-hover)] ease-standard';
+    'flex h-[38px] items-center gap-3 rounded-lg text-body-sm transition-colors duration-[var(--duration-hover)] ease-standard touch-target-44';
 
 const rowRestClasses =
     'font-normal text-muted-foreground hover:bg-surface-hover hover:text-foreground hover:font-medium';
@@ -48,7 +48,7 @@ const rowActiveClasses = 'bg-primary-soft font-semibold text-primary';
 
 /** Shared by the collapse and expand toggles so both sit on the same axis. */
 const toggleClasses =
-    'flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover hover:text-foreground';
+    'flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover hover:text-foreground touch-target-44';
 
 /**
  * One of the sidebar's board lists. Hidden entirely when empty rather than
@@ -77,7 +77,7 @@ function BoardList({
                 <Link
                     key={board.slug}
                     href={board.slug}
-                    className="flex h-[38px] items-center gap-3 rounded-lg px-[11px] text-body-sm text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover hover:text-foreground"
+                    className="touch-target-44 flex h-[38px] items-center gap-3 rounded-lg px-[11px] text-body-sm text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover hover:text-foreground"
                 >
                     <BoardAvatar slug={board.slug} size={20} decorative />
                     <span className="truncate">

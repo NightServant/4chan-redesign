@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
  */
 const shareButtonVariants = cva(
     [
-        'inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md text-muted-foreground',
+        'touch-target-44 inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md text-muted-foreground',
         'transition-colors duration-[var(--duration-hover)] ease-standard',
         'hover:bg-surface-hover hover:text-foreground active:scale-[0.98]',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
@@ -173,5 +173,5 @@ function ShareControl({
     );
 }
 
-export { ShareControl };
+export { ShareControl, shareButtonVariants };
 export type { ShareControlProps };

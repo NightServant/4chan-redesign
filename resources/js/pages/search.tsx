@@ -131,7 +131,7 @@ export default function Search({
                             type="button"
                             aria-label="Back"
                             onClick={() => window.history.back()}
-                            className="flex size-9.5 shrink-0 items-center justify-center rounded-md text-foreground hover:bg-surface-hover"
+                            className="touch-target-44 flex size-9.5 shrink-0 items-center justify-center rounded-md text-foreground hover:bg-surface-hover"
                         >
                             <ArrowLeftIcon aria-hidden="true" />
                         </button>

@@ -507,3 +507,43 @@
     );
     background-size: var(--pattern-size-dense) var(--pattern-size-dense);
 }
+
+/*
+|-------------------------------------------------------------------------------
+| Touch target
+|-------------------------------------------------------------------------------
+|
+| 44x44 is the touch minimum (task 5); the pointer minimum this app was built
+| to is 34-38px, deliberately tighter for the desktop chrome. Growing every
+| icon button's own box to 44px would coarsen that chrome, so this grows the
+| hit area instead of the painted control: a transparent, empty pseudo-element
+| centred on whatever carries this class, sized to the larger of 44px or the
+| control's own box in each axis independently. A control already 44px or
+| wider in an axis is unaffected in that axis; the pseudo-element sits out of
+| normal flow, so neither the control's own size nor the row it sits in ever
+| changes.
+|
+| Gated to `pointer-coarse` -- the input mechanism doing the pointing -- not
+| to a viewport width. `pagination.tsx` had already solved this same problem
+| once with a `md:`-gated inset before this utility existed, and `md:` is the
+| wrong axis to gate on: a touchscreen tablet in a wide landscape window is
+| still a touchscreen, and a narrow pointer-driven browser window is still a
+| mouse.
+|
+*/
+@utility touch-target-44 {
+    position: relative;
+
+    &::before {
+        content: '';
+        position: absolute;
+
+        @variant pointer-coarse {
+            top: 50%;
+            left: 50%;
+            width: max(44px, 100%);
+            height: max(44px, 100%);
+            transform: translate(-50%, -50%);
+        }
+    }
+}

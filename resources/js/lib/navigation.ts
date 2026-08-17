@@ -98,6 +98,12 @@ const ACCOUNT_MENU: readonly CloverNavItem[] = [
  * label on a different baseline from its three neighbours, none of which
  * wrap. Only the bar's own label changed — `/rules` keeps its own page
  * heading and title.
+ *
+ * Likewise "Alerts", not "Notifications": the same 80px-slot defect,
+ * estimated at ~94px against that slot, a smaller overrun than "Community
+ * Rules" had but not a comfortable one either (task 5). Only the bar's own
+ * label changed here too — the sidebar's `PRIMARY_NAV` entry, the
+ * `/notifications` route and the page it renders are all untouched.
  */
 const MOBILE_NAV: readonly CloverNavItem[] = [
     { title: 'Home', href: home(), authedHref: dashboard(), icon: HouseIcon },
@@ -107,7 +113,7 @@ const MOBILE_NAV: readonly CloverNavItem[] = [
         icon: ScrollTextIcon,
     },
     {
-        title: 'Notifications',
+        title: 'Alerts',
         href: notifications(),
         icon: BellIcon,
         requiresAuth: true,

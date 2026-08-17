@@ -47,11 +47,13 @@ function mockPage({
 
 describe('MobileNav', () => {
     /**
-     * The bar became Home, Rules, Notifications, You after task 4:
+     * The bar became Home, Rules, Alerts, You after task 4 (task 4 called
+     * the third slot "Notifications"; task 5 renamed it "Alerts" — the bar's
+     * own label only, same route, same sidebar entry).
      * Popular and Latest are reachable from the drawer (the sidebar's own
      * list below `lg`), and History moved onto the account screen.
      */
-    it('renders Home, Rules and the sign-in slot when signed out, and no Notifications', () => {
+    it('renders Home, Rules and the sign-in slot when signed out, and no Alerts', () => {
         mockPage({ signedIn: false });
 
         render(<MobileNav />);
@@ -59,7 +61,7 @@ describe('MobileNav', () => {
         expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
         expect(screen.getByRole('link', { name: 'Rules' })).toBeInTheDocument();
         expect(
-            screen.queryByRole('link', { name: 'Notifications' }),
+            screen.queryByRole('link', { name: 'Alerts' }),
         ).not.toBeInTheDocument();
         expect(
             screen.queryByRole('link', { name: 'Popular' }),
@@ -96,7 +98,7 @@ describe('MobileNav', () => {
 
         expect(
             screen.getAllByRole('link', {
-                name: /Home|Rules|Notifications|You/,
+                name: /Home|Rules|Alerts|You/,
             }),
         ).toHaveLength(4);
         expect(
@@ -126,14 +128,16 @@ describe('MobileNav', () => {
         );
     });
 
-    it('points Notifications at /notifications when signed in', () => {
+    /** The bar's label is "Alerts"; the route underneath it is still /notifications. */
+    it('points Alerts at /notifications when signed in', () => {
         mockPage({ signedIn: true });
 
         render(<MobileNav />);
 
-        expect(
-            screen.getByRole('link', { name: 'Notifications' }),
-        ).toHaveAttribute('href', toUrl(notifications()));
+        expect(screen.getByRole('link', { name: 'Alerts' })).toHaveAttribute(
+            'href',
+            toUrl(notifications()),
+        );
     });
 
     /**
@@ -199,5 +203,27 @@ describe('MobileNav', () => {
         const signedInLinks = signedInContainer.querySelectorAll('a');
 
         expect(signedInLinks).toHaveLength(4);
+    });
+
+    /**
+     * Task 5's 44px touch target does not touch this bar: `min-h-12` is
+     * 48px, already over the minimum, and each slot's own width (`flex-1`
+     * of a signed-in 320px bar, the narrowest case) is 80px, also over it.
+     * `touch-target-44` grows a control up to 44px in an axis that falls
+     * short of it and leaves an axis alone that already clears it, so
+     * applying it here would be a no-op in both axes -- there is nothing
+     * for it to do. This guards the arithmetic staying true rather than
+     * the class being present, since no class was added.
+     */
+    it('already clears the 44px touch minimum in both axes, so nothing here changed for task 5', () => {
+        mockPage({ signedIn: true });
+
+        render(<MobileNav />);
+
+        const link = screen.getByRole('link', { name: 'Home' });
+
+        expect(link).toHaveClass('min-h-12');
+        expect(link).toHaveClass('flex-1');
+        expect(link).not.toHaveClass('touch-target-44');
     });
 });

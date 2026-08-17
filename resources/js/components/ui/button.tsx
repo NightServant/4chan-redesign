@@ -52,7 +52,7 @@ const buttonVariants = cva(
                 sm: 'h-8.5 px-3',
                 md: 'h-9.5 px-4',
                 lg: 'h-11 px-5',
-                icon: 'size-9.5 p-0',
+                icon: 'touch-target-44 size-9.5 p-0',
                 /** Alias of `md`, kept for starter-kit pages. */
                 default: 'h-9.5 px-4',
             },
