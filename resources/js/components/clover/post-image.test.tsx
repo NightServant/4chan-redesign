@@ -154,50 +154,22 @@ describe('PostImage', () => {
          * It caps the box, not the crop, so both variants carry it — the
          * thread page's column is the same 760px.
          */
-        it.each(['card', 'post'] as const)(
-            'caps the width of a %s box',
-            (variant) => {
-                render(
-                    <PostImage media={makeAttachment()} variant={variant} />,
-                );
+        /* Feed rows only. The thread page's column already caps itself at
+           `--measure-column`, so a second cap inside it left the image fixed
+           while the column grew -- which is the gap that kept coming back. */
+        it('caps the width of a card box', () => {
+            render(<PostImage media={makeAttachment()} variant="card" />);
 
-                expect(screen.getByRole('button')).toHaveClass('max-w-[560px]');
-            },
-        );
+            expect(screen.getByRole('button')).toHaveClass('max-w-[560px]');
+        });
 
-        /**
-         * Gabe's thread page at ~857px, and again at ~885px: the capped box sat
-         * against the left edge with the whole remainder on the right, while
-         * the post's header, title and footer all ran the full width. The cap
-         * itself produced the gap — a box with a `max-width` hugs the leading
-         * edge unless told otherwise.
-         *
-         * Every parent this variant has is a `flex flex-col`
-         * (`thread/original-post.tsx`, `clover/comment-tree.tsx`), so its
-         * horizontal placement is cross-axis alignment: `self-center` is the
-         * property that decides it, rather than an auto margin that only gets
-         * there by overriding the container's `align-items`.
-         *
-         * Read off the rendered element, not off the exported constant — a
-         * guard that reads the same value the component reads cannot fail, and
-         * `cn()` merges these strings before they reach the DOM. Both rules
-         * are checked, since two of them for one job is the state this is
-         * meant to avoid.
-         */
-        it('centres the post box in its column rather than hugging one edge', () => {
-            const { container } = render(
-                <PostImage media={makeAttachment()} variant="post" />,
-            );
+        it('lets a post box take its column', () => {
+            render(<PostImage media={makeAttachment()} variant="post" />);
 
-            const box = container.querySelector<HTMLElement>(
-                '[data-slot="post-image"]',
-            );
+            const box = screen.getByRole('button');
 
-            expect(box?.className).toMatch(/(^|\s)self-center(\s|$)/);
-            expect(box?.className).not.toMatch(/(^|\s)mx-auto(\s|$)/);
-            expect(box?.className).toMatch(/(^|\s)max-w-\[560px\](\s|$)/);
-            expect(box?.className).not.toMatch(/aspect-/);
-            expect(screen.getByRole('img')).toHaveClass('object-contain');
+            expect(box).toHaveClass('w-full');
+            expect(box.className).not.toMatch(/max-w-\[560px\]/);
         });
 
         /**

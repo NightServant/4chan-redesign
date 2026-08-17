@@ -156,7 +156,11 @@ const MAX_BOX_WIDTH = 'max-w-[560px]';
  */
 const VARIANT_BOX_CLASSES: Record<PostImageVariant, string> = {
     card: `aspect-[4/3] ${MAX_BOX_WIDTH}`,
-    post: `self-center ${MAX_BOX_WIDTH}`,
+    /* No cap. The thread column already caps itself at
+       `--measure-column`, so a second 560px cap inside it left the image
+       fixed while the column grew -- the gap Gabe kept seeing. The image
+       takes the column and stops at its own natural size. */
+    post: 'w-full',
 };
 
 const VARIANT_IMAGE_CLASSES: Record<PostImageVariant, string> = {
