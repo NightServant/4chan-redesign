@@ -1,8 +1,45 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import type { ReactNode } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PostAttachment, PostImage } from '@/components/clover/post-image';
 import { makeAttachment } from '@/fixtures/factories';
+
+/* Only rendered on the branch where a feed row's image is a link to its
+   thread; the rest of this suite never reaches Inertia at all. */
+vi.mock('@inertiajs/react', () => ({
+    Link: ({
+        href,
+        children,
+        ...props
+    }: { href: string; children: ReactNode } & Record<string, unknown>) => (
+        <a href={href} {...props}>
+            {children}
+        </a>
+    ),
+}));
+
+/**
+ * `useIsMobile` reads `matchMedia`, which jsdom does not implement. The
+ * feed-row-to-thread branch is a real behaviour difference -- a link versus a
+ * dialog -- so both sides are exercised rather than asserted from classes.
+ */
+function setViewport(isMobile: boolean): void {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+        matches: isMobile,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+    }));
+}
+
+afterEach(() => {
+    vi.unstubAllGlobals();
+});
 
 describe('PostImage', () => {
     /**
@@ -311,6 +348,63 @@ describe('PostImage', () => {
      * because the screen was opened to look at the image, and capped at half
      * the viewport so the picture is still there when it opens.
      */
+    /**
+     * A feed row on a phone opens the thread, not a viewer.
+     *
+     * The viewer there could only ever offer the file, its size and a way
+     * out -- a row has no replies in hand. Tapping a post should give the
+     * community, the whole image, the replies and the way in, and that screen
+     * already exists.
+     */
+    it('opens the thread instead of the viewer below `md` when it has no drawer', () => {
+        setViewport(true);
+
+        render(<PostImage media={makeAttachment()} href="/g/58210441" />);
+
+        expect(
+            screen.getByRole('link', { name: /attached image/i }),
+        ).toHaveAttribute('href', '/g/58210441');
+    });
+
+    it('still opens the viewer at `md` and up', async () => {
+        setViewport(false);
+        const user = userEvent.setup();
+        const media = makeAttachment();
+
+        render(<PostImage media={media} href="/g/58210441" />);
+
+        await user.click(
+            screen.getByRole('button', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        );
+
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    /** A caller with replies keeps the viewer at every width. */
+    it('keeps the viewer below `md` when a drawer was given', async () => {
+        setViewport(true);
+        const user = userEvent.setup();
+        const media = makeAttachment();
+
+        render(
+            <PostImage
+                media={media}
+                href="/g/58210441"
+                viewerDrawer={<p>A reply lives here.</p>}
+            />,
+        );
+
+        await user.click(
+            screen.getByRole('button', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        );
+
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
     it('hides the drawer behind a control and opens it on press', async () => {
         const user = userEvent.setup();
         const media = makeAttachment();

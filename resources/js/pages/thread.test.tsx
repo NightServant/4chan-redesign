@@ -160,7 +160,15 @@ describe('Thread', () => {
         expect(screen.getByText(`>>${KNOWN_THREAD.no}`)).toBeInTheDocument();
     });
 
-    it('links back to the board', () => {
+    /**
+     * No "Back to /g/" link.
+     *
+     * The board is named twice within an inch of it -- in the post's own
+     * header row, which links to the same place, and in the sidebar's board
+     * list. A third copy pointing at the same board was one row of chrome
+     * repeating what the content underneath already says.
+     */
+    it('offers no separate back link, since the post header names the board', () => {
         render(
             <Thread
                 slug="/g/"
@@ -171,8 +179,12 @@ describe('Thread', () => {
             />,
         );
 
-        const backLink = screen.getByRole('link', { name: /back to \/g\//i });
-        expect(backLink).toHaveAttribute('href', '/g');
+        expect(
+            screen.queryByRole('link', { name: /back to/i }),
+        ).not.toBeInTheDocument();
+        expect(
+            screen.getAllByRole('link', { name: /\/g\// })[0],
+        ).toHaveAttribute('href', '/g');
     });
 
     it('renders the reply count label matching the fixture, with the number in a MachineValue', () => {

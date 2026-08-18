@@ -189,7 +189,15 @@ function ThreadCard({
                         opened. */}
                     {thread.media ? (
                         <div className={cn('relative', inset)}>
-                            <PostAttachment media={thread.media} />
+                            {/* Below `md` this opens the thread rather than
+                                a viewer: a feed row has no replies to put
+                                behind the picture, and the thread is the
+                                screen that carries the board, the whole
+                                image, the replies and the way in. */}
+                            <PostAttachment
+                                media={thread.media}
+                                href={titleHref}
+                            />
                         </div>
                     ) : null}
                 </>

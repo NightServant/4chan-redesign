@@ -1,3 +1,4 @@
+import { Link } from '@inertiajs/react';
 import { ChevronUp, ExternalLink, EyeIcon } from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
@@ -5,6 +6,7 @@ import { MachineValue } from '@/components/clover/machine-value';
 import { MediaPlaceholder } from '@/components/clover/media-placeholder';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import type { Attachment } from '@/types/clover';
 
@@ -198,6 +200,18 @@ type PostImageProps = {
     viewerDrawer?: ReactNode;
     /** Names the drawer's control, e.g. "312 replies". */
     viewerDrawerLabel?: string;
+    /**
+     * Where the picture belongs, for callers that have no replies to show.
+     *
+     * Below `md` a feed row's image opens this instead of the viewer: the
+     * viewer there could only ever offer the file and a way out, and Gabe's
+     * ask is that tapping a post gives the community, the whole image, the
+     * replies and the way in. That screen already exists -- it is the thread
+     * -- so the tap goes there rather than a second one being built behind a
+     * dialog with no comments in hand. At `md` and up the viewer opens as
+     * before, beside a page that is already showing the row's context.
+     */
+    href?: string;
     className?: string;
 };
 
@@ -206,6 +220,7 @@ function PostImage({
     variant = 'card',
     viewerDrawer,
     viewerDrawerLabel = 'Replies',
+    href,
     className,
 }: PostImageProps) {
     /* Concealment is the initial state, not a permanent one: revealing is a
@@ -216,9 +231,15 @@ function PostImage({
        replies wait behind a control rather than taking half the screen from
        the thing that was tapped. */
     const [drawerOpen, setDrawerOpen] = useState(false);
+    const isMobile = useIsMobile();
+    /* A link, not a dialog, when there is somewhere better to go and no
+       replies to put behind the picture. */
+    const navigates =
+        isMobile && href !== undefined && viewerDrawer === undefined;
     const [failed, setFailed] = useState(false);
 
     const box = intrinsicBox(media);
+    const Component = navigates ? Link : 'button';
 
     /**
      * A file 4chan has since pruned still has a `tim`, so the URL is
@@ -276,10 +297,14 @@ function PostImage({
             {/* The thumbnail is the button. Wrapping an image in a button
                 rather than giving the image an onClick is what makes it
                 keyboard reachable and gives it a real accessible name. */}
-            <button
-                type="button"
+            <Component
+                {...(navigates
+                    ? { href }
+                    : {
+                          type: 'button' as const,
+                          onClick: () => setExpanded(true),
+                      })}
                 data-slot="post-image"
-                onClick={() => setExpanded(true)}
                 className={cn(
                     /* Full width too: an image that fills its box is still
                        inset if the box itself does not fill the column. */
@@ -303,7 +328,7 @@ function PostImage({
                     onError={() => setFailed(true)}
                     className={cn('block', VARIANT_IMAGE_CLASSES[variant])}
                 />
-            </button>
+            </Component>
 
             <Dialog open={expanded} onOpenChange={setExpanded}>
                 {/* The whole screen on a phone, a panel on a desktop.

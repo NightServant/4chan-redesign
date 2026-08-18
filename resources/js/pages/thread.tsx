@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { Archive, ArrowLeft } from 'lucide-react';
+import { Archive } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AuthGate } from '@/components/clover/auth-gate';
 import { CommentTree } from '@/components/clover/comment-tree';
@@ -180,14 +180,6 @@ export default function Thread({
             />
 
             <div className="mx-auto flex max-w-(--measure-column) flex-col gap-6 px-6 py-8">
-                <Link
-                    href={board({ board: boardToken(thread.board) })}
-                    className="inline-flex w-fit items-center gap-1.5 text-body-sm text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                >
-                    <ArrowLeft aria-hidden="true" className="size-4" />
-                    Back to {thread.board}
-                </Link>
-
                 {/* The viewer's drawer, below `md`: the thread's replies and
                     the way into the composer, behind the picture an anon just
                     tapped. Built here because this is the screen that has
