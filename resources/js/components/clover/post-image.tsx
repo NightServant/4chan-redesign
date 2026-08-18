@@ -376,7 +376,7 @@ function PostImage({
                     where a thumb is. At `md` and up the panel comes back,
                     sized to the image rather than to a fixed column, so a
                     portrait shot is not boxed in a landscape frame. */}
-                <DialogContent className="grid h-dvh w-screen max-w-none grid-rows-[auto_1fr_auto] gap-0 rounded-none border-0 bg-bg p-0 sm:max-w-none md:h-auto md:w-fit md:max-w-[min(94vw,1400px)] md:rounded-2xl md:border md:p-6">
+                <DialogContent className="grid h-dvh w-full max-w-none grid-rows-[auto_1fr_auto] gap-0 rounded-none border-0 bg-bg p-0 sm:max-w-none md:h-auto md:w-fit md:max-w-[min(94vw,1400px)] md:rounded-2xl md:border md:p-6">
                     <DialogTitle className="sr-only">
                         {media.filename}
                     </DialogTitle>
@@ -390,7 +390,7 @@ function PostImage({
                         names only the file is a lightbox; naming the board
                         says which conversation this picture belongs to,
                         which is the thing the drawer below then shows. */}
-                    <div className="flex min-w-0 items-center gap-2 border-b border-border px-3 py-3 pr-14 md:hidden">
+                    <div className="flex min-w-0 items-center gap-2 overflow-hidden border-b border-border px-3 py-3 pr-14 md:hidden">
                         {board !== undefined ? (
                             <span className="shrink-0 text-body-sm font-semibold text-foreground">
                                 {board}
@@ -401,7 +401,13 @@ function PostImage({
                         </MachineValue>
                     </div>
 
-                    <div className="flex min-h-0 items-center justify-center overflow-hidden p-2 md:p-0">
+                    {/* `min-w-0` as well as `min-h-0`. A grid item's minimum
+                        is `auto`, which is its content's intrinsic size -- so
+                        a 1024px file made this track 1024px wide inside a
+                        320px dialog and the picture ran off both edges. The
+                        same rule is why the header row beside the close
+                        control needs one. */}
+                    <div className="flex min-h-0 min-w-0 items-center justify-center overflow-hidden p-2 md:p-0">
                         <img
                             src={media.fullUrl}
                             alt={altFor(media)}
@@ -492,7 +498,7 @@ function PostImage({
                             </div>
                         ) : null}
 
-                        <div className="flex items-center justify-between gap-3 border-t border-border px-3 py-2 md:justify-center md:border-0 md:py-0">
+                        <div className="flex min-w-0 items-center justify-between gap-3 border-t border-border px-3 py-2 md:justify-center md:border-0 md:py-0">
                             <MachineValue className="min-w-0 truncate text-faint">
                                 {media.label}
                             </MachineValue>

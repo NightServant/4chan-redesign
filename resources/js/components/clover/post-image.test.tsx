@@ -348,6 +348,32 @@ describe('PostImage', () => {
      * panel is sized to the image instead, which is the opposite rule and
      * still correct there.
      */
+    /**
+     * A grid item's minimum size is `auto` -- its content's intrinsic size --
+     * so a 1024px file made the viewer's middle track 1024px wide inside a
+     * 320px dialog and the picture ran off both edges, with the filename
+     * doing the same in the row above it.
+     */
+    it('lets its rows shrink below the file`s intrinsic width', async () => {
+        const user = userEvent.setup();
+        const media = makeAttachment();
+
+        render(<PostImage media={media} />);
+
+        await user.click(
+            screen.getByRole('button', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        );
+
+        const full = screen
+            .getAllByRole('img', { name: `Attached image: ${media.filename}` })
+            .at(-1);
+
+        expect(full?.parentElement).toHaveClass('min-w-0');
+        expect(full?.parentElement).toHaveClass('overflow-hidden');
+    });
+
     it('fills the viewer below `md` and sizes to the image above it', async () => {
         const user = userEvent.setup();
         const media = makeAttachment();
