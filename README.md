@@ -18,25 +18,28 @@ The design lives in a Claude Design project and is treated as a blueprint, not a
 
 Some of it is not a port at all. The prototype has no command palette, no thread page and no composer: it stubs the last two with copy claiming the design system ships them, and it does not. Those are net-new work built to sit inside the system rather than beside it.
 
-Boards, threads and posts are ingested from 4chan's read-only JSON API into Eloquent and reach the screens as Inertia props. Everything an account does — posting, voting, saving, following, and the reading history behind it — is this application's own and never leaves it. Clover is two data sources behind one set of typed contracts rather than a mirror.
+Boards, threads and posts are ingested from 4chan's read-only JSON API into Eloquent and reach the screens as Inertia props. Everything an account does — replying, saving, following, and the reading history behind it — is this application's own and never leaves it. Clover is two data sources behind one set of typed contracts rather than a mirror.
 
 ## Features
 
 - **Token foundation** &mdash; every colour authored once in OKLCH, mapped through Tailwind's `@theme` to both shadcn aliases and Clover-native utilities; dark by default with a fully authored light scope, and no neutral pure black or white
-- **Component library** &mdash; 94 components across primitives, Clover-specific components, and page sections, each built test-first
-- **Overlays on Radix** &mdash; dialog, dropdown, context menu, tabs, tooltip and select, so focus trapping, roving tabindex and typeahead are correct rather than approximated
+- **Component library** &mdash; 109 components across 23 pages: primitives, Clover-specific components and page sections, each built test-first
+- **Overlays on Radix** &mdash; dialog, sheet, dropdown, context menu, tabs, tooltip and select, so focus trapping, roving tabindex and typeahead are correct rather than approximated
 - **Command palette** &mdash; ⌘K / Ctrl+K over `cmdk`, net-new work the design prototype never covered
-- **App chrome** &mdash; collapsible sidebar with persisted state, sticky header with account and notification menus, and a mobile bottom bar that respects the home-indicator inset
+- **App chrome that reshapes** &mdash; a collapsible sidebar with persisted state above `lg` and the same list as a drawer below it; a header carrying the account and notification menus on a desktop and the drawer trigger plus a search field on a phone; a bottom bar for signed-in anons, and in its place a dock for signed-out ones that says what Clover is before asking anyone to join
+- **One set of measures** &mdash; the shell, the thread column, the rail and the media box are custom properties, so a width is decided in one place and every screen reads it, and the rail is not reserved at widths where it never renders. Every control clears 44px on a coarse pointer
 - **Community layer** &mdash; thread cards with a stretched-link target so the share and bookmark buttons stay independently focusable, and a comment tree nested from quotelinks, since 4chan's own posts are flat
 - **Feed, boards and threads** &mdash; three feed sorts, a board page per slug with a real empty state, and a thread view that handles a post number matching nothing as an ordinary case rather than an error
+- **Search over the synced database** &mdash; a header dropdown that suggests boards and threads as you type, and a results page with All, Posts, Communities and Comments tabs plus sort and time filters at every width. Recent searches are kept in the browser for an anon who is signed in, and recorded for nobody who is not
 - **Real data, read-only upstream** &mdash; 77 boards, their catalogs and their posts ingested from 4chan's JSON API by `clover:sync`, rate limited to one request a second and conditional on `If-Modified-Since`; nothing is ever written back
 - **Greentext that works** &mdash; post bodies are parsed from 4chan's HTML to plain text on ingest, then rendered line by line with quote lines styled and `>>` references picked out; no post body ever reaches React as markup
 - **Adult boards behind an opt-in** &mdash; `ws_board` drives it, the preference is account-level and off by default, and a board you have not opted into answers 404 rather than 403 so its existence is not confirmed
 - **Imageboard URLs** &mdash; `/g/` is a board and `/g/109522303` a thread, constrained to the synced slug list so they cannot shadow the site's own pages
-- **Attachments that render** &mdash; images served straight from 4chan's CDN, addressed by the id it stores them under; spoilered files and everything on a not-worksafe board sit behind a cover that fetches nothing until asked
-- **Composers that persist** &mdash; a reply form inline where replying belongs and a dialog for starting a thread, both refusing empty input, both enforcing the board's own `max_comment_chars` rather than one global guess, and both writing a post that survives a reload
-- **An account layer of its own** &mdash; saved threads, reading history and followed boards, each private to the anon and none of it attached to anything they post. There is no voting: blessings and curses were removed in task 12, because 4chan has no votes to import and almost nothing cast here ever carried any
-- **Marketing homepage** &mdash; hero, board grid, trending strip, features, and a footer whose every destination resolves to a real page
+- **Attachments that render** &mdash; images served straight from 4chan's CDN, addressed by the id it stores them under; spoilered files and everything on a not-worksafe board sit behind a cover that fetches nothing until asked. A feed row crops its image to a fixed box, a thread page shows the file whole, and a viewer opens it full screen with the replies a drawer away
+- **Attachments an anon can post** &mdash; a reply carries an image of up to 4 MB, stored on this application's own disk and never sent anywhere; the account screen's media tab lists what that account has uploaded
+- **Composers that persist** &mdash; a reply form inline where replying belongs, and its own page below `md` where a phone keyboard leaves no room for a form under a thread; both refuse empty input, both enforce the board's own `max_comment_chars` rather than one global guess, and both write a post that survives a reload
+- **An account layer of its own** &mdash; saved threads, reading history and followed boards, each private to the anon and none of it attached to anything they post. Settings sit behind one drawer (appearance, adult boards, two-factor, sign out) and Edit profile is a sheet on a phone. There is no voting: blessings and curses were retired, because 4chan has no votes to import and almost nothing cast here ever carried any
+- **Marketing homepage** &mdash; a hero over live threads, boards as a carousel, a trending ticker, features that become an accordion on a phone, and a footer whose every destination resolves to a real page
 - **Accessibility as a build constraint** &mdash; focus rings never removed, state never carried by colour alone, tests asserting accessible names and keyboard paths instead of class strings
 - **Motion that means something** &mdash; four duration tokens, exits at roughly 65% of their enter, layout properties never animated, and a reduced-motion rule asserted against the compiled stylesheet
 - **Two variable fonts** &mdash; Inter and Space Grotesk, subset to WOFF2; no monospace ships, and machine values use Inter with tabular figures
@@ -138,6 +141,10 @@ Open [http://localhost:8000](http://localhost:8000). Served by [Laravel Herd](ht
 
 ### Useful commands
 
+The suite is 1,285 frontend tests and 411 backend ones. `ci:check` runs all of
+it alongside the linters, the formatters and Larastan — the same set the three
+GitHub checks run, so a branch that passes it locally passes there.
+
 ```bash
 composer ci:check        # everything CI runs, in one command
 
@@ -150,56 +157,13 @@ npm run format           # Prettier
 vendor/bin/pint          # PHP formatting
 ```
 
-## Progress
+## Known gaps
 
-Work is sequenced into gated tasks. Each is built, reviewed, merged to `main` as one squashed commit, and verified on `main` before the next begins. **Current suite: 836 frontend tests, 296 backend tests.**
-
-| Task | Scope | Status |
-|---|---|---|
-| 1 | Design foundation: OKLCH tokens, both theme scopes, two variable fonts, typed contracts | [Merged](https://github.com/NightServant/4chan-redesign/pull/4) |
-| 2 | Core primitives and form controls | [Merged](https://github.com/NightServant/4chan-redesign/pull/7) |
-| 3 | Overlays, navigation, feedback; command palette | [Merged](https://github.com/NightServant/4chan-redesign/pull/8) |
-| 4 | App chrome and Inertia layouts; breadcrumbs and the shadcn sidebar removed | [Merged](https://github.com/NightServant/4chan-redesign/pull/9) |
-| 5 | Community layer: thread cards, votes, comment tree, skeletons | [Merged](https://github.com/NightServant/4chan-redesign/pull/10) |
-| 6 | Homepage, plus eleven information routes | [Merged](https://github.com/NightServant/4chan-redesign/pull/11) |
-| 6.1 | Visual fixes from review: rail alignment, hero overlap, header backdrop | [Merged](https://github.com/NightServant/4chan-redesign/pull/12) |
-| 7 | Feed and board pages; board and thread routing | [Merged](https://github.com/NightServant/4chan-redesign/pull/15) |
-| 8 | Thread view, reply composer, new-thread dialog, auth gate | [Merged](https://github.com/NightServant/4chan-redesign/pull/16) |
-| 8.1 | Review fixes: Home resolves by auth state, feed sort tabs removed | [Merged](https://github.com/NightServant/4chan-redesign/pull/17) |
-| 9 | Account, history, auth screens, error pages | [Merged](https://github.com/NightServant/4chan-redesign/pull/19) |
-| 10 | The six screens the prototype never covered: settings, messages, bookmarks, communities, two-factor, passkeys | [Merged](https://github.com/NightServant/4chan-redesign/pull/19) |
-| 11a | Read layer: ingest from 4chan's API, board and thread models, per-board limits, mature-board gating | [Merged](https://github.com/NightServant/4chan-redesign/pull/20) |
-| 11a.1 | Attachments rendered from 4chan's CDN, behind spoiler and mature-board covers | [Merged](https://github.com/NightServant/4chan-redesign/pull/21) |
-| 11a.2 | Image sizing; no attachments on the homepage | [Merged](https://github.com/NightServant/4chan-redesign/pull/22) |
-| 11a.3 | Whole catalog imported, opening post with it | [Merged](https://github.com/NightServant/4chan-redesign/pull/23) |
-| 11b | Account layer: votes, bookmarks, history, subscriptions, local posting; messages removed | [Merged](https://github.com/NightServant/4chan-redesign/pull/25) |
-| 12 | Blessings and curses retired, table and all; sharing a thread in their place | [Merged](https://github.com/NightServant/4chan-redesign/pull/29) |
-| 13a | Hero rebuilt around live thread rails; light-theme green fixed; boards as a carousel | [Merged](https://github.com/NightServant/4chan-redesign/pull/30) |
-| 13b | Features as tabs; footer cut to what Clover has, with the pages written | [Merged](https://github.com/NightServant/4chan-redesign/pull/31) |
-| 13c | Patterns in the design system, parallax bands, ticker-speed marquees, trending as a ticker | [Merged](https://github.com/NightServant/4chan-redesign/pull/32) |
-| 13d | One pattern throughout, ruled columns, legible boxed marquee rows | [Merged](https://github.com/NightServant/4chan-redesign/pull/33) |
-| 13e | Dots alternate green and grey; hero rails ruled both sides | [Merged](https://github.com/NightServant/4chan-redesign/pull/34) |
-| 13f | Second dot colour dropped; one colour on the paper | [Merged](https://github.com/NightServant/4chan-redesign/pull/35) |
-| 13g | Paper extended to the app shell and the auth form side | [Merged](https://github.com/NightServant/4chan-redesign/pull/36) |
-| 14 | Search that works: header dropdown and a results page, over the synced database | [Merged](https://github.com/NightServant/4chan-redesign/pull/37) |
-| 15 | Threads as rows rather than cards; images shown whole; NSFW marked | [Merged](https://github.com/NightServant/4chan-redesign/pull/38) |
-| 15a | Paper on the app chrome; search aligned to the thread column; hover on the title | [Merged](https://github.com/NightServant/4chan-redesign/pull/39) |
-| 16 | Sidebar carries the board lists; New Thread removed; bookmarking actually works | [Merged](https://github.com/NightServant/4chan-redesign/pull/40) |
-| 17 | Appearance page removed; adult boards and two-factor in the avatar menu; history as rows | Open |
-
-The app is navigable end to end: homepage, feed, board, thread, reply. Every link resolves, and everything an account does persists.
-
-There are no design fixtures left. `resources/js/fixtures/` holds test-data
-builders and nothing else — every product surface reads the database.
-
-### Known gaps
-
-- **Nothing has been checked in a browser by eye.** Every route is asserted to render and the write paths are covered end to end, but no one has looked at the result. Historically on this project the defects that mattered came from screenshots, not from the suite.
-- **`NewThreadDialog` is mounted by nothing.** Starting a thread works over its route and is covered by tests, but no screen renders the dialog, so the feature is unreachable from the interface.
-- **The feed does not page.** It is one query with a limit. The previous "Load more" was removed rather than kept, because it showed two skeletons and put itself back — paging a server-backed feed needs a cursor on the prop.
-- **Reading progress is always nought.** The thread page records that a thread was read but does not measure how far, so the history screen's progress ring is honest and uninformative. Inventing a number would be worse.
-- **Clover accepts no uploads.** A post written here carries no attachment, which is why the account screen's media tab is empty for a new account.
+- **Nothing checks the layout by eye except a person.** Every route is asserted to render, the write paths are covered end to end, and screens are read at several widths on production builds before a branch merges — but there is no visual-regression suite, so a layout that breaks silently is caught by a screenshot or not at all. Historically on this project the defects that mattered came from screenshots rather than from the suite.
+- **Threads cannot be started here.** Replying works, persists and takes an image; opening a thread was removed along with its dialog, route and controller, because at the time Clover accepted no uploads and a board where every new thread opens without an image is not the board it mirrors. Replies carry attachments now, so the reason has expired and this is a gap rather than a decision.
+- **Only the history screen pages.** The feed, board pages and search results are each one query with a limit, so what is past it is unreachable. Paging a server-backed feed needs a cursor on the prop, not a button that puts itself back.
 - **`php artisan route:cache` freezes the board list.** The `/{board}` constraint is built from the synced table, so a deployment that caches routes must re-cache them after a sync adds boards.
+- **A checkout with no scheduler running goes stale.** The schedule exists — the catalog every fifteen minutes, the five newest threads a board has every hour — but nothing runs it locally unless `php artisan schedule:work` is up, and the pages keep rendering an old bump order without saying so.
 
 ## Data notes
 
@@ -207,7 +171,7 @@ Board, thread and post content is **real, and comes from 4chan**, via its [read-
 
 Post bodies are parsed to plain text on the way in. The API returns `com` as HTML written by anonymous strangers — `<br>`, `<wbr>` injected mid-URL, greentext spans, three shapes of quotelink and HTML entities — so it is converted once during ingest rather than trusted into the DOM at render time. No post body reaches React as markup, and the renderer uses no `dangerouslySetInnerHTML`. (One component does: the two-factor setup modal, for the QR code SVG Fortify generates server-side. That is the app's own output, not an anon's.)
 
-**Attachments are real images, served by 4chan.** Files are addressed by `tim`, 4chan's own id for them, and the `<img>` points straight at `i.4cdn.org` — the documented arrangement, and what any client does. Nothing is downloaded or stored here: the application holds the id of a file, not the file. A browser fetching one therefore contacts 4chan directly, and `referrerPolicy="no-referrer"` keeps which page an anon was reading out of it.
+**Attachments are real images, served by 4chan.** Files are addressed by `tim`, 4chan's own id for them, and the `<img>` points straight at `i.4cdn.org` — the documented arrangement, and what any client does. Nothing from 4chan is downloaded or stored here: for an upstream post, the application holds the id of a file rather than the file. An image attached to a reply written on Clover is the other way round — it is this application's own file, on its own disk, and it is never sent anywhere. A browser fetching one therefore contacts 4chan directly, and `referrerPolicy="no-referrer"` keeps which page an anon was reading out of it.
 
 **A covered attachment is never fetched.** Images 4chan marks `spoiler`, and every image on a board marked not worksafe, render as a labelled cover with no `src` at all until an anon asks for one. Blurring a file the browser has already downloaded conceals nothing — the bytes arrived and the request happened. The homepage carries no attachments in its payload whatsoever, so the first screen a visitor sees cannot make a request to the CDN.
 
