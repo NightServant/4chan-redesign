@@ -123,7 +123,11 @@ function ThreadCard({
                    row lifts off the page it is ruled into. No transform
                    either -- a row that moves shifts every row beneath it. */
                 'rounded-xl transition-[background-color] duration-[var(--duration-hover)] ease-standard',
-                'hover:bg-surface/60',
+                /* `surface-hover`, the token that exists for this, rather
+                   than a translucent `surface`: at 60% over a 14% ground the
+                   dark theme's lift was about two points of lightness, which
+                   is a change you have to look for. */
+                'hover:bg-surface-hover',
                 className,
             )}
             {...props}

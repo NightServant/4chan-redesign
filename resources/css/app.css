@@ -125,7 +125,10 @@
     --bg: oklch(14.18% 0.0042 165.2);
     --surface: oklch(19.06% 0.0074 164.1);
     --surface-elevated: oklch(22.01% 0.0095 159.2);
-    --surface-hover: oklch(24.44% 0.0115 156.3);
+    /* Lifted from 24.44%. It reads against `--surface` (19.06%) in a menu,
+       but a feed row hovers against `--bg` (14.18%) and needs to answer at a
+       glance rather than on inspection. */
+    --surface-hover: oklch(27.5% 0.0125 156.3);
     --scrim: oklch(8% 0.006 165 / 0.72);
 
     /* Text */
