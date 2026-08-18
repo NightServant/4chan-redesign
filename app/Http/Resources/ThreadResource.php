@@ -76,7 +76,18 @@ final class ThreadResource extends JsonResource
             'nsfw' => ! $thread->board->worksafe,
 
             'replies' => $thread->replies_count,
-            'images' => number_format($thread->images_count),
+            /**
+             * The OP's own file included.
+             *
+             * `images_count` is 4chan's `images`, which counts the images on
+             * *replies* and excludes the opening post's -- so a thread whose
+             * only picture is the OP's reported "0 images" directly beneath
+             * that picture. The count a reader can check against the screen
+             * is the one worth printing.
+             */
+            'images' => number_format(
+                $thread->images_count + ($originalPost?->hasMedia() ? 1 : 0),
+            ),
 
             /**
              * The OP's attachment, or null when the thread opened without one.

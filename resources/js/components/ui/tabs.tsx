@@ -50,7 +50,11 @@ function TabsTrigger({
         <TabsPrimitive.Trigger
             data-slot="tabs-trigger"
             className={cn(
-                '-mb-px inline-flex items-center justify-center border-b-2 border-transparent px-3 py-2 text-body-sm font-medium whitespace-nowrap text-muted-foreground',
+                /* A tab is ~36px tall at `py-2`, under the touch minimum,
+                   and the board page's sort tabs are the ones an anon reaches
+                   for on a phone. The hit area grows on a coarse pointer; the
+                   rule under the active tab does not move. */
+                'touch-target-44 -mb-px inline-flex items-center justify-center border-b-2 border-transparent px-3 py-2 text-body-sm font-medium whitespace-nowrap text-muted-foreground',
                 'transition-colors duration-[var(--duration-hover)] ease-standard',
                 'hover:not-disabled:text-foreground',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',

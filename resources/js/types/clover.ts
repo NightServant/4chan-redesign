@@ -327,25 +327,3 @@ export interface BoardDirectoryEntry extends Board {
      */
     worksafe: boolean;
 }
-
-/**
- * A board as listed in the directory.
- *
- * Extends `Board` with the copy and state the directory needs. `slug` must
- * be a routable board: the directory links every row, so a slug the router
- * does not know would ship a dead link on a page whose entire job is links.
- */
-export interface BoardDirectoryEntry extends Board {
-    description: string;
-    /**
-     * Clover's own grouping, not 4chan's: `boards.json` carries no category.
-     * Describes subject matter only and says nothing about whether a board is
-     * worksafe — `worksafe` is the field that decides what an anon is shown.
-     */
-    category: string;
-    /**
-     * 4chan's own `ws_board` flag. Boards where this is false are hidden
-     * unless an anon has opted into seeing them.
-     */
-    worksafe: boolean;
-}
