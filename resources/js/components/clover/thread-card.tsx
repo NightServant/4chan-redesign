@@ -101,7 +101,11 @@ function ThreadCard({
         <h3 className="font-display text-[17px] leading-snug font-semibold text-balance text-foreground">
             <Link
                 href={titleHref}
-                className="static transition-colors duration-[var(--duration-hover)] ease-standard after:absolute after:inset-0 after:content-[''] hover:text-primary"
+                /* `group-hover`, not `hover`. The row's tint answers a
+                   pointer anywhere on it, so a title that only marked itself
+                   when the cursor crossed the words left the two halves of
+                   one hover state disagreeing. */
+                className="static transition-colors duration-[var(--duration-hover)] ease-standard group-hover:text-primary after:absolute after:inset-0 after:content-['']"
             >
                 {thread.title}
             </Link>
@@ -112,7 +116,7 @@ function ThreadCard({
         <div
             data-slot="thread-card"
             className={cn(
-                'relative flex flex-col gap-2 border-b border-border py-4',
+                'group relative flex flex-col gap-2 border-b border-border py-4',
                 /* A rounded surface under the pointer, so a row answers
                    before it is pressed. The whole row is the target -- the
                    title's stretched pseudo-element covers it -- and nothing

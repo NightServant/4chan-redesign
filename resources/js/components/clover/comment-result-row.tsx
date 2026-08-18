@@ -39,7 +39,11 @@ function CommentResultRow({
         <div
             data-slot="comment-result-row"
             className={cn(
-                'relative flex flex-col gap-2 border-b border-border py-4',
+                /* Same hover as a thread row, since it is the same shape of
+                   row: the whole box is the target, so the surface and the
+                   title answer together rather than the title alone. */
+                'group relative flex flex-col gap-2 rounded-xl border-b border-border py-4',
+                'transition-[background-color] duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover',
                 className,
             )}
             {...props}
@@ -68,7 +72,7 @@ function CommentResultRow({
                             target stays the one link. */}
                         <Link
                             href={href}
-                            className="static transition-colors duration-[var(--duration-hover)] ease-standard after:absolute after:inset-0 after:content-[''] hover:text-primary"
+                            className="static transition-colors duration-[var(--duration-hover)] ease-standard group-hover:text-primary after:absolute after:inset-0 after:content-['']"
                         >
                             {comment.threadTitle}
                         </Link>

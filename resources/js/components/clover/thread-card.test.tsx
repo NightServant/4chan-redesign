@@ -98,7 +98,10 @@ describe('ThreadCard', () => {
         expect(row?.className).toMatch(/rounded-xl/);
         expect(row?.className).not.toMatch(/hover:shadow/);
         expect(row?.className).not.toMatch(/hover:-?translate/);
-        expect(title.className).toMatch(/hover:text-primary/);
+        /* One hover state, not two: the row tints and the title marks
+           together, from the same pointer. */
+        expect(row?.className).toMatch(/(^|\s)group(\s|$)/);
+        expect(title.className).toMatch(/group-hover:text-primary/);
     });
 
     it('prints no excerpt under the title', () => {
