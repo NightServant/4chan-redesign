@@ -35,6 +35,8 @@ type OriginalPostProps = {
     viewerDrawer?: ReactNode;
     /** Names that drawer's control, e.g. "312 replies". */
     viewerDrawerLabel?: string;
+    /** Where the viewer's own way in points. The composer, from this page. */
+    viewerCtaHref?: string;
     /** Held by the caller: this component owns no state of its own. */
     bookmarked?: boolean;
     onBookmark?: () => void;
@@ -57,6 +59,7 @@ function OriginalPost({
     thread,
     viewerDrawer,
     viewerDrawerLabel,
+    viewerCtaHref,
     bookmarked = false,
     onBookmark,
     className,
@@ -123,6 +126,7 @@ function OriginalPost({
                 variant="post"
                 viewerDrawer={viewerDrawer}
                 viewerDrawerLabel={viewerDrawerLabel}
+                threadHref={viewerCtaHref}
             />
 
             <footer className="flex flex-wrap items-center gap-5">

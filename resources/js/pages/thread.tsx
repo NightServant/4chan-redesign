@@ -190,6 +190,12 @@ export default function Thread({
                     onBookmark={() =>
                         requireAuth('bookmark this thread', toggleBookmark)
                     }
+                    /* From this page the way in is the composer, not the
+                       thread an anon is already reading. Signed out there is
+                       nowhere to send them that would not turn them away at
+                       the door, so the viewer carries no call to action and
+                       the gate stays where it is, at the foot of the page. */
+                    viewerCtaHref={signedIn ? composerHref : undefined}
                     viewerDrawerLabel={plural(
                         comments.length,
                         'reply',

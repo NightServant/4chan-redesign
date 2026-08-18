@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { ChevronUp, ExternalLink, EyeIcon } from 'lucide-react';
+import { ChevronUp, EyeIcon } from 'lucide-react';
 import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { CommentTree } from '@/components/clover/comment-tree';
@@ -418,7 +418,14 @@ function PostImage({
                         names only the file is a lightbox; naming the board
                         says which conversation this picture belongs to,
                         which is the thing the drawer below then shows. */}
-                    <div className="flex min-w-0 items-center gap-2 overflow-hidden border-b border-border px-3 py-3 pr-14 md:hidden">
+                    <div /* `h-16`, not padding. `DialogContent` positions its close
+                            control absolutely at `top-4` with a `size-8` box,
+                            so its centre is 32px from the panel's top edge
+                            whatever this row does -- and a `py-3` row put the
+                            board and the filename 4px above it. A 64px row
+                            centres its own contents on the same line. */
+                        className="flex h-16 min-w-0 items-center gap-2 overflow-hidden border-b border-border px-3 pr-14 md:hidden"
+                    >
                         {board !== undefined ? (
                             <span className="shrink-0 text-body-sm font-semibold text-foreground">
                                 {board}
@@ -550,40 +557,49 @@ function PostImage({
                                                 </p>
                                             ))
                                         )}
-
-                                        {/* The way in, at the foot of the
-                                            conversation rather than beside
-                                            the picture. */}
-                                        {threadHref !== undefined ? (
-                                            <Button variant="outline" asChild>
-                                                <Link href={threadHref}>
-                                                    Join the conversation
-                                                </Link>
-                                            </Button>
-                                        ) : null}
                                     </div>
                                 ) : null}
                             </div>
                         ) : null}
 
-                        <div className="flex min-w-0 items-center justify-between gap-3 border-t border-border px-3 py-2 md:justify-center md:border-0 md:py-0">
+                        {/* The way in, at the very bottom of the viewer
+                            rather than inside the drawer that scrolls. It is
+                            the last row of the panel's grid, so it holds its
+                            place whether the replies are open, closed or
+                            being scrolled through. */}
+                        {threadHref !== undefined ? (
+                            <div className="border-t border-border px-3 py-3 md:hidden">
+                                <Button
+                                    variant="outline"
+                                    asChild
+                                    className="w-full"
+                                >
+                                    <Link href={threadHref}>
+                                        Join the conversation
+                                    </Link>
+                                </Button>
+                            </div>
+                        ) : null}
+
+                        {/* The file's own line, `md` and up only. On a phone
+                            it was the last thing in the viewer, under the
+                            replies and the way into them -- a filename and a
+                            byte count holding the position an anon's thumb
+                            lands on. The picture is the claim; its weight is
+                            not. */}
+                        <div className="hidden min-w-0 items-center justify-center gap-3 border-t border-border px-3 py-2 md:flex md:border-0 md:py-0">
                             <MachineValue className="min-w-0 truncate text-faint">
                                 {media.label}
                             </MachineValue>
 
-                            <a
-                                href={media.fullUrl}
-                                target="_blank"
-                                rel="noreferrer noopener"
-                                referrerPolicy="no-referrer"
-                                className="touch-target-44 inline-flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-body-sm text-muted-foreground hover:bg-surface-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:hidden"
-                            >
-                                <ExternalLink
-                                    aria-hidden="true"
-                                    className="size-4"
-                                />
-                                Original file
-                            </a>
+                            {/* No "Original file" link. It sent an anon to
+                                4chan's CDN for the same picture already
+                                filling the screen -- a way out of Clover
+                                rather than a use of it, and on a phone it
+                                opened a bare image with no way back. The
+                                file's own line stays: its size and dimensions
+                                are the one claim here the viewer cannot make
+                                by showing the thing itself. */}
                         </div>
                     </div>
                 </DialogContent>

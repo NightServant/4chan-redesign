@@ -590,6 +590,96 @@ describe('PostImage', () => {
      * drawer at all rather than an empty one under a control promising
      * replies.
      */
+    /**
+     * The way in is the viewer's own last row, not a bar inside the drawer.
+     *
+     * Inside the drawer it moved with the replies; as the panel's final grid
+     * row it holds the bottom of the screen whether the replies are open,
+     * closed, or being scrolled through -- which is where a thumb already is.
+     */
+    it('keeps the way in at the very bottom, outside the scrolling drawer', async () => {
+        const user = userEvent.setup();
+        const media = makeAttachment();
+
+        render(
+            <PostImage
+                media={media}
+                viewerDrawer={<p>A reply lives here.</p>}
+                threadHref="/g/58210441"
+            />,
+        );
+
+        await user.click(
+            screen.getByRole('button', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        );
+
+        /* Present before the drawer is ever opened, and not inside it. */
+        const cta = screen.getByRole('link', { name: 'Join the conversation' });
+
+        expect(cta).toBeInTheDocument();
+        expect(
+            screen.queryByText('A reply lives here.'),
+        ).not.toBeInTheDocument();
+
+        await user.click(screen.getByRole('button', { name: /replies/i }));
+
+        const drawer = screen.getByText('A reply lives here.').closest('div');
+
+        expect(drawer?.contains(cta)).toBe(false);
+    });
+
+    /**
+     * No filename and byte count at the foot of a phone's viewer. It was the
+     * last thing in the panel, under the replies and the way into them,
+     * holding the position a thumb lands on. It stays at `md` and up, where
+     * the panel has room for a caption.
+     */
+    /**
+     * The header sits on the close control's line.
+     *
+     * `DialogContent` places its close button absolutely at `top-4` with a
+     * `size-8` box, so its centre is 32px from the panel's top edge whatever
+     * this row does. A padded row put the board and the filename 4px above
+     * it; a 64px row centres them on the same line. Measured at 0px apart.
+     */
+    it('gives its header the height the close control is positioned for', async () => {
+        const user = userEvent.setup();
+        const media = makeAttachment();
+
+        render(<PostImage media={media} board="/vrpg/" />);
+
+        await user.click(
+            screen.getByRole('button', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        );
+
+        const header = screen.getByText('/vrpg/').closest('div');
+
+        expect(header).toHaveClass('h-16');
+        expect(header).toHaveClass('items-center');
+        expect(header?.className).not.toMatch(/(^|\s)py-\d/);
+    });
+
+    it('keeps the file line off the bottom below `md`', async () => {
+        const user = userEvent.setup();
+        const media = makeAttachment();
+
+        render(<PostImage media={media} />);
+
+        await user.click(
+            screen.getByRole('button', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        );
+
+        expect(screen.getByText(media.label).closest('div')).toHaveClass(
+            'hidden',
+        );
+    });
+
     it('renders no drawer control when the caller passed none', async () => {
         const user = userEvent.setup();
         const media = makeAttachment();
@@ -623,11 +713,16 @@ describe('PostImage', () => {
            carries the 44px hit area now -- task 5 scoped this file out and
            the full-screen viewer is what brought it back. */
         const close = screen.getByRole('button', { name: 'Close' });
-        const original = screen.getByRole('link', { name: /original file/i });
 
         expect(close).toHaveClass('touch-target-44');
-        expect(original).toHaveClass('touch-target-44');
-        expect(original).toHaveAttribute('href', media.fullUrl);
+
+        /* No "Original file" link: it sent an anon to 4chan's CDN for the
+           same picture already filling the screen, and on a phone that is a
+           bare image with no way back. */
+        expect(
+            screen.queryByRole('link', { name: /original file/i }),
+        ).not.toBeInTheDocument();
+        expect(screen.getByText(media.label)).toBeInTheDocument();
     });
 
     /**
