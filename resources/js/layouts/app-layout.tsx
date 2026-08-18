@@ -1,7 +1,8 @@
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import * as SheetPrimitive from '@radix-ui/react-dialog';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
+import { AnonDock } from '@/components/clover/anon-dock';
 import { AppHeader } from '@/components/clover/app-header';
 import { AppSidebar } from '@/components/clover/app-sidebar';
 import { MobileNav } from '@/components/clover/mobile-nav';
@@ -38,6 +39,7 @@ import { cn } from '@/lib/utils';
  * rather than depth.
  */
 export default function AppLayout({ children }: { children: ReactNode }) {
+    const { auth } = usePage().props;
     const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
 
     useEffect(() => {
@@ -52,7 +54,19 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 <div className="flex min-w-0 flex-1 flex-col">
                     <AppHeader />
 
-                    <main className="flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+                    {/* Room for whichever fixed bar is at the foot of a
+                        phone. The bottom bar is 64px; the signed-out dock is
+                        taller, carrying a sentence above its two buttons, and
+                        content that ends under either of them is content an
+                        anon cannot reach. */}
+                    <main
+                        className={cn(
+                            'flex-1 md:pb-0',
+                            auth.user
+                                ? 'pb-[calc(4rem+env(safe-area-inset-bottom))]'
+                                : 'pb-[calc(9rem+env(safe-area-inset-bottom))]',
+                        )}
+                    >
                         <PatternField
                             depth={28}
                             feather={false}
@@ -64,6 +78,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 </div>
 
                 <MobileNav />
+                <AnonDock />
             </div>
 
             {/* The drawer's panel. It renders `AppSidebar` itself rather than

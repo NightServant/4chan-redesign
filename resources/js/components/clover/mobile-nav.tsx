@@ -34,6 +34,18 @@ function MobileNav({ className, ...props }: MobileNavProps) {
     const { isCurrentUrl } = useCurrentUrl();
     const signedIn = Boolean(pageProps.auth.user);
 
+    /**
+     * Nothing at all for a signed-out anon below `md`.
+     *
+     * `AnonDock` holds that space now: the bar's three signed-out slots were
+     * Home, Rules and Log in, and the first two are in the drawer while the
+     * third is one of the dock's two buttons. Two fixed bars at the foot of a
+     * phone is one too many, and the one that says what this is wins.
+     */
+    if (!signedIn) {
+        return null;
+    }
+
     const items = MOBILE_NAV.filter((item) => !item.requiresAuth || signedIn);
 
     return (

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { MobileNav } from '@/components/clover/mobile-nav';
 import { toUrl } from '@/lib/utils';
-import { account, dashboard, login, notifications, rules } from '@/routes';
+import { account, dashboard, notifications, rules } from '@/routes';
 
 const { usePage } = vi.hoisted(() => ({ usePage: vi.fn() }));
 
@@ -53,16 +53,35 @@ describe('MobileNav', () => {
      * Popular and Latest are reachable from the drawer (the sidebar's own
      * list below `lg`), and History moved onto the account screen.
      */
-    it('renders Home, Rules and the sign-in slot when signed out, and no Alerts', () => {
+    /**
+     * Nothing at all when signed out.
+     *
+     * The bar's three signed-out slots were Home, Rules and Log in: the first
+     * two are in the drawer, and the third is one of `AnonDock`'s two
+     * buttons. Two fixed bars at the foot of a phone is one too many, and the
+     * one that says what Clover is wins. Gabe's decision, 2026-08-18.
+     */
+    it('does not render at all for a signed-out anon', () => {
         mockPage({ signedIn: false });
+
+        const { container } = render(<MobileNav />);
+
+        expect(container).toBeEmptyDOMElement();
+    });
+
+    /* Popular and Latest lost their slots to the drawer in task 4; the bar
+       carries the four an anon reaches for, and nothing else. */
+    it('renders Home, Rules, Alerts and You for a signed-in anon', () => {
+        mockPage({ signedIn: true });
 
         render(<MobileNav />);
 
         expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
         expect(screen.getByRole('link', { name: 'Rules' })).toBeInTheDocument();
         expect(
-            screen.queryByRole('link', { name: 'Alerts' }),
-        ).not.toBeInTheDocument();
+            screen.getByRole('link', { name: 'Alerts' }),
+        ).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'You' })).toBeInTheDocument();
         expect(
             screen.queryByRole('link', { name: 'Popular' }),
         ).not.toBeInTheDocument();
@@ -71,25 +90,9 @@ describe('MobileNav', () => {
         ).not.toBeInTheDocument();
     });
 
-    /**
-     * `requiresAuth` items drop out for a signed-out anon, but the fourth
-     * slot is never one of them: it reads "Log in" and points at `/login`
-     * instead of disappearing. It has to be exactly one control, not zero
-     * and not two.
-     */
-    it('offers exactly one sign-in control, reading "Log in" and pointing at /login, when signed out', () => {
-        mockPage({ signedIn: false });
-
-        render(<MobileNav />);
-
-        const signIn = screen.getAllByRole('link', { name: 'Log in' });
-
-        expect(signIn).toHaveLength(1);
-        expect(signIn[0]).toHaveAttribute('href', toUrl(login()));
-        expect(
-            screen.queryByRole('link', { name: 'You' }),
-        ).not.toBeInTheDocument();
-    });
+    /* The sign-in control moved to `AnonDock`, which is the only thing at the
+       foot of a phone for a signed-out anon now. Its own suite owns that
+       assertion; this bar does not render for them at all. */
 
     it('renders all four destinations when signed in, the fourth reading "You"', () => {
         mockPage({ signedIn: true });
@@ -118,7 +121,7 @@ describe('MobileNav', () => {
     });
 
     it('points Rules at the existing /rules page', () => {
-        mockPage({ signedIn: false });
+        mockPage({ signedIn: true });
 
         render(<MobileNav />);
 
@@ -171,38 +174,44 @@ describe('MobileNav', () => {
     });
 
     it('gives every item an accessible name from real text, not decoration alone', () => {
-        mockPage({ signedIn: false });
+        mockPage({ signedIn: true });
 
         render(<MobileNav />);
 
-        for (const name of ['Home', 'Rules', 'Log in']) {
+        for (const name of ['Home', 'Rules', 'Alerts', 'You']) {
             const link = screen.getByRole('link', { name });
             expect(link).toHaveAccessibleName(name);
         }
     });
 
     it('renders as a nav landmark so it is reachable as a region', () => {
-        mockPage({ signedIn: false });
+        mockPage({ signedIn: true });
 
         render(<MobileNav />);
 
         expect(screen.getByRole('navigation')).toBeInTheDocument();
     });
 
-    it('lays out three items and four items without a fixed column-count assumption', () => {
-        mockPage({ signedIn: false });
-
-        const { container: signedOutContainer } = render(<MobileNav />);
-        const signedOutLinks = signedOutContainer.querySelectorAll('a');
-
-        expect(signedOutLinks).toHaveLength(3);
-
+    /**
+     * The bar distributes with `flex-1` rather than a fixed column count.
+     *
+     * It used to render three slots signed out and four signed in, which is
+     * what that rule was for; signed out it renders nothing at all now, so
+     * the case that remains is the four-slot one -- and the layout rule is
+     * asserted directly, because a count of four proves nothing about how
+     * the fifth would sit if one were ever added.
+     */
+    it('distributes its slots rather than assuming a column count', () => {
         mockPage({ signedIn: true });
 
-        const { container: signedInContainer } = render(<MobileNav />);
-        const signedInLinks = signedInContainer.querySelectorAll('a');
+        const { container } = render(<MobileNav />);
+        const links = container.querySelectorAll('a');
 
-        expect(signedInLinks).toHaveLength(4);
+        expect(links).toHaveLength(4);
+
+        for (const link of links) {
+            expect(link.className).toMatch(/(^|\s)flex-1(\s|$)/);
+        }
     });
 
     /**
