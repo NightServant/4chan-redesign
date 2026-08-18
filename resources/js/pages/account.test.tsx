@@ -172,6 +172,23 @@ beforeEach(() => {
 });
 
 describe('Account', () => {
+    /**
+     * The same measure the header and the feed use.
+     *
+     * This page and the communities index are both shell-wide, so a change to
+     * `--measure-shell` moves the chrome and every body with it. Asserted
+     * because the two have disagreed before: the account screen was
+     * `--measure-page` while the header was the shell, and the search page
+     * and history each carried a hand-written pixel width of their own.
+     */
+    it('is measured against the shell, like the chrome above it', () => {
+        const { container } = render(<Account {...accountProps()} />);
+
+        expect(container.querySelector('main, div')?.className).toContain(
+            'max-w-(--measure-shell)',
+        );
+    });
+
     it('has exactly one first-level heading, naming the anon', () => {
         render(<Account {...accountProps()} />);
 

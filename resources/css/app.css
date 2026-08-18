@@ -222,17 +222,18 @@
     /* Sized against the post column beside it, not against the page. It was
        330px next to a 560px column, which read as two columns competing
        rather than one and its margin; it is 320px next to 720px now. */
-    --measure-rail: 320px;
+    --measure-rail: 300px;
     /* The width a post is actually drawn at: the cap on an attachment's box,
        and the cap on the column that holds the cards carrying them. One
        value, because when they were two the column grew to 760px while the
        image stayed at 560 and every row ended in 200px of nothing.
 
-       720px rather than the 560px it started at: with the chrome and the
-       body both measured against the shell below, 560 left the whole
-       application sitting in the middle of a wide display with a third of
-       the screen empty either side. */
-    --measure-media: 720px;
+       640px, after two corrections in both directions. At 560 the whole
+       application sat in a band down the middle of a wide display; at 720
+       (860 past 1536px) a single post ran wider than anything else on the
+       page and its images with it. This is the measure that leaves neither
+       a third of the screen empty nor a photograph the width of a laptop. */
+    --measure-media: 640px;
     /* The shell: the post column, the rail, and the gap between them. The
        chrome is measured against this rather than against `--measure-page`,
        so the header's search field starts where a post starts and its
@@ -255,17 +256,30 @@
     --file-h: 100%;
     --file-ratio: 1;
 
-    --measure-shell: calc(
-        var(--measure-media) + var(--measure-rail) + 1.75rem + 3rem
-    );
+    /* Below `lg` there is no rail -- it is `hidden lg:flex` -- so the shell
+       is the post column and its padding, and nothing else. Reserving the
+       rail's width there left a phantom column of empty paper down the right
+       of every tablet. The full measure returns at `lg`, in the block below,
+       where the rail is actually rendered. */
+    --measure-shell: calc(var(--measure-media) + 3rem);
+}
+
+@media (min-width: 1024px) {
+    :root {
+        /* The rail renders from `lg`, so the shell makes room for it and the
+           gap between the two columns from `lg` too. */
+        --measure-shell: calc(
+            var(--measure-media) + var(--measure-rail) + 1.75rem + 3rem
+        );
+    }
 }
 
 @media (min-width: 1536px) {
     :root {
         --measure-page: 1440px;
         --measure-column: 840px;
-        --measure-rail: 360px;
-        --measure-media: 860px;
+        --measure-rail: 320px;
+        --measure-media: 720px;
     }
 }
 
