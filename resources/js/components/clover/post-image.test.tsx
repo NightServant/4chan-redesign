@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PostAttachment, PostImage } from '@/components/clover/post-image';
-import { makeAttachment } from '@/fixtures/factories';
+import { makeAttachment, makeComment } from '@/fixtures/factories';
 
 /* Only rendered on the branch where a feed row's image is a link to its
    thread; the rest of this suite never reaches Inertia at all. */
@@ -18,24 +18,6 @@ vi.mock('@inertiajs/react', () => ({
         </a>
     ),
 }));
-
-/**
- * `useIsMobile` reads `matchMedia`, which jsdom does not implement. The
- * feed-row-to-thread branch is a real behaviour difference -- a link versus a
- * dialog -- so both sides are exercised rather than asserted from classes.
- */
-function setViewport(isMobile: boolean): void {
-    vi.stubGlobal('matchMedia', (query: string) => ({
-        matches: isMobile,
-        media: query,
-        onchange: null,
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-    }));
-}
 
 afterEach(() => {
     vi.unstubAllGlobals();
@@ -349,29 +331,28 @@ describe('PostImage', () => {
      * the viewport so the picture is still there when it opens.
      */
     /**
-     * A feed row on a phone opens the thread, not a viewer.
+     * The viewer is a place, not a lightbox: the community at the top, the
+     * picture, the replies behind a control, and the way in at the foot.
      *
-     * The viewer there could only ever offer the file, its size and a way
-     * out -- a row has no replies in hand. Tapping a post should give the
-     * community, the whole image, the replies and the way in, and that screen
-     * already exists.
+     * A feed row carries no comments, so its drawer fetches them the first
+     * time it is opened -- once, and only then. Sending every thread's tree
+     * with the feed would be tens of thousands of rows for the handful anyone
+     * opens; the thread page passes `viewerDrawer` instead and never fetches.
      */
-    it('opens the thread instead of the viewer below `md` when it has no drawer', () => {
-        setViewport(true);
-
-        render(<PostImage media={makeAttachment()} href="/g/58210441" />);
-
-        expect(
-            screen.getByRole('link', { name: /attached image/i }),
-        ).toHaveAttribute('href', '/g/58210441');
-    });
-
-    it('still opens the viewer at `md` and up', async () => {
-        setViewport(false);
+    /**
+     * The viewer's image fills the space it is given, ratio intact.
+     *
+     * `h-auto w-auto` rendered the file at its intrinsic size, so a 1024x760
+     * image sat small in the middle of a phone's screen -- a viewer showing a
+     * picture smaller than the row it was opened from. At `md` and up the
+     * panel is sized to the image instead, which is the opposite rule and
+     * still correct there.
+     */
+    it('fills the viewer below `md` and sizes to the image above it', async () => {
         const user = userEvent.setup();
         const media = makeAttachment();
 
-        render(<PostImage media={media} href="/g/58210441" />);
+        render(<PostImage media={media} />);
 
         await user.click(
             screen.getByRole('button', {
@@ -379,20 +360,35 @@ describe('PostImage', () => {
             }),
         );
 
-        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        const full = screen
+            .getAllByRole('img', { name: `Attached image: ${media.filename}` })
+            .at(-1);
+
+        expect(full).toHaveClass('h-full');
+        expect(full).toHaveClass('w-full');
+        expect(full).toHaveClass('object-contain');
+        expect(full?.className).toMatch(/md:h-auto/);
+        expect(full?.className).toMatch(/md:w-auto/);
     });
 
-    /** A caller with replies keeps the viewer at every width. */
-    it('keeps the viewer below `md` when a drawer was given', async () => {
-        setViewport(true);
+    it('names the community and fetches replies the first time the drawer opens', async () => {
         const user = userEvent.setup();
         const media = makeAttachment();
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            json: () =>
+                Promise.resolve({
+                    comments: [makeComment({ body: 'Fetched reply.' })],
+                }),
+        });
+        vi.stubGlobal('fetch', fetchMock);
 
         render(
             <PostImage
                 media={media}
-                href="/g/58210441"
-                viewerDrawer={<p>A reply lives here.</p>}
+                board="/g/"
+                threadHref="/g/58210441"
+                repliesUrl="/g/58210441/replies"
             />,
         );
 
@@ -402,7 +398,16 @@ describe('PostImage', () => {
             }),
         );
 
-        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        expect(screen.getByText('/g/')).toBeInTheDocument();
+        expect(fetchMock).not.toHaveBeenCalled();
+
+        await user.click(screen.getByRole('button', { name: /replies/i }));
+
+        expect(await screen.findByText('Fetched reply.')).toBeInTheDocument();
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(
+            screen.getByRole('link', { name: 'Join the conversation' }),
+        ).toHaveAttribute('href', '/g/58210441');
     });
 
     it('hides the drawer behind a control and opens it on press', async () => {
@@ -530,12 +535,14 @@ describe('PostImage', () => {
     });
 
     /**
-     * The `width` and `height` attributes carry the file's real dimensions, so
-     * without both axes set to automatic they fix the rendered size and the
-     * dialog shows a 3000px image at 3000px. Automatic on both, bounded by the
-     * viewport, is what hands the proportions back to the image.
+     * The `width` and `height` attributes carry the file's real dimensions,
+     * and left to themselves they fix the rendered size -- the dialog would
+     * show a 3000px image at 3000px. Both axes are still taken off the image;
+     * what changed is who bounds them. Below `md` the box does, so the
+     * picture fills the viewer; at `md` and up the image does, so the panel
+     * is sized to it. Either way the attributes are not what decides.
      */
-    it('lets the opened image size itself on both axes', async () => {
+    it('never renders the opened image at its intrinsic size', async () => {
         const user = userEvent.setup();
         const media = makeAttachment();
 
@@ -551,9 +558,9 @@ describe('PostImage', () => {
             .getAllByRole('img', { name: `Attached image: ${media.filename}` })
             .find((image) => image.getAttribute('src') === media.fullUrl);
 
-        expect(opened).toHaveClass('h-auto');
-        expect(opened).toHaveClass('w-auto');
         expect(opened).toHaveClass('object-contain');
+        expect(opened?.className).toMatch(/md:max-h-\[82vh\]/);
+        expect(opened?.className).not.toMatch(/(^|\s)h-auto(\s|$)/);
     });
 
     it('sizes the dialog to the image rather than to a fixed column', async () => {

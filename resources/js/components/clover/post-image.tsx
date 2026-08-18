@@ -2,13 +2,13 @@ import { Link } from '@inertiajs/react';
 import { ChevronUp, ExternalLink, EyeIcon } from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
+import { CommentTree } from '@/components/clover/comment-tree';
 import { MachineValue } from '@/components/clover/machine-value';
 import { MediaPlaceholder } from '@/components/clover/media-placeholder';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import type { Attachment } from '@/types/clover';
+import type { Attachment, Comment } from '@/types/clover';
 
 /**
  * A post's attachment: thumbnail inline, full image in a dialog.
@@ -201,17 +201,18 @@ type PostImageProps = {
     /** Names the drawer's control, e.g. "312 replies". */
     viewerDrawerLabel?: string;
     /**
-     * Where the picture belongs, for callers that have no replies to show.
+     * The thread this picture belongs to, which is what makes the viewer a
+     * place rather than a lightbox: the community at the top, the replies in
+     * the drawer, and the way in at the foot.
      *
-     * Below `md` a feed row's image opens this instead of the viewer: the
-     * viewer there could only ever offer the file and a way out, and Gabe's
-     * ask is that tapping a post gives the community, the whole image, the
-     * replies and the way in. That screen already exists -- it is the thread
-     * -- so the tap goes there rather than a second one being built behind a
-     * dialog with no comments in hand. At `md` and up the viewer opens as
-     * before, beside a page that is already showing the row's context.
+     * `repliesUrl` is fetched the first time the drawer opens. A feed row
+     * carries no comments, and sending every thread's tree with the feed
+     * would be tens of thousands of rows for the handful anyone opens; the
+     * thread page passes `viewerDrawer` instead and never fetches.
      */
-    href?: string;
+    board?: string;
+    threadHref?: string;
+    repliesUrl?: string;
     className?: string;
 };
 
@@ -220,7 +221,9 @@ function PostImage({
     variant = 'card',
     viewerDrawer,
     viewerDrawerLabel = 'Replies',
-    href,
+    board,
+    threadHref,
+    repliesUrl,
     className,
 }: PostImageProps) {
     /* Concealment is the initial state, not a permanent one: revealing is a
@@ -231,15 +234,51 @@ function PostImage({
        replies wait behind a control rather than taking half the screen from
        the thing that was tapped. */
     const [drawerOpen, setDrawerOpen] = useState(false);
-    const isMobile = useIsMobile();
-    /* A link, not a dialog, when there is somewhere better to go and no
-       replies to put behind the picture. */
-    const navigates =
-        isMobile && href !== undefined && viewerDrawer === undefined;
+    /* Fetched once, the first time the drawer opens, and only when the caller
+       did not hand its content over. */
+    const [fetched, setFetched] = useState<Comment[] | null>(null);
+    const [loadingReplies, setLoadingReplies] = useState(false);
     const [failed, setFailed] = useState(false);
 
     const box = intrinsicBox(media);
-    const Component = navigates ? Link : 'button';
+
+    const drawerContent =
+        viewerDrawer ??
+        (fetched === null ? null : <CommentTree comments={fetched} />);
+    const hasDrawer = viewerDrawer !== undefined || repliesUrl !== undefined;
+
+    async function openDrawer(): Promise<void> {
+        setDrawerOpen(!drawerOpen);
+
+        if (
+            drawerOpen ||
+            viewerDrawer !== undefined ||
+            repliesUrl === undefined ||
+            fetched !== null
+        ) {
+            return;
+        }
+
+        setLoadingReplies(true);
+
+        try {
+            const response = await fetch(repliesUrl, {
+                headers: { Accept: 'application/json' },
+            });
+            const data = response.ok
+                ? ((await response.json()) as { comments: Comment[] })
+                : null;
+
+            setFetched(data?.comments ?? []);
+        } catch {
+            /* An empty list rather than a spinner that never stops: the
+               drawer is a convenience over the thread page, which is one tap
+               away and always has the real tree. */
+            setFetched([]);
+        } finally {
+            setLoadingReplies(false);
+        }
+    }
 
     /**
      * A file 4chan has since pruned still has a `tim`, so the URL is
@@ -297,14 +336,10 @@ function PostImage({
             {/* The thumbnail is the button. Wrapping an image in a button
                 rather than giving the image an onClick is what makes it
                 keyboard reachable and gives it a real accessible name. */}
-            <Component
-                {...(navigates
-                    ? { href }
-                    : {
-                          type: 'button' as const,
-                          onClick: () => setExpanded(true),
-                      })}
+            <button
+                type="button"
                 data-slot="post-image"
+                onClick={() => setExpanded(true)}
                 className={cn(
                     /* Full width too: an image that fills its box is still
                        inset if the box itself does not fill the column. */
@@ -328,7 +363,7 @@ function PostImage({
                     onError={() => setFailed(true)}
                     className={cn('block', VARIANT_IMAGE_CLASSES[variant])}
                 />
-            </Component>
+            </button>
 
             <Dialog open={expanded} onOpenChange={setExpanded}>
                 {/* The whole screen on a phone, a panel on a desktop.
@@ -351,7 +386,16 @@ function PostImage({
                         two: a second close button of our own would have sat
                         beside the built-in one at every width, and the built-in
                         one now carries a 44px hit area of its own. */}
-                    <div className="flex items-center border-b border-border px-3 py-3 pr-14 md:hidden">
+                    {/* The community first, the file second. A viewer that
+                        names only the file is a lightbox; naming the board
+                        says which conversation this picture belongs to,
+                        which is the thing the drawer below then shows. */}
+                    <div className="flex min-w-0 items-center gap-2 border-b border-border px-3 py-3 pr-14 md:hidden">
+                        {board !== undefined ? (
+                            <span className="shrink-0 text-body-sm font-semibold text-foreground">
+                                {board}
+                            </span>
+                        ) : null}
                         <MachineValue className="min-w-0 truncate text-faint">
                             {media.filename}
                         </MachineValue>
@@ -374,7 +418,17 @@ function PostImage({
                                otherwise fix the rendered size, so `h-auto
                                w-auto` is what hands the proportions back to
                                the image. */
-                            className="h-auto max-h-full w-auto max-w-full rounded-md object-contain md:max-h-[82vh]"
+                            /* Fills the space the viewer gives it, ratio
+                               intact. `h-auto w-auto` let the file render at
+                               its intrinsic size, so a 1024x760 image sat
+                               small in the middle of a phone's screen with
+                               black either side of it -- a viewer that shows
+                               a picture smaller than the row it was opened
+                               from. `object-contain` is what keeps the
+                               proportions while the box does the sizing. At
+                               `md` and up the panel is sized to the image
+                               instead, so the old rule holds there. */
+                            className="h-full w-full rounded-md object-contain md:h-auto md:max-h-[82vh] md:w-auto md:max-w-full"
                         />
                     </div>
 
@@ -391,11 +445,11 @@ function PostImage({
                             caller had replies to give. Closed on arrival, and
                             it takes at most half the screen when open so the
                             picture it belongs to is still visible above it. */}
-                        {viewerDrawer !== undefined ? (
+                        {hasDrawer ? (
                             <div className="border-t border-border md:hidden">
                                 <button
                                     type="button"
-                                    onClick={() => setDrawerOpen(!drawerOpen)}
+                                    onClick={openDrawer}
                                     aria-expanded={drawerOpen}
                                     className="touch-target-44 flex w-full items-center justify-between gap-3 px-3 py-3 text-left text-body-sm text-foreground"
                                 >
@@ -410,8 +464,29 @@ function PostImage({
                                 </button>
 
                                 {drawerOpen ? (
-                                    <div className="max-h-[50dvh] overflow-y-auto border-t border-border px-3 py-3">
-                                        {viewerDrawer}
+                                    <div className="flex max-h-[50dvh] flex-col gap-4 overflow-y-auto border-t border-border px-3 py-3">
+                                        {loadingReplies ? (
+                                            <p className="text-body-sm text-muted-foreground">
+                                                Loading replies…
+                                            </p>
+                                        ) : (
+                                            (drawerContent ?? (
+                                                <p className="text-body-sm text-muted-foreground">
+                                                    No replies yet.
+                                                </p>
+                                            ))
+                                        )}
+
+                                        {/* The way in, at the foot of the
+                                            conversation rather than beside
+                                            the picture. */}
+                                        {threadHref !== undefined ? (
+                                            <Button variant="outline" asChild>
+                                                <Link href={threadHref}>
+                                                    Join the conversation
+                                                </Link>
+                                            </Button>
+                                        ) : null}
                                     </div>
                                 ) : null}
                             </div>

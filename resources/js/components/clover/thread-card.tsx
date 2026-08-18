@@ -189,14 +189,18 @@ function ThreadCard({
                         opened. */}
                     {thread.media ? (
                         <div className={cn('relative', inset)}>
-                            {/* Below `md` this opens the thread rather than
-                                a viewer: a feed row has no replies to put
-                                behind the picture, and the thread is the
-                                screen that carries the board, the whole
-                                image, the replies and the way in. */}
+                            {/* The viewer opened from a row is still a
+                                place: it names the board, and its drawer
+                                fetches this thread's replies the first time
+                                it is opened, with the way into the thread at
+                                their foot. The row itself still navigates --
+                                the title's stretched link covers everything
+                                but the picture. */}
                             <PostAttachment
                                 media={thread.media}
-                                href={titleHref}
+                                board={thread.board}
+                                threadHref={titleHref}
+                                repliesUrl={`${titleHref}/replies`}
                             />
                         </div>
                     ) : null}

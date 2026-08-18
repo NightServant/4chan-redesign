@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\CommentTree;
 use App\Models\Board;
 use App\Models\Post;
 use App\Models\Thread;
 use App\Services\LocalPostNumbers;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -70,6 +72,32 @@ class ReplyController extends Controller
              * server accepts or let them fill a field the request rejects.
              */
             'maxCommentChars' => $model->max_comment_chars,
+        ]);
+    }
+
+    /**
+     * A thread's replies as JSON, for the full-image viewer's drawer.
+     *
+     * The viewer opens from a feed row as well as from the thread page, and a
+     * row carries no comments -- so the drawer fetches rather than the feed
+     * sending every thread's tree with the page, which would be tens of
+     * thousands of rows for the handful anyone opens.
+     *
+     * Same builder the thread page uses (`CommentTree`), so the drawer and
+     * the page cannot disagree about nesting, quoting or what a reply says.
+     * Public, because reading never needs an account here.
+     */
+    public function index(Request $request, string $board, string $thread): JsonResponse
+    {
+        $model = $this->visibleBoard($request, $board);
+
+        $target = Thread::query()
+            ->where('board_id', $model->id)
+            ->where('no', (int) $thread)
+            ->firstOrFail();
+
+        return response()->json([
+            'comments' => CommentTree::for($target),
         ]);
     }
 
