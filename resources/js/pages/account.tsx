@@ -5,6 +5,7 @@ import {
     ImageIcon,
     MessageSquare,
 } from 'lucide-react';
+import { AccountRail } from '@/components/account/account-rail';
 import { ProfileCommentList } from '@/components/account/profile-comment-list';
 import { ProfileHeader } from '@/components/account/profile-header';
 import { EmptyState } from '@/components/clover/empty-state';
@@ -90,22 +91,17 @@ export default function Account({
                 description="Your replies, the images you attached to them, and the threads you saved."
             />
 
-            <div className="mx-auto flex w-full max-w-(--measure-shell) flex-col gap-5 px-6 py-6">
-                <ProfileHeader profile={profile} stats={stats} />
+            {/* Two columns at `lg`, as every other reading screen has: the
+                page is measured against the shell, and the shell's extra
+                width *is* the rail's. Without one the identity block ran the
+                full width while the tabs sat in a 720px column beneath it,
+                with two empty bands either side. */}
+            <div className="mx-auto flex w-full max-w-(--measure-shell) gap-7 px-6 py-6">
+                <div className="flex min-w-0 flex-1 flex-col gap-5">
+                    <ProfileHeader profile={profile} stats={stats} />
 
-                {/* The column the tabs and their content sit in is the post
-                    measure, centred, while the identity block above spans the
-                    shell. The Saved tab renders the same `ThreadCard` the feed
-                    does, and its attachment is capped at `--measure-media`, so
-                    a wider column left every saved card ending in 300px of
-                    empty paper -- the feed's old gap, on a different screen.
-                    This page carries no rail, so the shell's extra width has
-                    nothing to hold. */}
-                <Tabs
-                    defaultValue="comments"
-                    className="mx-auto w-full max-w-(--measure-media)"
-                >
-                    {/* Scrolls rather than clipping. Four tabs did not fit
+                    <Tabs defaultValue="comments">
+                        {/* Scrolls rather than clipping. Four tabs did not fit
                         a 320px row and "History" was cut off at the edge with
                         nothing to say more existed. `w-full` is the
                         load-bearing half: `TabsList`'s own base is `w-fit`,
@@ -113,99 +109,99 @@ export default function Account({
                         `overflow-x-auto` alone would have been a dead class --
                         the same trap task 8 hit on the board page's sort
                         tabs. */}
-                    <TabsList
-                        aria-label="Profile sections"
-                        className="w-full overflow-x-auto"
-                    >
-                        {TABS.map((tab) => (
-                            <TabsTrigger
-                                key={tab.value}
-                                value={tab.value}
-                                className="shrink-0"
-                            >
-                                {tab.label}
-                            </TabsTrigger>
-                        ))}
-                        {/* At `md` and up `/history` is its own page, reached
+                        <TabsList
+                            aria-label="Profile sections"
+                            className="w-full overflow-x-auto"
+                        >
+                            {TABS.map((tab) => (
+                                <TabsTrigger
+                                    key={tab.value}
+                                    value={tab.value}
+                                    className="shrink-0"
+                                >
+                                    {tab.label}
+                                </TabsTrigger>
+                            ))}
+                            {/* At `md` and up `/history` is its own page, reached
                             from the avatar menu, and this tab does not exist
                             there — the tab and its content both carry
                             `md:hidden` so neither survives a resize while
                             active. */}
-                        <TabsTrigger
-                            value="history"
-                            className="shrink-0 md:hidden"
-                        >
-                            History
-                        </TabsTrigger>
-                    </TabsList>
+                            <TabsTrigger
+                                value="history"
+                                className="shrink-0 md:hidden"
+                            >
+                                History
+                            </TabsTrigger>
+                        </TabsList>
 
-                    <TabsContent value="comments">
-                        {comments.length === 0 ? (
-                            <EmptyState
-                                icon={<MessageSquare />}
-                                title="No replies yet"
-                                body="Replies you write appear here, newest first."
-                            />
-                        ) : (
-                            <ProfileCommentList comments={comments} />
-                        )}
-                    </TabsContent>
+                        <TabsContent value="comments">
+                            {comments.length === 0 ? (
+                                <EmptyState
+                                    icon={<MessageSquare />}
+                                    title="No replies yet"
+                                    body="Replies you write appear here, newest first."
+                                />
+                            ) : (
+                                <ProfileCommentList comments={comments} />
+                            )}
+                        </TabsContent>
 
-                    <TabsContent value="media">
-                        {/* Their own uploads, shown as the pictures they are.
+                        <TabsContent value="media">
+                            {/* Their own uploads, shown as the pictures they are.
                             This rendered a `MediaPlaceholder` per label — a
                             grey box with a filename in it — because the server
                             sent label strings rather than attachments. It was
                             built that way when Clover accepted no files and
                             stayed that way after replies could carry one. */}
-                        {media.length === 0 ? (
-                            <EmptyState
-                                icon={<ImageIcon />}
-                                title="No media yet"
-                                body="Images you attach to a reply appear here."
-                            />
-                        ) : (
-                            /* `min(220px,100%)`, not a bare 220px minimum —
+                            {media.length === 0 ? (
+                                <EmptyState
+                                    icon={<ImageIcon />}
+                                    title="No media yet"
+                                    body="Images you attach to a reply appear here."
+                                />
+                            ) : (
+                                /* `min(220px,100%)`, not a bare 220px minimum —
                                see board-directory.tsx for the overflow this
                                produces at a 320px viewport. */
-                            <div className="grid grid-cols-[repeat(auto-fill,minmax(min(220px,100%),1fr))] gap-3">
-                                {media.map((attachment) => (
-                                    <PostAttachment
-                                        key={attachment.fullUrl}
-                                        media={attachment}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </TabsContent>
+                                <div className="grid grid-cols-[repeat(auto-fill,minmax(min(220px,100%),1fr))] gap-3">
+                                    {media.map((attachment) => (
+                                        <PostAttachment
+                                            key={attachment.fullUrl}
+                                            media={attachment}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </TabsContent>
 
-                    <TabsContent value="saved">
-                        {saved.length === 0 ? (
-                            <EmptyState
-                                icon={<Bookmark />}
-                                title="Nothing saved yet"
-                                body="Bookmarked threads land here and stay until you remove them."
-                                action={
-                                    <Button variant="outline" asChild>
-                                        <Link href={bookmarks()}>
-                                            Open bookmarks
-                                        </Link>
-                                    </Button>
-                                }
-                            />
-                        ) : (
-                            <div className="flex flex-col gap-4">
-                                {saved.map((thread) => (
-                                    <ThreadCard
-                                        key={thread.id}
-                                        thread={thread}
-                                        onBookmark={() =>
-                                            toggleBookmark(thread)
-                                        }
-                                    />
-                                ))}
+                        <TabsContent value="saved">
+                            {saved.length === 0 ? (
+                                <EmptyState
+                                    icon={<Bookmark />}
+                                    title="Nothing saved yet"
+                                    body="Bookmarked threads land here and stay until you remove them."
+                                    action={
+                                        <Button variant="outline" asChild>
+                                            <Link href={bookmarks()}>
+                                                Open bookmarks
+                                            </Link>
+                                        </Button>
+                                    }
+                                />
+                            ) : (
+                                <div className="flex flex-col gap-4">
+                                    {saved.map((thread) => (
+                                        <ThreadCard
+                                            key={thread.id}
+                                            thread={thread}
+                                            onBookmark={() =>
+                                                toggleBookmark(thread)
+                                            }
+                                        />
+                                    ))}
 
-                                {/* Present whenever the tab has anything in
+                                    {/* Present whenever the tab has anything in
                                     it, not only when it is empty. This tab
                                     is capped at `AccountController::SAVED`,
                                     and below `md` it is the whole of what an
@@ -215,66 +211,69 @@ export default function Account({
                                     `PRIMARY_NAV`, which has none. An anon
                                     with twenty saved threads saw six of them
                                     and no way to the rest. */}
-                                <Button
-                                    variant="ghost"
-                                    asChild
-                                    className="self-start"
-                                >
-                                    <Link href={bookmarks()}>
-                                        View all bookmarks
-                                    </Link>
-                                </Button>
-                            </div>
-                        )}
-                    </TabsContent>
+                                    <Button
+                                        variant="ghost"
+                                        asChild
+                                        className="self-start"
+                                    >
+                                        <Link href={bookmarks()}>
+                                            View all bookmarks
+                                        </Link>
+                                    </Button>
+                                </div>
+                            )}
+                        </TabsContent>
 
-                    {/* Below `md` only. `/history` sends every read with no
+                        {/* Below `md` only. `/history` sends every read with no
                         limit; this is capped server-side
                         (`AccountController::HISTORY`) because every client
                         pays for these rows whether or not it ever renders
                         the tab, and the tab is `md:hidden` -- invisible to
                         the server deciding how many rows to send. */}
-                    <TabsContent value="history" className="md:hidden">
-                        {history.length === 0 ? (
-                            <EmptyState
-                                icon={<HistoryIcon />}
-                                title="No history yet"
-                                body="Threads you open appear here, most recent first."
-                                action={
-                                    <Button variant="outline" asChild>
-                                        <Link href={historyRoute()}>
-                                            Open history
-                                        </Link>
-                                    </Button>
-                                }
-                            />
-                        ) : (
-                            <div className="flex flex-col gap-4">
-                                <HistoryEntryList
-                                    entries={history}
-                                    onBookmark={(thread) =>
-                                        toggleBookmark(thread)
+                        <TabsContent value="history" className="md:hidden">
+                            {history.length === 0 ? (
+                                <EmptyState
+                                    icon={<HistoryIcon />}
+                                    title="No history yet"
+                                    body="Threads you open appear here, most recent first."
+                                    action={
+                                        <Button variant="outline" asChild>
+                                            <Link href={historyRoute()}>
+                                                Open history
+                                            </Link>
+                                        </Button>
                                     }
                                 />
+                            ) : (
+                                <div className="flex flex-col gap-4">
+                                    <HistoryEntryList
+                                        entries={history}
+                                        onBookmark={(thread) =>
+                                            toggleBookmark(thread)
+                                        }
+                                    />
 
-                                {/* The tab is always capped, so there is
+                                    {/* The tab is always capped, so there is
                                     always potentially "the rest" once it has
                                     anything in it at all. The Saved tab
                                     carries the same link for the same
                                     reason. */}
-                                <Button
-                                    variant="ghost"
-                                    asChild
-                                    className="self-start"
-                                >
-                                    <Link href={historyRoute()}>
-                                        View full history
-                                    </Link>
-                                </Button>
-                            </div>
-                        )}
-                    </TabsContent>
-                </Tabs>
+                                    <Button
+                                        variant="ghost"
+                                        asChild
+                                        className="self-start"
+                                    >
+                                        <Link href={historyRoute()}>
+                                            View full history
+                                        </Link>
+                                    </Button>
+                                </div>
+                            )}
+                        </TabsContent>
+                    </Tabs>
+                </div>
+
+                <AccountRail comments={comments} />
             </div>
 
             {authGate}

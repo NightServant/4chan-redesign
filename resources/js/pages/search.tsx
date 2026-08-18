@@ -224,7 +224,7 @@ export default function Search({
                 hides on `/search?q=...` too, so this has to cover both. */}
             <div className="sticky top-0 z-30 h-16 border-b border-border bg-bg md:hidden">
                 <PatternField depth={0} feather={false} className="h-full">
-                    <div className="mx-auto flex h-16 w-full max-w-(--measure-page) items-center gap-2 px-6">
+                    <div className="mx-auto flex h-16 w-full max-w-(--measure-shell) items-center gap-2 px-6">
                         <button
                             type="button"
                             aria-label="Back"
