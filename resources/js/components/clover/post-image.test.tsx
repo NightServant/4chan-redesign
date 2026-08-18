@@ -848,6 +848,106 @@ describe('PostImage', () => {
     });
 });
 
+/**
+ * The shapes an imageboard actually carries, run against the rules that make
+ * an overflow impossible.
+ *
+ * Every visual bug this component has had came from one of these files
+ * meeting one of those rules: a 1170x1151 tweet screenshot ran 208px off a
+ * 438px screen because the panel's column sized itself to the picture; a
+ * 1440x1080 photograph was clipped on a desktop because an inline cap beat
+ * the breakpoint's own; a 96px reaction image filled a phone because the fill
+ * had no ceiling.
+ *
+ * jsdom cannot measure a box, so these are contracts rather than
+ * measurements -- they assert the rules hold for every shape, not the pixels
+ * that follow. The pixels were checked in a browser at 390, 424, 438 and
+ * 1440, and those numbers are in the commit messages rather than here, where
+ * they would rot.
+ */
+describe('PostImage, across the shapes a board carries', () => {
+    const SHAPES = [
+        ['a square thumbnail', 96, 96],
+        ['a tweet screenshot', 1170, 1151],
+        ['a wide photograph', 1440, 1080],
+        ['a tall screenshot', 500, 6000],
+        ['a panorama', 6000, 500],
+        ['a file that never measured', null, null],
+    ] as const;
+
+    it.each(SHAPES)(
+        'opens %s without letting the file size the panel below `md`',
+        async (_label, width, height) => {
+            const user = userEvent.setup();
+            const media = makeAttachment({ width, height });
+
+            render(<PostImage media={media} />);
+
+            await user.click(
+                screen.getByRole('button', {
+                    name: `Attached image: ${media.filename}`,
+                }),
+            );
+
+            const panel = screen.getByRole('dialog');
+            const full = screen
+                .getAllByRole('img', {
+                    name: `Attached image: ${media.filename}`,
+                })
+                .at(-1);
+            const row = full?.parentElement;
+
+            /* The column is a definite share of the panel. An implicit `auto`
+               column sizes to its content, and the content is an image that
+               asks for its own width. */
+            expect(panel).toHaveClass('grid-cols-1');
+
+            /* The rows may shrink below their content. A grid item's minimum
+               is `auto` -- its content's intrinsic size -- which is the same
+               default that overflowed four container queries in task 1. */
+            expect(row).toHaveClass('min-w-0');
+            expect(row).toHaveClass('overflow-hidden');
+
+            /* Below `md` the box bounds the image, never the file: the panel
+               is the whole screen there, so a file-derived cap is no cap. */
+            expect(full).toHaveClass('max-w-full');
+            expect(full).toHaveClass('max-h-full');
+            expect(full?.className).not.toMatch(/(^|\s)max-w-\[var/);
+
+            /* At `md` and up the bound is the viewport and the file, applied
+               as classes so each breakpoint can still override -- an inline
+               declaration would win over all of them. */
+            expect(full?.className).toMatch(/md:max-h-\[min\(82vh,/);
+            expect(full?.style.maxWidth).toBe('');
+            expect(full?.style.maxHeight).toBe('');
+
+            /* Proportions are never distorted, whatever the shape. */
+            expect(full).toHaveClass('object-contain');
+        },
+    );
+
+    it.each(SHAPES)(
+        'crops %s to a uniform feed row rather than setting the row height',
+        (_label, width, height) => {
+            render(
+                <PostImage
+                    media={makeAttachment({ width, height })}
+                    variant="card"
+                />,
+            );
+
+            const box = screen.getByRole('button');
+
+            /* A feed is a grid of equal rows: the ratio is fixed and the
+               picture is cropped into it, so a 6000px-tall file cannot set
+               the height of the row it sits in. */
+            expect(box).toHaveClass('aspect-[16/9]');
+            expect(box).toHaveClass('max-w-(--measure-media)');
+            expect(screen.getByRole('img')).toHaveClass('object-cover');
+        },
+    );
+});
+
 describe('PostAttachment', () => {
     it('renders nothing for a post with no file', () => {
         const { container } = render(<PostAttachment media={null} />);
