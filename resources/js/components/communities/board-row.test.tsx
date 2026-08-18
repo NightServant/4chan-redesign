@@ -73,7 +73,11 @@ describe('BoardRow', () => {
      */
     it('carries the dot matrix behind the card surface', () => {
         const { container } = render(
-            <BoardRow entry={TECHNOLOGY} subscribed={false} />,
+            <BoardRow
+                entry={TECHNOLOGY}
+                subscribed={false}
+                onToggleSubscribe={() => {}}
+            />,
         );
 
         const paper = container.querySelector(

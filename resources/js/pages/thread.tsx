@@ -188,10 +188,46 @@ export default function Thread({
                     Back to {thread.board}
                 </Link>
 
+                {/* The viewer's drawer, below `md`: the thread's replies and
+                    the way into the composer, behind the picture an anon just
+                    tapped. Built here because this is the screen that has
+                    both -- a feed row opening the same viewer has no comments
+                    in hand, and its drawer is simply absent. */}
                 <OriginalPost
                     thread={thread}
                     onBookmark={() =>
                         requireAuth('bookmark this thread', toggleBookmark)
+                    }
+                    viewerDrawerLabel={plural(
+                        comments.length,
+                        'reply',
+                        'replies',
+                    )}
+                    viewerDrawer={
+                        comments.length === 0 ? undefined : (
+                            <div className="flex flex-col gap-4">
+                                <CommentTree comments={comments} />
+
+                                {signedIn ? (
+                                    <Button variant="outline" asChild>
+                                        <Link href={composerHref}>
+                                            Join the conversation
+                                        </Link>
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        variant="outline"
+                                        onClick={() =>
+                                            setAuthGateAction(
+                                                'reply to this thread',
+                                            )
+                                        }
+                                    >
+                                        Join the conversation
+                                    </Button>
+                                )}
+                            </div>
+                        )
                     }
                 />
 

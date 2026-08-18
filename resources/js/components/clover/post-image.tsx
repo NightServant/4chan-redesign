@@ -1,5 +1,6 @@
-import { ExternalLink, EyeIcon } from 'lucide-react';
+import { ChevronUp, ExternalLink, EyeIcon } from 'lucide-react';
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { MachineValue } from '@/components/clover/machine-value';
 import { MediaPlaceholder } from '@/components/clover/media-placeholder';
 import { Button } from '@/components/ui/button';
@@ -186,14 +187,35 @@ type PostImageProps = {
     media: Attachment;
     /** Defaults to `card`, the tighter cap. */
     variant?: PostImageVariant;
+    /**
+     * What the viewer's drawer holds below `md`, if anything.
+     *
+     * Optional because this component is used in three places and only one of
+     * them has replies in hand: a feed row knows nothing about the thread's
+     * comments, and inventing a fetch here would put a second source of the
+     * comment tree behind a picture. The thread page passes its own.
+     */
+    viewerDrawer?: ReactNode;
+    /** Names the drawer's control, e.g. "312 replies". */
+    viewerDrawerLabel?: string;
     className?: string;
 };
 
-function PostImage({ media, variant = 'card', className }: PostImageProps) {
+function PostImage({
+    media,
+    variant = 'card',
+    viewerDrawer,
+    viewerDrawerLabel = 'Replies',
+    className,
+}: PostImageProps) {
     /* Concealment is the initial state, not a permanent one: revealing is a
        per-attachment decision an anon makes and it does not persist. */
     const [revealed, setRevealed] = useState(media.concealed === null);
     const [expanded, setExpanded] = useState(false);
+    /* Closed on arrival. The viewer is opened to look at the picture, so the
+       replies wait behind a control rather than taking half the screen from
+       the thing that was tapped. */
+    const [drawerOpen, setDrawerOpen] = useState(false);
     const [failed, setFailed] = useState(false);
 
     const box = intrinsicBox(media);
@@ -339,24 +361,56 @@ function PostImage({ media, variant = 'card', className }: PostImageProps) {
                         and sharing belong to the post, not to its
                         attachment, and this component has never been given
                         one. */}
-                    <div className="flex items-center justify-between gap-3 border-t border-border px-3 py-2 md:mt-4 md:justify-center md:border-0 md:py-0">
-                        <MachineValue className="min-w-0 truncate text-faint">
-                            {media.label}
-                        </MachineValue>
+                    <div className="flex flex-col md:mt-4">
+                        {/* The drawer, below `md` only and only where the
+                            caller had replies to give. Closed on arrival, and
+                            it takes at most half the screen when open so the
+                            picture it belongs to is still visible above it. */}
+                        {viewerDrawer !== undefined ? (
+                            <div className="border-t border-border md:hidden">
+                                <button
+                                    type="button"
+                                    onClick={() => setDrawerOpen(!drawerOpen)}
+                                    aria-expanded={drawerOpen}
+                                    className="touch-target-44 flex w-full items-center justify-between gap-3 px-3 py-3 text-left text-body-sm text-foreground"
+                                >
+                                    {viewerDrawerLabel}
+                                    <ChevronUp
+                                        aria-hidden="true"
+                                        className={cn(
+                                            'size-4 shrink-0 text-faint transition-transform duration-[var(--duration-state)] ease-standard',
+                                            drawerOpen && 'rotate-180',
+                                        )}
+                                    />
+                                </button>
 
-                        <a
-                            href={media.fullUrl}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                            referrerPolicy="no-referrer"
-                            className="touch-target-44 inline-flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-body-sm text-muted-foreground hover:bg-surface-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:hidden"
-                        >
-                            <ExternalLink
-                                aria-hidden="true"
-                                className="size-4"
-                            />
-                            Original file
-                        </a>
+                                {drawerOpen ? (
+                                    <div className="max-h-[50dvh] overflow-y-auto border-t border-border px-3 py-3">
+                                        {viewerDrawer}
+                                    </div>
+                                ) : null}
+                            </div>
+                        ) : null}
+
+                        <div className="flex items-center justify-between gap-3 border-t border-border px-3 py-2 md:justify-center md:border-0 md:py-0">
+                            <MachineValue className="min-w-0 truncate text-faint">
+                                {media.label}
+                            </MachineValue>
+
+                            <a
+                                href={media.fullUrl}
+                                target="_blank"
+                                rel="noreferrer noopener"
+                                referrerPolicy="no-referrer"
+                                className="touch-target-44 inline-flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-body-sm text-muted-foreground hover:bg-surface-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:hidden"
+                            >
+                                <ExternalLink
+                                    aria-hidden="true"
+                                    className="size-4"
+                                />
+                                Original file
+                            </a>
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -372,18 +426,13 @@ function PostImage({ media, variant = 'card', className }: PostImageProps) {
  */
 function PostAttachment({
     media,
-    variant,
-    className,
-}: {
-    media: Attachment | null;
-    variant?: PostImageVariant;
-    className?: string;
-}) {
+    ...props
+}: Omit<PostImageProps, 'media'> & { media: Attachment | null }) {
     if (media === null) {
         return null;
     }
 
-    return <PostImage media={media} variant={variant} className={className} />;
+    return <PostImage media={media} {...props} />;
 }
 
 export { PostAttachment, PostImage };

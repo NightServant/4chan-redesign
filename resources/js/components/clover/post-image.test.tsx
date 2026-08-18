@@ -302,6 +302,68 @@ describe('PostImage', () => {
         expect(dialog.className).toMatch(/md:h-auto/);
     });
 
+    /**
+     * The viewer's drawer, below `md`.
+     *
+     * Gabe's request: tapping the picture should not cut an anon off from the
+     * conversation it belongs to. The replies and the way into the composer
+     * sit behind a control at the foot of the viewer -- closed on arrival,
+     * because the screen was opened to look at the image, and capped at half
+     * the viewport so the picture is still there when it opens.
+     */
+    it('hides the drawer behind a control and opens it on press', async () => {
+        const user = userEvent.setup();
+        const media = makeAttachment();
+
+        render(
+            <PostImage
+                media={media}
+                viewerDrawer={<p>A reply lives here.</p>}
+                viewerDrawerLabel="312 replies"
+            />,
+        );
+
+        await user.click(
+            screen.getByRole('button', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        );
+
+        const trigger = screen.getByRole('button', { name: /312 replies/ });
+
+        expect(trigger).toHaveAttribute('aria-expanded', 'false');
+        expect(
+            screen.queryByText('A reply lives here.'),
+        ).not.toBeInTheDocument();
+
+        await user.click(trigger);
+
+        expect(trigger).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.getByText('A reply lives here.')).toBeInTheDocument();
+    });
+
+    /**
+     * A feed row opens the same viewer with no comments in hand, so it has no
+     * drawer at all rather than an empty one under a control promising
+     * replies.
+     */
+    it('renders no drawer control when the caller passed none', async () => {
+        const user = userEvent.setup();
+        const media = makeAttachment();
+
+        render(<PostImage media={media} />);
+
+        await user.click(
+            screen.getByRole('button', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        );
+
+        expect(
+            screen.queryByRole('button', { name: /replies/i }),
+        ).not.toBeInTheDocument();
+    });
+
     it('carries a close control and a bottom bar of real touch targets', async () => {
         const user = userEvent.setup();
         const media = makeAttachment();
