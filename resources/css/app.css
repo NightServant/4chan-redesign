@@ -234,8 +234,17 @@
        chrome is measured against this rather than against `--measure-page`,
        so the header's search field starts where a post starts and its
        controls end where the rail ends. Derived rather than typed, so the
-       1536px step below moves all of it at once. */
-    --measure-shell: calc(var(--measure-media) + var(--measure-rail) + 1.75rem);
+       1536px step below moves all of it at once.
+
+       The `3rem` is the `px-6` every consumer carries. Each box measured
+       against this is padded, so the padding belongs in the measure: without
+       it the box was the right width but its *content* was 48px short, the
+       two columns inside shrank to fit, and the search field -- capped at
+       the post column's own measure rather than sharing its row -- kept its
+       full width and hung past them. */
+    --measure-shell: calc(
+        var(--measure-media) + var(--measure-rail) + 1.75rem + 3rem
+    );
 }
 
 @media (min-width: 1536px) {
