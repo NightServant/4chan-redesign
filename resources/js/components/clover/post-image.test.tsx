@@ -442,6 +442,56 @@ describe('PostImage', () => {
         expect(full).toHaveClass('w-full');
     });
 
+    /**
+     * The panel's column is a definite share of it, not `auto`.
+     *
+     * An implicit grid column sizes to its content, and the content is an
+     * image whose `height: 100%` and intrinsic ratio asked for 769px: the row
+     * took it, so a 1170x1151 file made a 662px row inside a 429px panel and
+     * ran 208px off a 438px screen. Reproduced at that exact width with that
+     * exact file before this was changed.
+     */
+    it('gives the panel a definite column so its rows cannot outgrow it', async () => {
+        const user = userEvent.setup();
+        const media = makeAttachment({ width: 1170, height: 1151 });
+
+        render(<PostImage media={media} />);
+
+        await user.click(
+            screen.getByRole('button', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        );
+
+        expect(screen.getByRole('dialog')).toHaveClass('grid-cols-1');
+    });
+
+    /**
+     * Below `md` the image is bounded by its box, not by the file. The panel
+     * is the whole screen there, so the box is already the right bound --
+     * `max-w-[var(--file-w)]` let a 1170px file size the element from its own
+     * width instead.
+     */
+    it('bounds the image by its box below `md`', async () => {
+        const user = userEvent.setup();
+        const media = makeAttachment({ width: 1170, height: 1151 });
+
+        render(<PostImage media={media} />);
+
+        await user.click(
+            screen.getByRole('button', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        );
+
+        const full = screen
+            .getAllByRole('img', { name: `Attached image: ${media.filename}` })
+            .at(-1);
+
+        expect(full).toHaveClass('max-w-full');
+        expect(full?.className).not.toMatch(/max-w-\[var\(--file-w\)\]/);
+    });
+
     it('fills the viewer below `md` and sizes to the image above it', async () => {
         const user = userEvent.setup();
         const media = makeAttachment();

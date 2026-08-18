@@ -403,7 +403,7 @@ function PostImage({
                                     : String(media.width / media.height),
                         } as CSSProperties
                     }
-                    className="grid h-dvh w-full max-w-none grid-rows-[auto_1fr_auto] gap-0 rounded-none border-0 bg-bg p-0 sm:max-w-none md:h-auto md:w-[min(94vw,var(--file-w),calc(82vh*var(--file-ratio)))] md:max-w-[min(94vw,1400px)] md:rounded-2xl md:border md:p-6"
+                    className="grid h-dvh w-full max-w-none grid-cols-1 grid-rows-[auto_1fr_auto] gap-0 rounded-none border-0 bg-bg p-0 sm:max-w-none md:h-auto md:w-[min(94vw,var(--file-w),calc(82vh*var(--file-ratio)))] md:max-w-[min(94vw,1400px)] md:rounded-2xl md:border md:p-6"
                 >
                     <DialogTitle className="sr-only">
                         {media.filename}
@@ -458,6 +458,23 @@ function PostImage({
                                to the classes instead leaves each breakpoint
                                able to bound them.
 
+                               Below `md` the bound is the box, not the file:
+                               `max-w-[var(--file-w)]` let a 1170px file size
+                               the element from its own width inside a 429px
+                               panel, and it ran 208px past the edge. The
+                               panel is the whole screen there, so the box is
+                               already the right bound and the file's numbers
+                               have no work to do.
+
+                               `grid-cols-1` on the panel is what makes that
+                               bound real. The implicit column is `auto`,
+                               which sizes to its content -- and the content
+                               is an image whose `height: 100%` and intrinsic
+                               ratio ask for 769px. The column took it, so the
+                               row was 662px inside a 429px panel and the
+                               picture ran off the screen. `1fr` is a definite
+                               share of the panel instead.
+
                                At `md` and up the bound is the viewport --
                                `94vw` and `82vh` -- rather than `100%`. The
                                panel is `w-fit`, so a percentage there asks
@@ -485,7 +502,7 @@ function PostImage({
                                proportions while the box does the sizing. At
                                `md` and up the panel is sized to the image
                                instead, so the old rule holds there. */
-                            className="h-full max-h-[var(--file-h)] w-full max-w-[var(--file-w)] rounded-md object-contain md:h-auto md:max-h-[min(82vh,var(--file-h))] md:w-auto md:max-w-full"
+                            className="h-full max-h-full w-full max-w-full rounded-md object-contain md:h-auto md:max-h-[min(82vh,var(--file-h))] md:w-auto md:max-w-full"
                         />
                     </div>
 
