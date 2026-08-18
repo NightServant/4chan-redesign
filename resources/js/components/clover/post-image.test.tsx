@@ -161,10 +161,16 @@ describe('PostImage', () => {
         /* Feed rows only. The thread page's column already caps itself at
            `--measure-column`, so a second cap inside it left the image fixed
            while the column grew -- which is the gap that kept coming back. */
-        it('caps the width of a card box', () => {
+        /* The shared token, not a literal. `--measure-media` caps the feed
+           column too, so a change to one is a change to both -- when they
+           were separate numbers the column ran to 760px while the image
+           stopped at 560 and every row ended in empty paper. */
+        it('caps the width of a card box at the shared media measure', () => {
             render(<PostImage media={makeAttachment()} variant="card" />);
 
-            expect(screen.getByRole('button')).toHaveClass('max-w-[560px]');
+            expect(screen.getByRole('button')).toHaveClass(
+                'max-w-(--measure-media)',
+            );
         });
 
         /* Sized to the file, bounded by the column, centred in it. A fixed
@@ -178,7 +184,7 @@ describe('PostImage', () => {
 
             expect(box).toHaveClass('w-fit');
             expect(box).toHaveClass('self-center');
-            expect(box.className).not.toMatch(/max-w-\[560px\]/);
+            expect(box.className).not.toMatch(/max-w-\(--measure-media\)/);
             expect(box.className).not.toMatch(/(^|\s)w-full(\s|$)/);
             expect(screen.getByRole('img')).toHaveClass('w-auto');
         });

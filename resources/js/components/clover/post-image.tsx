@@ -108,7 +108,11 @@ function altFor(media: Attachment): string {
  * so it holds at 390 and at 2545 alike; a `md:`-gated version would be exactly
  * the half-measure the request was about.
  */
-const MAX_BOX_WIDTH = 'max-w-[560px]';
+/* The shared measure, not a number of its own. `--measure-media` is also
+   what caps the feed column, so the box and the column it sits in cannot
+   drift apart -- which is exactly what left every feed row ending in 200px
+   of empty paper. */
+const MAX_BOX_WIDTH = 'max-w-(--measure-media)';
 
 /**
  * The box each variant draws, and the image inside it.

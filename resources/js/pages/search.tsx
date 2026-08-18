@@ -309,7 +309,7 @@ export default function Search({
                 </PatternField>
             </div>
 
-            <div className="mx-auto flex w-full max-w-[820px] flex-col gap-6 px-6 py-8">
+            <div className="mx-auto flex w-full max-w-(--measure-media) flex-col gap-6 px-6 py-8">
                 {/* The suggestions screen below `md`: recent searches, then
                     the busiest boards or, once typed into, live matches —
                     exactly what the header dropdown already offers, nothing

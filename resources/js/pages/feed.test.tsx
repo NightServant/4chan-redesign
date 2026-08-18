@@ -94,6 +94,23 @@ const THREADS = [
 
 describe('Feed', () => {
     /**
+     * The column is capped at the same measure the attachment box is.
+     *
+     * At `--measure-column` it ran to 760px while an image stopped at 560, so
+     * every card ended in 200px of empty paper down the right-hand side. One
+     * token for both is what stops them drifting again.
+     */
+    it('caps the column at the same measure as the media it holds', () => {
+        const { container } = render(
+            <Feed sort="bumped" threads={THREADS} library={LIBRARY} />,
+        );
+
+        expect(
+            container.querySelector('[data-slot="feed-column"]'),
+        ).toHaveClass('max-w-(--measure-media)');
+    });
+
+    /**
      * A feed mixes boards, and a post number does not identify a thread
      * across them.
      *

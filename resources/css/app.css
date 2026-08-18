@@ -217,6 +217,11 @@
     --measure-page: 1180px;
     --measure-column: 760px;
     --measure-rail: 330px;
+    /* The width a post is actually drawn at: the cap on an attachment's box,
+       and the cap on the column that holds the cards carrying them. One
+       value, because when they were two the column grew to 760px while the
+       image stayed at 560 and every row ended in 200px of nothing. */
+    --measure-media: 560px;
 }
 
 @media (min-width: 1536px) {
@@ -224,6 +229,7 @@
         --measure-page: 1440px;
         --measure-column: 840px;
         --measure-rail: 400px;
+        --measure-media: 620px;
     }
 }
 

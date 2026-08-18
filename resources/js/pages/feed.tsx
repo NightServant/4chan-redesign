@@ -82,7 +82,12 @@ export default function Feed({ sort, threads, library }: FeedProps) {
             <div className="mx-auto flex w-full max-w-(--measure-page) gap-7 px-6 py-6">
                 <div
                     data-slot="feed-column"
-                    className="flex max-w-(--measure-column) min-w-0 flex-1 flex-col gap-5"
+                    /* `--measure-media`, the same token the attachment box
+                       is capped at. At `--measure-column` the column ran to
+                       760px while the image stopped at 560, so every card
+                       ended in 200px of empty paper -- the gap Gabe kept
+                       pointing at. */
+                    className="flex max-w-(--measure-media) min-w-0 flex-1 flex-col gap-5"
                 >
                     <PageHeader
                         title={HEADINGS[sort]}

@@ -90,7 +90,7 @@ export default function History({ entries }: HistoryProps) {
                 description="Threads you opened on Clover, most recent first."
             />
 
-            <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-[18px] px-6 py-6">
+            <div className="mx-auto flex w-full max-w-(--measure-media) flex-col gap-[18px] px-6 py-6">
                 <PageHeader
                     title="History"
                     description="Threads you opened, most recent first."
