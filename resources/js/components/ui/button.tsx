@@ -48,13 +48,24 @@ const buttonVariants = cva(
                 /** Quiet filled action, kept for starter-kit pages. */
                 secondary: secondaryClasses,
             },
+            /**
+             * Every size below `lg` grows its hit area on a coarse pointer.
+             *
+             * Only `icon` carried the utility, on the reading that a text
+             * button is wide enough to hit -- which is true horizontally and
+             * says nothing about the other axis: `sm` is 34px tall and `md`
+             * 38px, both under the 44px minimum, and Join on the board page
+             * was one of them. `lg` is already 44px. The painted control does
+             * not change at any pointer size; `touch-target-44` grows the
+             * area, not the box.
+             */
             size: {
-                sm: 'h-8.5 px-3',
-                md: 'h-9.5 px-4',
+                sm: 'touch-target-44 h-8.5 px-3',
+                md: 'touch-target-44 h-9.5 px-4',
                 lg: 'h-11 px-5',
                 icon: 'touch-target-44 size-9.5 p-0',
                 /** Alias of `md`, kept for starter-kit pages. */
-                default: 'h-9.5 px-4',
+                default: 'touch-target-44 h-9.5 px-4',
             },
             pill: {
                 true: 'rounded-full',

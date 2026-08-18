@@ -113,9 +113,40 @@ describe(`${UTILITY_NAME} (class contract, resources/css/app.css)`, () => {
  * in one string literal together and the source scan below cannot see them.
  * This calls the real function instead of reading source.
  */
-describe('Button size="icon" (class contract)', () => {
+describe('Button (class contract)', () => {
+    /**
+     * Every size under 44px, not just the icon.
+     *
+     * The utility went on `icon` alone, on the reading that a text button is
+     * wide enough to hit. That is true horizontally and silent about the
+     * other axis: `sm` is 34px tall and `md` 38px, and the board page's Join
+     * control was one of them. `lg` is already 44px and needs nothing.
+     */
+    it.each(['sm', 'md', 'default', 'icon'] as const)(
+        'carries touch-target-44 at size %s',
+        (size) => {
+            expect(buttonVariants({ size })).toContain(UTILITY_NAME);
+        },
+    );
+
+    it('leaves the already-tall size alone', () => {
+        expect(buttonVariants({ size: 'lg' })).not.toContain(UTILITY_NAME);
+    });
+});
+
+/**
+ * A tab is ~36px at `py-2`, and the board page's sort tabs are what an anon
+ * reaches for on a phone. `TabsTrigger` builds its classes inline rather than
+ * through `cva`, so this reads the rendered element.
+ */
+describe('TabsTrigger (class contract)', () => {
     it('carries touch-target-44', () => {
-        expect(buttonVariants({ size: 'icon' })).toContain(UTILITY_NAME);
+        const source = readFileSync(
+            join(process.cwd(), 'resources/js/components/ui/tabs.tsx'),
+            'utf8',
+        );
+
+        expect(source).toContain(`${UTILITY_NAME} -mb-px inline-flex`);
     });
 });
 
