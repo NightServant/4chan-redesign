@@ -19,10 +19,15 @@ import { Card } from '@/components/ui/card';
  */
 function AnonBanner() {
     return (
-        <Card className="flex-row items-center gap-4 px-5 py-5">
+        <Card className="flex-row items-center gap-4 px-4 py-4 sm:px-5 sm:py-5">
+            {/* Gone below `sm`. It is `aria-hidden` decoration, and at a
+                320px viewport it was spending 44px plus a 16px gap -- over a
+                fifth of the line -- to say nothing the sentence does not,
+                which left the copy setting at roughly ten characters a
+                line. */}
             <span
                 aria-hidden="true"
-                className="grid size-11 shrink-0 place-items-center rounded-full border border-border bg-surface-elevated text-faint"
+                className="hidden size-11 shrink-0 place-items-center rounded-full border border-border bg-surface-elevated text-faint sm:grid"
             >
                 <Shield aria-hidden="true" className="size-5" />
             </span>

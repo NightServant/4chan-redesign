@@ -90,10 +90,21 @@ export default function Account({
                 description="Your replies, the images you attached to them, and the threads you saved."
             />
 
-            <div className="mx-auto flex w-full max-w-(--measure-page) flex-col gap-5 px-6 py-6">
+            <div className="mx-auto flex w-full max-w-(--measure-shell) flex-col gap-5 px-6 py-6">
                 <ProfileHeader profile={profile} stats={stats} />
 
-                <Tabs defaultValue="comments">
+                {/* The column the tabs and their content sit in is the post
+                    measure, centred, while the identity block above spans the
+                    shell. The Saved tab renders the same `ThreadCard` the feed
+                    does, and its attachment is capped at `--measure-media`, so
+                    a wider column left every saved card ending in 300px of
+                    empty paper -- the feed's old gap, on a different screen.
+                    This page carries no rail, so the shell's extra width has
+                    nothing to hold. */}
+                <Tabs
+                    defaultValue="comments"
+                    className="mx-auto w-full max-w-(--measure-media)"
+                >
                     {/* Scrolls rather than clipping. Four tabs did not fit
                         a 320px row and "History" was cut off at the edge with
                         nothing to say more existed. `w-full` is the
