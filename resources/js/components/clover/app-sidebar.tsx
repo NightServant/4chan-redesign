@@ -47,8 +47,17 @@ const rowRestClasses =
 const rowActiveClasses = 'bg-primary-soft font-semibold text-primary';
 
 /** Shared by the collapse and expand toggles so both sit on the same axis. */
+/**
+ * `hidden lg:flex`, because below `lg` this sidebar is a drawer.
+ *
+ * Collapsing to a rail is a desktop idea: it trades width for a strip of
+ * icons on a screen wide enough to have both. In the drawer there is nothing
+ * to trade -- the panel is over the page and the hamburger already closes it,
+ * so the toggle offered a second, worse way to do the same thing and left an
+ * icon-only rail no route could reach.
+ */
 const toggleClasses =
-    'flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover hover:text-foreground touch-target-44';
+    'hidden size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover hover:text-foreground lg:flex touch-target-44';
 
 /**
  * One of the sidebar's board lists. Hidden entirely when empty rather than

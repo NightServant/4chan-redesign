@@ -113,6 +113,17 @@ function ThreadCard({
             data-slot="thread-card"
             className={cn(
                 'relative flex flex-col gap-2 border-b border-border py-4',
+                /* A rounded surface under the pointer, so a row answers
+                   before it is pressed. The whole row is the target -- the
+                   title's stretched pseudo-element covers it -- and nothing
+                   said so until the cursor happened to cross the words.
+
+                   Surface and radius only. No shadow: this is a ruled list,
+                   not a deck of cards, and elevation on hover would claim the
+                   row lifts off the page it is ruled into. No transform
+                   either -- a row that moves shifts every row beneath it. */
+                'rounded-xl transition-[background-color] duration-[var(--duration-hover)] ease-standard',
+                'hover:bg-surface/60',
                 className,
             )}
             {...props}

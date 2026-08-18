@@ -92,6 +92,25 @@ afterEach(() => {
 });
 
 describe('AppSidebar', () => {
+    /**
+     * No collapse toggle below `lg`, where this sidebar is a drawer.
+     *
+     * Collapsing to an icon rail trades width for a strip of glyphs, which is
+     * a desktop trade. In a drawer there is nothing to trade: the panel is
+     * over the page, the hamburger already closes it, and collapsing left an
+     * icon-only rail no route could reach.
+     */
+    it('offers its collapse toggle only at `lg` and up', () => {
+        render(<AppSidebar />);
+
+        const toggle = screen.getByRole('button', {
+            name: /collapse sidebar/i,
+        });
+
+        expect(toggle).toHaveClass('hidden');
+        expect(toggle).toHaveClass('lg:flex');
+    });
+
     it('renders every PRIMARY_NAV row for a signed-in anon', () => {
         mockPage.props.auth.user = SIGNED_IN_USER;
 

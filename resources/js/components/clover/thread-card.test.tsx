@@ -61,7 +61,11 @@ describe('ThreadCard', () => {
 
         expect(container.querySelector('[data-slot="card"]')).toBeNull();
         expect(row?.className).toMatch(/border-b/);
-        expect(row?.className).not.toMatch(/shadow-lift|rounded-xl/);
+        /* Still not a card: no border box and no elevation, resting or
+           hovered. The radius is there for the hover surface's own corners --
+           a tint with square edges on a ruled list reads as a highlight bar,
+           not as the row answering. */
+        expect(row?.className).not.toMatch(/shadow-lift/);
     });
 
     /**
@@ -70,17 +74,30 @@ describe('ThreadCard', () => {
      * row frequently said the same thing twice at two sizes.
      */
     /**
-     * A whole row tinting is a lot of movement for a pointer that happens to
-     * cross a feed, and thirty of them flicker on the way down the page. The
-     * title is the thing being pointed at and the only thing that navigates.
+     * The whole row answers the pointer now (Gabe, 2026-08-17).
+     *
+     * It used to react on the title alone, on the reasoning that thirty rows
+     * tinting on the way down a feed is a lot of movement. That reasoning was
+     * about *tinting*; what it missed is that the whole row is the target --
+     * the title's stretched pseudo-element covers it -- so a row that only
+     * responded where the words happened to be was hiding the size of its own
+     * hit area.
+     *
+     * Surface and radius only -- no shadow, because this is a ruled list
+     * rather than a deck of cards, and no transform, because a row that moves
+     * shifts every row beneath it. That last part is the flicker the old rule
+     * was actually worried about.
      */
-    it('reacts on the title alone, and never on the row', () => {
+    it('lifts the whole row under the pointer, and still marks the title', () => {
         const { container } = render(<ThreadCard thread={baseThread} />);
 
         const row = container.querySelector('[data-slot="thread-card"]');
         const title = screen.getByRole('link', { name: baseThread.title });
 
-        expect(row?.className).not.toMatch(/hover:/);
+        expect(row?.className).toMatch(/hover:bg-surface/);
+        expect(row?.className).toMatch(/rounded-xl/);
+        expect(row?.className).not.toMatch(/hover:shadow/);
+        expect(row?.className).not.toMatch(/hover:-?translate/);
         expect(title.className).toMatch(/hover:text-primary/);
     });
 
