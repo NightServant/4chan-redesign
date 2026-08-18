@@ -399,14 +399,17 @@ describe('PostImage', () => {
             }),
         );
 
-        const full = screen
-            .getAllByRole('img', { name: `Attached image: ${media.filename}` })
-            .at(-1);
+        /* The file's size reaches the CSS as custom properties on the panel,
+           inherited by the image. Inline `max-width` would have won over
+           every breakpoint's own rule -- which is what clipped the picture on
+           wide screens. */
+        const panel = screen.getByRole('dialog');
 
-        expect(full).toHaveStyle({
-            maxWidth: `${width}px`,
-            maxHeight: `${height}px`,
-        });
+        expect(panel.style.getPropertyValue('--file-w')).toBe(`${width}px`);
+        expect(panel.style.getPropertyValue('--file-h')).toBe(`${height}px`);
+        expect(panel.style.getPropertyValue('--file-ratio')).toBe(
+            String(width / height),
+        );
     });
 
     /**
@@ -430,7 +433,12 @@ describe('PostImage', () => {
             .getAllByRole('img', { name: `Attached image: ${media.filename}` })
             .at(-1);
 
-        expect(full?.style.maxWidth).toBe('');
+        /* No dimensions to cap with, so the properties fall back to the box
+           itself and the fill stands rather than the image collapsing. */
+        const panel = screen.getByRole('dialog');
+
+        expect(panel.style.getPropertyValue('--file-w')).toBe('100%');
+        expect(panel.style.getPropertyValue('--file-h')).toBe('100%');
         expect(full).toHaveClass('w-full');
     });
 
@@ -645,7 +653,7 @@ describe('PostImage', () => {
             .find((image) => image.getAttribute('src') === media.fullUrl);
 
         expect(opened).toHaveClass('object-contain');
-        expect(opened?.className).toMatch(/md:max-h-\[82vh\]/);
+        expect(opened?.className).toMatch(/md:max-h-\[min\(82vh,/);
         expect(opened?.className).not.toMatch(/(^|\s)h-auto(\s|$)/);
     });
 
@@ -661,7 +669,14 @@ describe('PostImage', () => {
             }),
         );
 
-        expect(screen.getByRole('dialog').className).toMatch(/md:w-fit/);
+        /* Sized from the file rather than fitted to it: fitting a panel to
+           an image while the image is bounded by that panel is a circle, and
+           it resolved to a 698px panel holding a 964px picture. The width is
+           the file's own, bounded by the viewport and by what the height cap
+           implies through the ratio. */
+        expect(screen.getByRole('dialog').className).toMatch(
+            /md:w-\[min\(94vw,var\(--file-w\),calc\(82vh\*var\(--file-ratio\)\)\)\]/,
+        );
     });
 
     it('is reachable and operable from the keyboard', async () => {

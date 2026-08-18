@@ -245,6 +245,16 @@
        two columns inside shrank to fit, and the search field -- capped at
        the post column's own measure rather than sharing its row -- kept its
        full width and hung past them. */
+    /* The attachment being viewed, set per image by `post-image.tsx`. They
+       are declared here so a class referencing one always resolves: the
+       viewer's panel and its image are bounded by these, and a `var()` that
+       resolves to nothing takes its whole declaration down with it. The
+       defaults are the "no dimensions known" case -- fill the box, square
+       ratio -- which is what a local upload that failed to measure gets. */
+    --file-w: 100%;
+    --file-h: 100%;
+    --file-ratio: 1;
+
     --measure-shell: calc(
         var(--measure-media) + var(--measure-rail) + 1.75rem + 3rem
     );

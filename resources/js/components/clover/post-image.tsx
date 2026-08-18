@@ -1,7 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { ChevronUp, ExternalLink, EyeIcon } from 'lucide-react';
 import { useState } from 'react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { CommentTree } from '@/components/clover/comment-tree';
 import { MachineValue } from '@/components/clover/machine-value';
 import { MediaPlaceholder } from '@/components/clover/media-placeholder';
@@ -376,7 +376,35 @@ function PostImage({
                     where a thumb is. At `md` and up the panel comes back,
                     sized to the image rather than to a fixed column, so a
                     portrait shot is not boxed in a landscape frame. */}
-                <DialogContent className="grid h-dvh w-full max-w-none grid-rows-[auto_1fr_auto] gap-0 rounded-none border-0 bg-bg p-0 sm:max-w-none md:h-auto md:w-fit md:max-w-[min(94vw,1400px)] md:rounded-2xl md:border md:p-6">
+                <DialogContent
+                    /* The file's own size, inherited by the image inside.
+                       The panel is sized from it at `md` and up rather than
+                       from `fit-content`: fitting to the image while the
+                       image is bounded by the panel is a circle, and it
+                       resolved to a 698px panel holding a 964px picture. */
+                    style={
+                        {
+                            '--file-w':
+                                media.width === null
+                                    ? '100%'
+                                    : `${media.width}px`,
+                            '--file-h':
+                                media.height === null
+                                    ? '100%'
+                                    : `${media.height}px`,
+                            /* Unitless, so `calc()` can turn a height bound
+                               into the width that bound implies. Without it
+                               the panel could only be told "at most the
+                               file's width", which on a height-limited image
+                               left it 1313px wide around a 964px picture. */
+                            '--file-ratio':
+                                media.width === null || media.height === null
+                                    ? '1'
+                                    : String(media.width / media.height),
+                        } as CSSProperties
+                    }
+                    className="grid h-dvh w-full max-w-none grid-rows-[auto_1fr_auto] gap-0 rounded-none border-0 bg-bg p-0 sm:max-w-none md:h-auto md:w-[min(94vw,var(--file-w),calc(82vh*var(--file-ratio)))] md:max-w-[min(94vw,1400px)] md:rounded-2xl md:border md:p-6"
+                >
                     <DialogTitle className="sr-only">
                         {media.filename}
                     </DialogTitle>
@@ -414,22 +442,29 @@ function PostImage({
                             width={media.width ?? undefined}
                             height={media.height ?? undefined}
                             referrerPolicy="no-referrer"
-                            /* Never larger than the file itself.
-                            
+                            /* The file's own size, as custom properties
+                               rather than inline `max-width` / `max-height`.
+
+                               Never larger than the file itself is the rule:
                                `h-full w-full` fills the viewer, which is what
                                a 1440px photograph wants and what a 96px
-                               reaction image very much does not: blown up to
-                               a phone's screen it is a wall of mush. The cap
-                               is the file's own dimensions, so a small file
-                               sits at its true size in the middle of the
-                               viewer and a large one still fills it. 4chan
-                               sends both for every attachment; where it does
-                               not, there is no cap to apply and the fill
-                               stands. */
-                            style={{
-                                maxWidth: media.width ?? undefined,
-                                maxHeight: media.height ?? undefined,
-                            }}
+                               reaction image very much does not. But an
+                               inline declaration beats every class, so
+                               capping this way took `md:max-h-[82vh]` out of
+                               the cascade with it -- on a wide screen the
+                               image was then free to render at its natural
+                               1440x1080 inside a panel capped at 94vw, and
+                               was simply clipped by it. Feeding the numbers
+                               to the classes instead leaves each breakpoint
+                               able to bound them.
+
+                               At `md` and up the bound is the viewport --
+                               `94vw` and `82vh` -- rather than `100%`. The
+                               panel is `w-fit`, so a percentage there asks
+                               the parent for a width the parent is deriving
+                               from this image: the circle resolved small, and
+                               a 1440px file opened at 649px on a 1440px
+                               screen. */
                             onError={() => {
                                 setFailed(true);
                                 setExpanded(false);
@@ -450,7 +485,7 @@ function PostImage({
                                proportions while the box does the sizing. At
                                `md` and up the panel is sized to the image
                                instead, so the old rule holds there. */
-                            className="h-full w-full rounded-md object-contain md:h-auto md:max-h-[82vh] md:w-auto md:max-w-full"
+                            className="h-full max-h-[var(--file-h)] w-full max-w-[var(--file-w)] rounded-md object-contain md:h-auto md:max-h-[min(82vh,var(--file-h))] md:w-auto md:max-w-full"
                         />
                     </div>
 
