@@ -2,6 +2,7 @@ import { Link } from '@inertiajs/react';
 import { CheckIcon, PlusIcon } from 'lucide-react';
 import { BoardAvatar } from '@/components/clover/board-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
+import { PatternField } from '@/components/clover/pattern-field';
 import { Button } from '@/components/ui/button';
 import { board as boardRoute } from '@/routes';
 import type { BoardDirectoryEntry } from '@/types/clover';
@@ -56,8 +57,25 @@ export function BoardRow({
     return (
         <div
             data-slot="board-row"
-            className="relative flex h-full flex-col gap-1.5 py-4 transition-[border-color,transform] duration-150 ease-standard md:gap-3 md:rounded-xl md:border md:border-border md:bg-surface md:px-5 md:py-5 md:hover:-translate-y-px md:hover:border-border-strong"
+            className="relative isolate flex h-full flex-col gap-1.5 overflow-hidden py-4 transition-[border-color,transform] duration-150 ease-standard md:gap-3 md:rounded-xl md:border md:border-border md:bg-surface md:px-5 md:py-5 md:hover:-translate-y-px md:hover:border-border-strong"
         >
+            {/* The same drawn paper `Card` carries, so a board reads as a
+                piece of the page rather than a flat panel on it. `depth={0}`
+                for the same two reasons: a box inside an already-drifting page
+                should not travel at a second rate, and depth 0 draws no
+                `overflow-clip` of its own -- this row's stretched link is a
+                pseudo-element covering the box, and a clipping ancestor is
+                exactly the shape that has swallowed one before.
+
+                Below `md` the row has no fill of its own, so the page's paper
+                already shows through; the layer only reads once the card's
+                surface arrives at `md`. */}
+            <PatternField
+                depth={0}
+                feather={false}
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 -z-10 hidden md:block"
+            />
             <div
                 data-slot="board-row-identity"
                 className="flex min-w-0 items-center gap-2.5"

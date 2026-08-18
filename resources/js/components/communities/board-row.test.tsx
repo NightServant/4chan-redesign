@@ -65,6 +65,27 @@ function boxClasses(node: HTMLElement): string[] {
 }
 
 describe('BoardRow', () => {
+    /**
+     * The same drawn paper `Card` carries, so a board reads as a piece of the
+     * page rather than a flat panel on it. Only once the card's own surface
+     * arrives at `md`: below it the row has no fill, and the page's paper
+     * already shows through.
+     */
+    it('carries the dot matrix behind the card surface', () => {
+        const { container } = render(
+            <BoardRow entry={TECHNOLOGY} subscribed={false} />,
+        );
+
+        const paper = container.querySelector(
+            '[data-slot="pattern-field-paper"]',
+        );
+
+        expect(paper).not.toBeNull();
+        expect(
+            container.querySelector('[data-slot="pattern-field"]'),
+        ).toHaveClass('md:block');
+    });
+
     it('links the board name at the routable slug', () => {
         renderRow();
 
