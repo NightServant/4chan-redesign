@@ -216,15 +216,20 @@
 :root {
     --measure-page: 1180px;
     --measure-column: 760px;
-    /* Narrower than it was (330px). Beside a 560px post column the rail was
-       carrying nearly as much width as the thread it annotates, which reads
-       as two columns competing rather than one and its margin. */
-    --measure-rail: 280px;
+    /* Sized against the post column beside it, not against the page. It was
+       330px next to a 560px column, which read as two columns competing
+       rather than one and its margin; it is 320px next to 720px now. */
+    --measure-rail: 320px;
     /* The width a post is actually drawn at: the cap on an attachment's box,
        and the cap on the column that holds the cards carrying them. One
        value, because when they were two the column grew to 760px while the
-       image stayed at 560 and every row ended in 200px of nothing. */
-    --measure-media: 560px;
+       image stayed at 560 and every row ended in 200px of nothing.
+
+       720px rather than the 560px it started at: with the chrome and the
+       body both measured against the shell below, 560 left the whole
+       application sitting in the middle of a wide display with a third of
+       the screen empty either side. */
+    --measure-media: 720px;
     /* The shell: the post column, the rail, and the gap between them. The
        chrome is measured against this rather than against `--measure-page`,
        so the header's search field starts where a post starts and its
@@ -237,8 +242,8 @@
     :root {
         --measure-page: 1440px;
         --measure-column: 840px;
-        --measure-rail: 320px;
-        --measure-media: 620px;
+        --measure-rail: 360px;
+        --measure-media: 860px;
     }
 }
 
