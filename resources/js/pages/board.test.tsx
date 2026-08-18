@@ -37,8 +37,32 @@ const mockPage: {
     url: '/g/',
 };
 
+/**
+ * The router double routes both methods through `this.visit`, so a detached
+ * `const request = cond ? router.delete : router.post` fails here the way it
+ * fails in the browser. `use-bookmark.test.tsx` documents why that matters:
+ * a double of three plain functions left every bookmark button in this app
+ * dead with the suite green.
+ */
+const { router } = vi.hoisted(() => ({
+    router: {
+        visit: vi.fn(),
+        post(url: string, data?: unknown, options?: unknown) {
+            return this.visit(url, {
+                ...(options ?? {}),
+                method: 'post',
+                data,
+            });
+        },
+        delete(url: string, options?: unknown) {
+            return this.visit(url, { ...(options ?? {}), method: 'delete' });
+        },
+    },
+}));
+
 vi.mock('@inertiajs/react', () => ({
     usePage: () => mockPage,
+    router,
     Head: () => null,
     Link: ({
         href,
@@ -83,6 +107,7 @@ const G_THREADS = [
 ];
 
 beforeEach(() => {
+    router.visit.mockClear();
     mockPage.props = {
         auth: { user: null },
         sidebarOpen: true,
@@ -105,7 +130,12 @@ describe('Board', () => {
         expect(
             screen.getByRole('heading', { level: 1, name: 'Technology' }),
         ).toBeInTheDocument();
-        expect(screen.getByText('/g/ · 18,402 threads')).toBeInTheDocument();
+        /* Scoped to the header: every thread card below carries the board's
+           slug too, so an unscoped query matches three nodes. */
+        const header = screen.getByRole('banner');
+
+        expect(within(header).getByText('/g/')).toBeInTheDocument();
+        expect(within(header).getByText('18,402 threads')).toBeInTheDocument();
     });
 
     /* The board's threads are chosen by the query now, so what this asserts is
@@ -160,7 +190,41 @@ describe('Board', () => {
         expect(action).toHaveAttribute('href', '/popular');
     });
 
-    it('toggles the subscribe control and exposes its pressed state to assistive technology', async () => {
+    it('carries a Join control reporting what the server says about this anon', () => {
+        const { unmount } = render(
+            <Board
+                board={TECHNOLOGY}
+                threads={G_THREADS}
+                maxCommentChars={2000}
+            />,
+        );
+
+        expect(screen.getByRole('button', { name: 'Join' })).toHaveAttribute(
+            'aria-pressed',
+            'false',
+        );
+        unmount();
+
+        render(
+            <Board
+                board={{ ...TECHNOLOGY, subscribed: true }}
+                threads={G_THREADS}
+                maxCommentChars={2000}
+            />,
+        );
+
+        expect(screen.getByRole('button', { name: 'Joined' })).toHaveAttribute(
+            'aria-pressed',
+            'true',
+        );
+    });
+
+    /**
+     * A signed-out anon is what this page is mostly serving. The subscribe
+     * route is behind `auth`, so an ungated press is a redirect off a public
+     * reading page.
+     */
+    it('meets a signed-out anon pressing Join with the gate, and sends nothing', async () => {
         const user = userEvent.setup();
         render(
             <Board
@@ -170,14 +234,36 @@ describe('Board', () => {
             />,
         );
 
-        const toggle = screen.getByRole('button', { name: 'Subscribe' });
-        expect(toggle).toHaveAttribute('aria-pressed', 'false');
+        await user.click(screen.getByRole('button', { name: 'Join' }));
 
-        await user.click(toggle);
+        expect(await screen.findByRole('dialog')).toBeInTheDocument();
+        expect(router.visit).not.toHaveBeenCalled();
+    });
 
-        expect(
-            screen.getByRole('button', { name: 'Subscribed' }),
-        ).toHaveAttribute('aria-pressed', 'true');
+    it('asks the server to follow the board when an anon is signed in', async () => {
+        const user = userEvent.setup();
+        mockPage.props.auth.user = {
+            id: 1,
+            email: 'anon@example.com',
+            email_verified_at: null,
+            created_at: '2026-01-01T00:00:00Z',
+            updated_at: '2026-01-01T00:00:00Z',
+        };
+
+        render(
+            <Board
+                board={TECHNOLOGY}
+                threads={G_THREADS}
+                maxCommentChars={2000}
+            />,
+        );
+
+        await user.click(screen.getByRole('button', { name: 'Join' }));
+
+        expect(router.visit).toHaveBeenCalledWith(
+            `/boards/${TECHNOLOGY.id}/subscribe`,
+            expect.objectContaining({ method: 'post', preserveScroll: true }),
+        );
     });
 
     it('has exactly one first-level heading', () => {
@@ -218,5 +304,55 @@ describe('Board', () => {
         expect(
             within(tablist).getByRole('tab', { name: 'Most replies' }),
         ).toBeInTheDocument();
+    });
+
+    /**
+     * Three labels do not fit a 320px phone, and today they wrap onto a second
+     * line, which reads as two rows of controls rather than one. The row
+     * scrolls sideways instead, the treatment task 7 gave the search tabs.
+     *
+     * jsdom has no layout engine, so this is the contract that produces the
+     * behaviour, not a measurement of it: the row scrolls, it does not wrap,
+     * and no tab may be squeezed narrower than its own label.
+     */
+    it('scrolls the sort tabs sideways rather than wrapping them', () => {
+        render(
+            <Board
+                board={TECHNOLOGY}
+                threads={G_THREADS}
+                maxCommentChars={2000}
+            />,
+        );
+
+        const tablist = screen.getByRole('tablist');
+
+        expect(tablist).toHaveClass('overflow-x-auto');
+        expect(tablist.className).not.toMatch(/\bflex-wrap\b/);
+        expect(tablist.className).not.toMatch(/\bw-fit\b/);
+
+        for (const tab of within(tablist).getAllByRole('tab')) {
+            expect(tab).toHaveClass('shrink-0', 'whitespace-nowrap');
+        }
+    });
+
+    /**
+     * Reddit's community page carries a visitors-and-contributions line, Wiki
+     * / Top 50 / Top Members links, Community highlights and flair filter
+     * chips. Clover counts none of that, curates nothing, and 4chan boards
+     * carry no flair. Rendering any of it would mean inventing the figure
+     * behind it, which is the rule that deleted `Board.online`.
+     */
+    it('renders no section this application has no source for', () => {
+        const { container } = render(
+            <Board
+                board={TECHNOLOGY}
+                threads={G_THREADS}
+                maxCommentChars={2000}
+            />,
+        );
+
+        expect(container.textContent).not.toMatch(
+            /visitor|contribution|wiki|top 50|top members|moderator|highlight|flair/i,
+        );
     });
 });

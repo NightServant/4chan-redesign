@@ -82,6 +82,58 @@ describe('TopNav', () => {
         ).not.toBeInTheDocument();
     });
 
+    /**
+     * Task 13, fix 3. Gabe's decision, asked for twice, and it reverses the
+     * scoping from earlier in this branch where the homepage was deliberately
+     * left alone: the pair is hidden below `md` and unchanged from `md` up.
+     *
+     * jsdom applies no stylesheet, so `hidden md:flex` renders both links into
+     * the document either way and no query can tell whether they are on screen.
+     * What is guarded instead is that the pair sits inside one box carrying
+     * exactly that pair of classes — and that the box holds *only* the pair, so
+     * the wordmark and the theme toggle cannot be hidden with it.
+     */
+    it('hides Log in and Create account below `md`, and only those two', () => {
+        const { container } = render(<TopNav />);
+
+        const group = container.querySelector('[data-slot="top-nav-auth"]');
+
+        expect(group).toHaveClass('hidden', 'md:flex');
+        expect(group).toContainElement(
+            screen.getByRole('link', { name: 'Log in' }),
+        );
+        expect(group).toContainElement(
+            screen.getByRole('link', { name: 'Create account' }),
+        );
+        expect(group).not.toContainElement(
+            screen.getByRole('link', { name: 'Clover home' }),
+        );
+        expect(group).not.toContainElement(
+            screen.getByRole('button', {
+                name: /switch to (light|dark) theme/i,
+            }),
+        );
+    });
+
+    /**
+     * The wordmark and the theme toggle are what remain below `md`, and they
+     * are not gated behind a breakpoint at any width.
+     */
+    it('keeps the wordmark and the theme toggle at every width', () => {
+        const { container } = render(<TopNav />);
+
+        const row = container.querySelector('[data-slot="top-nav-row"]');
+        const wordmarkLink = screen.getByRole('link', { name: 'Clover home' });
+        const toggle = screen.getByRole('button', {
+            name: /switch to (light|dark) theme/i,
+        });
+
+        expect(row).toContainElement(wordmarkLink);
+        expect(row).toContainElement(toggle);
+        expect(wordmarkLink.className).not.toMatch(/(^|\s)hidden(\s|$)/);
+        expect(toggle.className).not.toMatch(/(^|\s)hidden(\s|$)/);
+    });
+
     it('shows a single dashboard link when signed in, hiding the auth actions', () => {
         mockPage.props.auth.user = SIGNED_IN_USER;
 
@@ -129,6 +181,25 @@ describe('TopNav', () => {
         expect(
             screen.queryByRole('button', { name: /menu/i }),
         ).not.toBeInTheDocument();
+    });
+
+    /**
+     * At a 320px viewport this row needs 71 (wordmark) + 261 (auth buttons) +
+     * 48 (theme toggle) = 380px inside a 320px header, and a fixed `h-16`
+     * with no wrap sent the auth button group 37px past the edge of the
+     * viewport. `flex-wrap` on `min-h-16` lets the row grow to two lines
+     * exactly when it does not fit one, which is a no-op at every width wide
+     * enough to fit already (the whole desktop and tablet range) and the fix
+     * at 320px. jsdom has no layout engine and cannot measure the overflow
+     * itself, so this only pins the classes that make wrapping possible.
+     */
+    it('lets the row wrap instead of forcing a fixed single-line height', () => {
+        const { container } = render(<TopNav />);
+
+        const row = container.querySelector('[data-slot="top-nav-row"]');
+
+        expect(row).toHaveClass('flex-wrap', 'min-h-16');
+        expect(row).not.toHaveClass('h-16');
     });
 
     /**

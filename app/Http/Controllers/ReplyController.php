@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\CommentTree;
 use App\Models\Board;
 use App\Models\Post;
 use App\Models\Thread;
 use App\Services\LocalPostNumbers;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
+use Inertia\Response;
 
 /**
  * Replying to a thread.
@@ -29,6 +33,79 @@ use Illuminate\Support\Facades\Storage;
  */
 class ReplyController extends Controller
 {
+    /**
+     * The composer as its own screen, for phones.
+     *
+     * A reply box at the foot of a thread is right with a mouse and a full
+     * window. On a phone it is a two-line textarea under two hundred comments,
+     * with the keyboard taking half of what is left. This gives the field the
+     * viewport, the attachment control somewhere to live, and Post somewhere a
+     * thumb can reach.
+     *
+     * It is a second surface onto `store` below, not a second implementation:
+     * same route, same validation, same numbering. The page it renders posts
+     * to the route that already existed.
+     */
+    public function create(Request $request, string $board, string $thread): Response
+    {
+        $model = $this->visibleBoard($request, $board);
+
+        $target = Thread::query()
+            ->where('board_id', $model->id)
+            ->where('no', (int) $thread)
+            ->firstOrFail();
+
+        return Inertia::render('reply', [
+            'thread' => [
+                'no' => $target->no,
+                'board' => '/'.$model->slug.'/',
+                /* `displayTitle`, not a second copy of its rules. A thread
+                   with no subject is ordinary on an imageboard, and the model
+                   already knows what a reader recognises it by: the subject,
+                   else the OP's opening line, else the post number. Writing
+                   that out again here is how the composer's heading and the
+                   thread's would drift -- and the version written here called
+                   a method `Post` does not have, which phpstan caught and the
+                   feature tests did not, because they only ever built threads
+                   that had a subject. */
+                'title' => $target->displayTitle(),
+            ],
+            /**
+             * The board's own limit, not the shared fallback. It is 2000,
+             * 3000 or 5000 depending on where you are posting, so a counter
+             * built on a constant would either stop an anon short of what the
+             * server accepts or let them fill a field the request rejects.
+             */
+            'maxCommentChars' => $model->max_comment_chars,
+        ]);
+    }
+
+    /**
+     * A thread's replies as JSON, for the full-image viewer's drawer.
+     *
+     * The viewer opens from a feed row as well as from the thread page, and a
+     * row carries no comments -- so the drawer fetches rather than the feed
+     * sending every thread's tree with the page, which would be tens of
+     * thousands of rows for the handful anyone opens.
+     *
+     * Same builder the thread page uses (`CommentTree`), so the drawer and
+     * the page cannot disagree about nesting, quoting or what a reply says.
+     * Public, because reading never needs an account here.
+     */
+    public function index(Request $request, string $board, string $thread): JsonResponse
+    {
+        $model = $this->visibleBoard($request, $board);
+
+        $target = Thread::query()
+            ->where('board_id', $model->id)
+            ->where('no', (int) $thread)
+            ->firstOrFail();
+
+        return response()->json([
+            'comments' => CommentTree::for($target),
+        ]);
+    }
+
     public function store(Request $request, string $board, string $thread): RedirectResponse
     {
         $model = $this->visibleBoard($request, $board);

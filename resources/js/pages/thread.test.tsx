@@ -92,6 +92,26 @@ const COMMENTS = [
     makeComment({ body: 'Mainline kernel support or vendor tree?' }),
 ];
 
+/**
+ * `useIsMobile` reads `matchMedia`, which jsdom does not implement. These
+ * tests set the answer per case, because below `md` the thread page offers a
+ * link to the composer page and at `md` and up it offers the inline composer
+ * -- two different things, not one restyled, so the branch has to be exercised
+ * both ways.
+ */
+function setViewport(isMobile: boolean): void {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+        matches: isMobile,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+    }));
+}
+
 function mockPage({ signedIn = false }: { signedIn?: boolean } = {}) {
     usePage.mockReturnValue({
         url: `/g/${KNOWN_THREAD.no}`,
@@ -101,9 +121,11 @@ function mockPage({ signedIn = false }: { signedIn?: boolean } = {}) {
 
 beforeEach(() => {
     mockPage();
+    setViewport(false);
 });
 
 afterEach(() => {
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
 });
 
@@ -138,7 +160,15 @@ describe('Thread', () => {
         expect(screen.getByText(`>>${KNOWN_THREAD.no}`)).toBeInTheDocument();
     });
 
-    it('links back to the board', () => {
+    /**
+     * No "Back to /g/" link.
+     *
+     * The board is named twice within an inch of it -- in the post's own
+     * header row, which links to the same place, and in the sidebar's board
+     * list. A third copy pointing at the same board was one row of chrome
+     * repeating what the content underneath already says.
+     */
+    it('offers no separate back link, since the post header names the board', () => {
         render(
             <Thread
                 slug="/g/"
@@ -149,8 +179,12 @@ describe('Thread', () => {
             />,
         );
 
-        const backLink = screen.getByRole('link', { name: /back to \/g\//i });
-        expect(backLink).toHaveAttribute('href', '/g');
+        expect(
+            screen.queryByRole('link', { name: /back to/i }),
+        ).not.toBeInTheDocument();
+        expect(
+            screen.getAllByRole('link', { name: /\/g\// })[0],
+        ).toHaveAttribute('href', '/g');
     });
 
     it('renders the reply count label matching the fixture, with the number in a MachineValue', () => {
@@ -214,6 +248,62 @@ describe('Thread', () => {
         expect(
             screen.queryByRole('button', { name: 'Reply to this thread' }),
         ).not.toBeInTheDocument();
+    });
+
+    /**
+     * Below `md` the reply box is a link to the composer page, not a field.
+     *
+     * A two-line textarea under two hundred comments, with the keyboard over
+     * the top of it, is the shape this replaces. The trigger is pinned to the
+     * foot of the screen -- which is also where the comments now end, since
+     * the composer no longer sits between the post and the replies.
+     */
+    it('offers a link to the composer page below `md`, not the inline field', () => {
+        setViewport(true);
+        mockPage({ signedIn: true });
+
+        render(
+            <Thread
+                slug="/g/"
+                no={KNOWN_THREAD.no}
+                thread={KNOWN_THREAD}
+                comments={COMMENTS}
+                maxCommentChars={2000}
+            />,
+        );
+
+        expect(
+            screen.getByRole('link', { name: /join the conversation/i }),
+        ).toHaveAttribute('href', `/g/${KNOWN_THREAD.no}/reply`);
+        expect(
+            screen.queryByTestId('reply-composer-stub'),
+        ).not.toBeInTheDocument();
+    });
+
+    /**
+     * Signed out, the same slot is the auth gate rather than a link into a
+     * page that would bounce them at the door.
+     */
+    it('offers the auth prompt below `md` to a signed-out anon, not the composer link', () => {
+        setViewport(true);
+        mockPage({ signedIn: false });
+
+        render(
+            <Thread
+                slug="/g/"
+                no={KNOWN_THREAD.no}
+                thread={KNOWN_THREAD}
+                comments={COMMENTS}
+                maxCommentChars={2000}
+            />,
+        );
+
+        expect(
+            screen.queryByRole('link', { name: /join the conversation/i }),
+        ).not.toBeInTheDocument();
+        expect(
+            screen.getByRole('button', { name: 'Reply to this thread' }),
+        ).toBeInTheDocument();
     });
 
     it('shows an auth prompt rather than the composer to a signed-out anon, opening the auth gate on press', async () => {

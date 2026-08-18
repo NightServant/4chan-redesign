@@ -61,7 +61,7 @@ export default function TwoFactorChallenge() {
 
             <Form
                 {...store.form()}
-                className="flex flex-col gap-6"
+                className="flex flex-col gap-5"
                 resetOnError
                 resetOnSuccess={!showRecoveryInput}
             >
@@ -82,6 +82,7 @@ export default function TwoFactorChallenge() {
                                     name="recovery_code"
                                     type="text"
                                     placeholder="Enter recovery code"
+                                    shortPlaceholder="Recovery code"
                                     autoFocus
                                     required
                                 />

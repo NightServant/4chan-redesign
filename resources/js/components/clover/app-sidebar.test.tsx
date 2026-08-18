@@ -92,6 +92,25 @@ afterEach(() => {
 });
 
 describe('AppSidebar', () => {
+    /**
+     * No collapse toggle below `lg`, where this sidebar is a drawer.
+     *
+     * Collapsing to an icon rail trades width for a strip of glyphs, which is
+     * a desktop trade. In a drawer there is nothing to trade: the panel is
+     * over the page, the hamburger already closes it, and collapsing left an
+     * icon-only rail no route could reach.
+     */
+    it('offers its collapse toggle only at `lg` and up', () => {
+        render(<AppSidebar />);
+
+        const toggle = screen.getByRole('button', {
+            name: /collapse sidebar/i,
+        });
+
+        expect(toggle).toHaveClass('hidden');
+        expect(toggle).toHaveClass('lg:flex');
+    });
+
     it('renders every PRIMARY_NAV row for a signed-in anon', () => {
         mockPage.props.auth.user = SIGNED_IN_USER;
 
@@ -280,6 +299,20 @@ describe('AppSidebar', () => {
         expect(
             container.querySelector('[data-slot="app-sidebar"]'),
         ).toHaveClass('w-[76px]');
+    });
+
+    /**
+     * The rail used to persist from `md`, which at an 805px tablet width left
+     * the feed only 489px wide against a 268px sidebar. Below `lg` it is a
+     * drawer's job now, built from this same component, so the rail itself
+     * only needs to stay out of `lg`'s way.
+     */
+    it('stays visible from `lg` up rather than `md`, now that a drawer covers everything below it', () => {
+        const { container } = render(<AppSidebar />);
+
+        const aside = container.querySelector('[data-slot="app-sidebar"]');
+        expect(aside).toHaveClass('lg:block');
+        expect(aside).not.toHaveClass('md:block');
     });
 
     /** The paper runs through the chrome as well as the content. */

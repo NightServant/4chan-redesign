@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { Archive, ArrowLeft } from 'lucide-react';
+import { Archive } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AuthGate } from '@/components/clover/auth-gate';
 import { CommentTree } from '@/components/clover/comment-tree';
@@ -10,9 +10,10 @@ import { SectionLabel } from '@/components/clover/section-label';
 import { OriginalPost } from '@/components/thread/original-post';
 import { ReplyComposer } from '@/components/thread/reply-composer';
 import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { plural } from '@/lib/utils';
 import { board } from '@/routes';
-import { store as storeReply } from '@/routes/replies';
+import { create as composeReply, store as storeReply } from '@/routes/replies';
 import {
     bookmark as bookmarkThread,
     read as recordRead,
@@ -56,6 +57,7 @@ export default function Thread({
 }: ThreadPageProps) {
     const { auth } = usePage().props;
     const signedIn = Boolean(auth.user);
+    const isMobile = useIsMobile();
 
     const [authGateAction, setAuthGateAction] = useState<string | null>(null);
 
@@ -116,6 +118,13 @@ export default function Thread({
         );
     }
 
+    /* Below `md` the reply control is a link into the composer page; at `md`
+       and up it is the inline form. Built once here rather than inline in the
+       markup, so the two branches cannot disagree about where it points. */
+    const composerHref = thread
+        ? composeReply({ board: boardToken(slug), thread: thread.no }).url
+        : '';
+
     function toggleBookmark() {
         if (!thread) {
             return;
@@ -171,18 +180,52 @@ export default function Thread({
             />
 
             <div className="mx-auto flex max-w-(--measure-column) flex-col gap-6 px-6 py-8">
-                <Link
-                    href={board({ board: boardToken(thread.board) })}
-                    className="inline-flex w-fit items-center gap-1.5 text-body-sm text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                >
-                    <ArrowLeft aria-hidden="true" className="size-4" />
-                    Back to {thread.board}
-                </Link>
-
+                {/* The viewer's drawer, below `md`: the thread's replies and
+                    the way into the composer, behind the picture an anon just
+                    tapped. Built here because this is the screen that has
+                    both -- a feed row opening the same viewer has no comments
+                    in hand, and its drawer is simply absent. */}
                 <OriginalPost
                     thread={thread}
                     onBookmark={() =>
                         requireAuth('bookmark this thread', toggleBookmark)
+                    }
+                    /* From this page the way in is the composer, not the
+                       thread an anon is already reading. Signed out there is
+                       nowhere to send them that would not turn them away at
+                       the door, so the viewer carries no call to action and
+                       the gate stays where it is, at the foot of the page. */
+                    viewerCtaHref={signedIn ? composerHref : undefined}
+                    viewerDrawerLabel={plural(
+                        comments.length,
+                        'reply',
+                        'replies',
+                    )}
+                    viewerDrawer={
+                        comments.length === 0 ? undefined : (
+                            <div className="flex flex-col gap-4">
+                                <CommentTree comments={comments} />
+
+                                {signedIn ? (
+                                    <Button variant="outline" asChild>
+                                        <Link href={composerHref}>
+                                            Join the conversation
+                                        </Link>
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        variant="outline"
+                                        onClick={() =>
+                                            setAuthGateAction(
+                                                'reply to this thread',
+                                            )
+                                        }
+                                    >
+                                        Join the conversation
+                                    </Button>
+                                )}
+                            </div>
+                        )
                     }
                 />
 
@@ -193,7 +236,27 @@ export default function Thread({
                     replies
                 </SectionLabel>
 
-                {signedIn ? (
+                {/* Below `md` the composer is a page of its own, so this
+                    slot is a link into it rather than a field: a two-line
+                    textarea under two hundred comments, with the keyboard
+                    over the top of it, is what that page exists to replace.
+                    The comments now run straight on from the post, and the
+                    trigger sits at the foot of them.
+
+                    `useIsMobile` rather than a `md:` pair, because these are
+                    two different controls -- a link and a form -- and a
+                    CSS-hidden form would still be in the tab order, still
+                    submit on Enter, and still be found by a screen reader
+                    looking for a way to reply. */}
+                {signedIn && isMobile ? (
+                    <Button
+                        variant="outline"
+                        asChild
+                        className="sticky bottom-4 z-20 w-full justify-start"
+                    >
+                        <Link href={composerHref}>Join the conversation</Link>
+                    </Button>
+                ) : signedIn ? (
                     <ReplyComposer
                         threadNo={thread.no}
                         maxCommentChars={maxCommentChars}

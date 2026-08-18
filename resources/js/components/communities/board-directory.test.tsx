@@ -1,16 +1,37 @@
-import { router } from '@inertiajs/react';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BoardDirectory } from '@/components/communities/board-directory';
 import { makeDirectoryEntry } from '@/fixtures/factories';
+import type { User } from '@/types/auth';
+
+/**
+ * The router double carries a receiver, for the reason `use-bookmark.test.tsx`
+ * sets out at length: a double of plain functions cannot reproduce the
+ * detached-method failure that left every bookmark button in this app dead
+ * while the suite stayed green.
+ */
+const { usePage, router } = vi.hoisted(() => ({
+    usePage: vi.fn(),
+    router: {
+        visit: vi.fn(),
+        post(url: string, data?: unknown, options?: unknown) {
+            return this.visit(url, {
+                ...(options ?? {}),
+                method: 'post',
+                data,
+            });
+        },
+        delete(url: string, options?: unknown) {
+            return this.visit(url, { ...(options ?? {}), method: 'delete' });
+        },
+    },
+}));
 
 vi.mock('@inertiajs/react', () => ({
-    usePage: () => ({
-        props: { recentActivity: [], sidebarBoards: [] },
-    }),
-    router: { post: vi.fn(), delete: vi.fn(), visit: vi.fn() },
+    usePage,
+    router,
     Link: ({
         href,
         children,
@@ -25,18 +46,39 @@ vi.mock('@inertiajs/react', () => ({
     ),
 }));
 
+const USER: User = {
+    id: 1,
+    email: 'anon@example.com',
+    email_verified_at: null,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+};
+
+function mockPage(signedIn: boolean): void {
+    usePage.mockReturnValue({
+        url: '/communities',
+        props: {
+            auth: { user: signedIn ? USER : null },
+            recentActivity: [],
+            sidebarBoards: [],
+        },
+    });
+}
+
 /* The list the server would have sent: every board here is one this anon may
    see. Filtering moved into the query, so a not-worksafe board never reaches
    the component at all — which is why there is no /b/ in this list, and why
    the counts below are of visible boards rather than of a filtered subset. */
 const BOARD_DIRECTORY = [
     makeDirectoryEntry({
+        id: 1,
         slug: '/g/',
         name: 'Technology',
         category: 'Interests',
         subscribed: true,
     }),
     makeDirectoryEntry({
+        id: 2,
         slug: '/wg/',
         name: 'Wallpapers',
         category: 'Creative',
@@ -44,22 +86,26 @@ const BOARD_DIRECTORY = [
         description: 'Wallpaper dumps at native resolution.',
     }),
     makeDirectoryEntry({
+        id: 3,
         slug: '/biz/',
         name: 'Business',
         category: 'Work',
     }),
     makeDirectoryEntry({
+        id: 4,
         slug: '/x/',
         name: 'Paranormal',
         category: 'Interests',
         subscribed: true,
     }),
     makeDirectoryEntry({
+        id: 5,
         slug: '/fit/',
         name: 'Fitness',
         category: 'Life',
     }),
     makeDirectoryEntry({
+        id: 6,
         slug: '/co/',
         name: 'Comics',
         category: 'Creative',
@@ -67,11 +113,16 @@ const BOARD_DIRECTORY = [
     }),
 ];
 
-function renderDirectory(boards = BOARD_DIRECTORY) {
-    render(<BoardDirectory boards={boards} />);
-
-    return { search: screen.getByLabelText('Search boards') };
+function renderDirectory(boards = BOARD_DIRECTORY, hiddenCount?: number) {
+    return render(
+        <BoardDirectory boards={boards} hiddenCount={hiddenCount ?? 0} />,
+    );
 }
+
+beforeEach(() => {
+    router.visit.mockClear();
+    mockPage(true);
+});
 
 describe('BoardDirectory', () => {
     it('counts the boards and the subscriptions in the description', () => {
@@ -97,24 +148,17 @@ describe('BoardDirectory', () => {
     });
 
     /**
-     * Following is stored now, so the count and the pressed state come back
-     * from the server. This asserted a local flip — a button reporting
-     * `aria-pressed` for something nothing recorded, which forgot itself on
-     * reload.
+     * The kicker is real grouping, not decoration: it is the only thing saying
+     * which boards belong together once the cards are gone.
      */
-    it('asks the server to follow a board', async () => {
-        const user = userEvent.setup();
-        renderDirectory();
+    it('keeps the category kicker above each group', () => {
+        const { container } = renderDirectory();
 
-        await user.click(
-            screen.getByRole('button', { name: 'Subscribe to /biz/' }),
-        );
+        const kickers = [
+            ...container.querySelectorAll('[data-slot="section-label"]'),
+        ].map((node) => node.textContent);
 
-        expect(router.post).toHaveBeenCalledWith(
-            expect.stringContaining('/subscribe'),
-            {},
-            expect.anything(),
-        );
+        expect(kickers).toEqual(['Interests', 'Creative', 'Work', 'Life']);
     });
 
     it('counts what the server says is followed', () => {
@@ -123,68 +167,134 @@ describe('BoardDirectory', () => {
         expect(screen.getByText('6 boards · 3 subscribed')).toBeInTheDocument();
     });
 
-    it('filters on slug, name and description', async () => {
-        const user = userEvent.setup();
-        const { search } = renderDirectory();
-
-        await user.type(search, 'wallpaper');
-
-        /* Scoped to the grid: the mature-boards notice is a link too, and
-           counting every link on the page would fold it into the total. */
-        const grid = screen.getByRole('region', { name: 'Creative' });
-        expect(within(grid).getAllByRole('link')).toHaveLength(1);
-        expect(
-            screen.getByRole('link', { name: 'Wallpapers' }),
-        ).toBeInTheDocument();
-
-        await user.clear(search);
-        await user.type(search, '/fit/');
+    it('says nothing to list rather than rendering an empty group', () => {
+        renderDirectory([]);
 
         expect(
-            screen.getByRole('link', { name: 'Fitness' }),
+            screen.getByRole('heading', { name: 'No boards to show' }),
         ).toBeInTheDocument();
+        expect(screen.queryByRole('region')).toBeNull();
+    });
+});
 
-        await user.clear(search);
-        await user.type(search, 'storyboards');
+/**
+ * Search is the header's job. It has its own page, its own results tabs and a
+ * Communities tab among them (task 7), so a second box filtering a list the
+ * browser already holds is a second search that behaves differently from the
+ * one every other screen offers.
+ */
+describe('BoardDirectory without its own search', () => {
+    it('offers no field of its own, at any width', () => {
+        const { container } = renderDirectory();
 
-        expect(
-            screen.getByRole('link', { name: 'Comics' }),
-        ).toBeInTheDocument();
+        expect(screen.queryByLabelText('Search boards')).toBeNull();
+        expect(screen.queryByRole('searchbox')).toBeNull();
+        expect(screen.queryByRole('textbox')).toBeNull();
+        expect(container.querySelector('input')).toBeNull();
     });
 
-    it('drops a category group once nothing in it matches', async () => {
-        const user = userEvent.setup();
-        const { search } = renderDirectory();
+    it('shows every board it is given, with nothing to type into to reduce them', () => {
+        renderDirectory();
 
-        await user.type(search, 'wallpaper');
+        for (const entry of BOARD_DIRECTORY) {
+            expect(
+                screen.getByRole('link', { name: entry.name }),
+            ).toBeInTheDocument();
+        }
+    });
+});
 
-        expect(
-            screen.getByRole('region', { name: 'Creative' }),
-        ).toBeInTheDocument();
-        expect(screen.queryByRole('region', { name: 'Interests' })).toBeNull();
+/**
+ * Below `md` the directory is a ruled list, not a deck of 53 cards. jsdom has
+ * no layout engine, so these are class contracts: the hairline between rows
+ * exists unconditionally and the grid only starts at `md`.
+ */
+describe('BoardDirectory layout', () => {
+    function boardList(container: HTMLElement): HTMLElement {
+        const list = container.querySelector<HTMLElement>(
+            '[data-slot="board-list"]',
+        );
+
+        if (list === null) {
+            throw new Error('No element carries data-slot="board-list".');
+        }
+
+        return list;
+    }
+
+    it('rules between rows below md', () => {
+        const { container } = renderDirectory();
+
+        expect(boardList(container)).toHaveClass('divide-y', 'divide-border');
     });
 
-    it('says what matched nothing without apologising for it', async () => {
+    it('lays the rows out one per line below md and in a grid at md', () => {
+        const { container } = renderDirectory();
+
+        const list = boardList(container);
+
+        expect(list).not.toHaveClass('grid');
+        expect(list).toHaveClass('flex', 'flex-col');
+        expect(
+            [...list.classList].some((name) => name.startsWith('md:grid')),
+        ).toBe(true);
+        expect(list).toHaveClass('md:divide-y-0');
+    });
+});
+
+/**
+ * Following a board is stored, and the control writes through the shared hook
+ * rather than through a second copy of the same call. The copy this component
+ * carried had no `AuthGate`, and the subscribe routes sit behind `auth`: a
+ * signed-out anon pressing Join on a page that is open to read was bounced to
+ * the login form.
+ */
+describe('BoardDirectory Join control', () => {
+    it('asks the server to follow a board', async () => {
         const user = userEvent.setup();
-        const { search } = renderDirectory();
+        renderDirectory();
 
-        await user.type(search, 'anime');
+        await user.click(screen.getByRole('button', { name: 'Join /biz/' }));
+
+        expect(router.visit).toHaveBeenCalledWith(
+            '/boards/3/subscribe',
+            expect.objectContaining({ method: 'post', preserveScroll: true }),
+        );
+    });
+
+    it('asks the server to unfollow a board it is already following', async () => {
+        const user = userEvent.setup();
+        renderDirectory();
+
+        await user.click(screen.getByRole('button', { name: 'Joined /g/' }));
+
+        expect(router.visit).toHaveBeenCalledWith(
+            '/boards/1/subscribe',
+            expect.objectContaining({ method: 'delete' }),
+        );
+    });
+
+    it('reports what the server says, not local state', () => {
+        renderDirectory();
 
         expect(
-            screen.getByRole('heading', { name: 'No boards match' }),
-        ).toBeInTheDocument();
+            screen.getByRole('button', { name: 'Joined /g/' }),
+        ).toHaveAttribute('aria-pressed', 'true');
         expect(
-            screen.getByText('Nothing matches "anime".'),
-        ).toBeInTheDocument();
-        /* No *board* is offered. The mature-boards notice links to settings
-           and is not part of the result set, so the assertion names what it
-           actually cares about instead of counting every anchor. */
-        const boardLinks = screen
-            .queryAllByRole('link')
-            .filter((link) =>
-                /^\/[a-z]+\/$/.test(link.getAttribute('href') ?? ''),
-            );
-        expect(boardLinks).toHaveLength(0);
+            screen.getByRole('button', { name: 'Join /biz/' }),
+        ).toHaveAttribute('aria-pressed', 'false');
+    });
+
+    it('meets a signed-out anon with the gate rather than a redirect', async () => {
+        const user = userEvent.setup();
+        mockPage(false);
+
+        renderDirectory();
+
+        await user.click(screen.getByRole('button', { name: 'Join /biz/' }));
+
+        expect(await screen.findByRole('dialog')).toBeInTheDocument();
+        expect(router.visit).not.toHaveBeenCalled();
     });
 });
 
@@ -202,7 +312,7 @@ describe('BoardDirectory', () => {
  */
 describe('BoardDirectory hidden-board notice', () => {
     it('renders only what it is given, making no filtering decision', () => {
-        render(<BoardDirectory boards={BOARD_DIRECTORY} />);
+        renderDirectory();
 
         for (const entry of BOARD_DIRECTORY) {
             expect(screen.getByText(entry.name)).toBeInTheDocument();
@@ -210,7 +320,7 @@ describe('BoardDirectory hidden-board notice', () => {
     });
 
     it('counts what it is showing', () => {
-        render(<BoardDirectory boards={BOARD_DIRECTORY} />);
+        renderDirectory();
 
         expect(
             screen.getByText(new RegExp(`^${BOARD_DIRECTORY.length} boards`)),
@@ -222,15 +332,31 @@ describe('BoardDirectory hidden-board notice', () => {
      * and leaves the setting undiscoverable for anyone who never goes looking.
      */
     it('says how many it is hiding, and where to change that', () => {
-        render(<BoardDirectory boards={BOARD_DIRECTORY} hiddenCount={24} />);
+        renderDirectory(BOARD_DIRECTORY, 24);
 
         expect(
             screen.getByText(/24 boards hidden by your content settings/i),
         ).toBeInTheDocument();
     });
 
+    /**
+     * The link is the only route to that setting from this page, so the notice
+     * saying a board is missing and the way to get it back travel together.
+     */
+    it('links the setting that hid them', () => {
+        const { container } = renderDirectory(BOARD_DIRECTORY, 24);
+
+        const notice = container.querySelector('[data-slot="mature-notice"]');
+
+        expect(notice).not.toBeNull();
+        expect(within(notice as HTMLElement).getByRole('link')).toHaveAttribute(
+            'href',
+            '/settings',
+        );
+    });
+
     it('says nothing about hidden boards when none are hidden', () => {
-        render(<BoardDirectory boards={BOARD_DIRECTORY} hiddenCount={0} />);
+        renderDirectory(BOARD_DIRECTORY, 0);
 
         expect(
             screen.queryByText(/hidden by your content settings/i),
@@ -248,17 +374,5 @@ describe('BoardDirectory hidden-board notice', () => {
         expect(
             screen.queryByText(/hidden by your content settings/i),
         ).toBeNull();
-    });
-
-    it('does not claim a fixed board count in the no-match copy', async () => {
-        const user = userEvent.setup();
-        render(<BoardDirectory boards={BOARD_DIRECTORY} />);
-
-        await user.type(screen.getByLabelText('Search boards'), 'zzzznope');
-
-        expect(
-            screen.getByText(/Nothing matches "zzzznope"/),
-        ).toBeInTheDocument();
-        expect(screen.queryByText(/six boards/i)).toBeNull();
     });
 });

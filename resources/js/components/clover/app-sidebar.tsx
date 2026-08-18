@@ -19,7 +19,13 @@ import type { CloverNavItem } from '@/types/navigation';
 
 /**
  * The primary nav down the left side. Sticky and full height, hidden below
- * `md` where the mobile bar takes over.
+ * `lg` where a drawer built from this same component takes over.
+ *
+ * The breakpoint used to be `md`: at an 805px tablet width the expanded
+ * sidebar took a third of the screen, leaving the feed column 489px and the
+ * header's search field 108px. `AppLayout` renders a second copy of this
+ * component inside a `Sheet` for that range instead, so the persistent rail
+ * only has to cover the width it actually fits.
  *
  * Width never animates: it is a layout property, and the taste laws ban
  * animating those outright. Collapse is instant; only colour, background and
@@ -33,7 +39,7 @@ const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 const MAX_BOARD_ROWS = 5;
 
 const rowBaseClasses =
-    'flex h-[38px] items-center gap-3 rounded-lg text-body-sm transition-colors duration-[var(--duration-hover)] ease-standard';
+    'flex h-[38px] items-center gap-3 rounded-lg text-body-sm transition-colors duration-[var(--duration-hover)] ease-standard touch-target-44';
 
 const rowRestClasses =
     'font-normal text-muted-foreground hover:bg-surface-hover hover:text-foreground hover:font-medium';
@@ -41,8 +47,17 @@ const rowRestClasses =
 const rowActiveClasses = 'bg-primary-soft font-semibold text-primary';
 
 /** Shared by the collapse and expand toggles so both sit on the same axis. */
+/**
+ * `hidden lg:flex`, because below `lg` this sidebar is a drawer.
+ *
+ * Collapsing to a rail is a desktop idea: it trades width for a strip of
+ * icons on a screen wide enough to have both. In the drawer there is nothing
+ * to trade -- the panel is over the page and the hamburger already closes it,
+ * so the toggle offered a second, worse way to do the same thing and left an
+ * icon-only rail no route could reach.
+ */
 const toggleClasses =
-    'flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover hover:text-foreground';
+    'hidden size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover hover:text-foreground lg:flex touch-target-44';
 
 /**
  * One of the sidebar's board lists. Hidden entirely when empty rather than
@@ -71,7 +86,7 @@ function BoardList({
                 <Link
                     key={board.slug}
                     href={board.slug}
-                    className="flex h-[38px] items-center gap-3 rounded-lg px-[11px] text-body-sm text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover hover:text-foreground"
+                    className="touch-target-44 flex h-[38px] items-center gap-3 rounded-lg px-[11px] text-body-sm text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover hover:text-foreground"
                 >
                     <BoardAvatar slug={board.slug} size={20} decorative />
                     <span className="truncate">
@@ -149,7 +164,7 @@ function AppSidebar({ className, ...props }: AppSidebarProps) {
             <aside
                 data-slot="app-sidebar"
                 className={cn(
-                    'sticky top-0 z-20 hidden h-screen shrink-0 border-r border-border bg-bg md:block',
+                    'sticky top-0 z-20 hidden h-screen shrink-0 border-r border-border bg-bg lg:block',
                     open ? 'w-[268px]' : 'w-[76px]',
                     className,
                 )}

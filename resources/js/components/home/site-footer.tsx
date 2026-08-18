@@ -72,8 +72,11 @@ function SiteFooter() {
                 <div
                     className="mx-auto grid max-w-(--measure-page) gap-7 border-x border-border px-6 py-9"
                     style={{
+                        /* `min(180px, 100%)`, not a bare 180px minimum — see
+                           board-directory.tsx for the overflow a bare pixel
+                           minimum produces at a 320px viewport. */
                         gridTemplateColumns:
-                            'repeat(auto-fit, minmax(180px, 1fr))',
+                            'repeat(auto-fit, minmax(min(180px, 100%), 1fr))',
                     }}
                 >
                     <div className="flex flex-col gap-2">

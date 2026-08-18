@@ -21,7 +21,16 @@ function ProfileCommentList({ comments }: ProfileCommentListProps) {
             <ul>
                 {comments.map((comment, index) => (
                     <li
-                        key={comment.no}
+                        /* Board and number, not the number alone. Post
+                           numbering is per board -- `LocalPostNumbers::BASE`
+                           starts every board's local sequence at
+                           9,000,000,000, exactly as 4chan numbers per board --
+                           so this anon's first reply on /g/ and their first on
+                           /co/ are both 9000000000. React was being handed two
+                           children with the same key, free to duplicate or
+                           drop either, and saying so in `browser.log` on every
+                           visit to this screen. */
+                        key={`${comment.board}${comment.no}`}
                         className={cn(
                             'flex flex-col gap-1.5 px-[18px] py-4',
                             index < comments.length - 1 &&

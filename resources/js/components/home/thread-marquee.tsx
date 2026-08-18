@@ -62,11 +62,25 @@ function MarqueeRow({ thread, axis }: { thread: Thread; axis: 'x' | 'y' }) {
            ruled rows reads as a list; a rail of boxes reads as a strip of
            cells, which is the register the rest of the page is now in. */
         <div
+            data-slot="thread-marquee-row"
             className={cn(
                 'flex flex-col gap-1.5 border-b border-border px-4 py-4',
                 axis === 'y'
                     ? 'border-t'
-                    : 'w-[320px] shrink-0 border-t border-l',
+                    : /* Narrower below `sm`. The ticker is `-mx-6`, so its
+                         window is about the width of the viewport: at 320px a
+                         320px card leaves nothing whole on screen, and every
+                         title is cut at both edges the whole time. That is the
+                         one case the "a cell passing a window" argument in the
+                         docblock below does not cover, because there is
+                         nothing between the cuts to read.
+
+                         232px leaves 86px of the following card showing at a
+                         320px viewport, which is the edge that makes it read
+                         as a strip rather than as a crop. Back to 320px from
+                         `sm` up, where a whole card plus most of the next
+                         already fitted. */
+                      'w-[232px] shrink-0 border-t border-l sm:w-[320px]',
             )}
         >
             <div className="flex items-center gap-2">

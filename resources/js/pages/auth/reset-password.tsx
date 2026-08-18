@@ -25,56 +25,55 @@ export default function ResetPassword({ token, email, passwordRules }: Props) {
                 {...update.form()}
                 transform={(data) => ({ ...data, token, email })}
                 resetOnSuccess={['password', 'password_confirmation']}
-                className="flex flex-col gap-6"
+                className="flex flex-col gap-5"
             >
                 {({ processing, errors }) => (
                     <>
-                        <div className="flex flex-col gap-4">
-                            {/* Fixed by the signed link. Shown so it is clear
-                                which account is being reset, read-only so it
-                                cannot drift out of step with the token. */}
-                            <FormField
-                                id="email"
-                                label="Email address"
-                                error={errors.email}
-                            >
-                                <AuthInput
-                                    icon={Mail}
-                                    type="email"
-                                    name="email"
-                                    autoComplete="email"
-                                    value={email}
-                                    readOnly
-                                />
-                            </FormField>
+                        {/* Fixed by the signed link. Shown so it is clear
+                            which account is being reset, read-only so it
+                            cannot drift out of step with the token. */}
+                        <FormField
+                            id="email"
+                            label="Email address"
+                            error={errors.email}
+                        >
+                            <AuthInput
+                                icon={Mail}
+                                type="email"
+                                name="email"
+                                autoComplete="email"
+                                value={email}
+                                readOnly
+                            />
+                        </FormField>
 
-                            <FormField
-                                id="password"
-                                label="Password"
-                                error={errors.password}
-                            >
-                                <AuthPasswordInput
-                                    name="password"
-                                    autoComplete="new-password"
-                                    autoFocus
-                                    placeholder="Password"
-                                    passwordrules={passwordRules}
-                                />
-                            </FormField>
+                        <FormField
+                            id="password"
+                            label="Password"
+                            error={errors.password}
+                        >
+                            <AuthPasswordInput
+                                name="password"
+                                autoComplete="new-password"
+                                autoFocus
+                                placeholder="Password"
+                                passwordrules={passwordRules}
+                            />
+                        </FormField>
 
-                            <FormField
-                                id="password_confirmation"
-                                label="Confirm password"
-                                error={errors.password_confirmation}
-                            >
-                                <AuthPasswordInput
-                                    name="password_confirmation"
-                                    autoComplete="new-password"
-                                    placeholder="Confirm password"
-                                    passwordrules={passwordRules}
-                                />
-                            </FormField>
-                        </div>
+                        <FormField
+                            id="password_confirmation"
+                            label="Confirm password"
+                            error={errors.password_confirmation}
+                        >
+                            <AuthPasswordInput
+                                name="password_confirmation"
+                                autoComplete="new-password"
+                                placeholder="Confirm password"
+                                shortPlaceholder="Confirm"
+                                passwordrules={passwordRules}
+                            />
+                        </FormField>
 
                         <Button
                             type="submit"

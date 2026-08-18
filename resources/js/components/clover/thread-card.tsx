@@ -4,6 +4,7 @@ import type { ComponentProps, ReactNode } from 'react';
 import { BoardAvatar } from '@/components/clover/board-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
 import { PostAttachment } from '@/components/clover/post-image';
+import { ResultThumbnail } from '@/components/clover/result-thumbnail';
 import { ShareControl } from '@/components/clover/share-control';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -53,10 +54,23 @@ type ThreadCardProps = Omit<ComponentProps<'div'>, 'onClick' | 'children'> & {
      * row still reads as the same object it is everywhere else.
      */
     meta?: ReactNode;
+    /**
+     * How the attachment is drawn. `full` is the feed's own image under the
+     * title; `thumbnail` puts it at the trailing edge of the row and is what
+     * the search results page asks for (task 7), where four sections of
+     * results have to stay scannable and a full-width image every third row
+     * is not.
+     *
+     * A layout switch rather than a second row component: the results page
+     * shows the same threads the feed does, with the same links, the same
+     * share and the same bookmark, and a copy of this file with the image
+     * moved is how those quietly drift apart.
+     */
+    mediaLayout?: 'full' | 'thumbnail';
 };
 
 const iconButtonClasses = cn(
-    'inline-flex size-8.5 shrink-0 items-center justify-center rounded-md text-muted-foreground',
+    'touch-target-44 inline-flex size-8.5 shrink-0 items-center justify-center rounded-md text-muted-foreground',
     'transition-colors duration-[var(--duration-hover)] ease-standard hover:bg-surface-hover',
     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
 );
@@ -66,21 +80,63 @@ function ThreadCard({
     href,
     onBookmark,
     meta,
+    mediaLayout = 'full',
     className,
     ...props
 }: ThreadCardProps) {
     const titleHref = href ?? `${thread.board}${thread.no}`;
 
+    /* The feed's rows are inset from the card's own hairline; the results
+       register is flush, so a thread row lines up with the board rows and the
+       reply rows beside it on the same page. The hairline itself spans the
+       full width in both. */
+    const inset = mediaLayout === 'thumbnail' ? '' : 'px-5';
+
+    /* One title, drawn in both layouts. The hover lives on it and nowhere
+       else: the row used to tint entirely, which is a lot of movement for a
+       pointer that happens to cross a feed, and it made thirty rows flicker on
+       the way down the page. The stretched pseudo-element still makes the
+       whole row clickable; it just no longer announces itself. */
+    const title = (
+        <h3 className="font-display text-[17px] leading-snug font-semibold text-balance text-foreground">
+            <Link
+                href={titleHref}
+                /* `group-hover`, not `hover`. The row's tint answers a
+                   pointer anywhere on it, so a title that only marked itself
+                   when the cursor crossed the words left the two halves of
+                   one hover state disagreeing. */
+                className="static transition-colors duration-[var(--duration-hover)] ease-standard group-hover:text-primary after:absolute after:inset-0 after:content-['']"
+            >
+                {thread.title}
+            </Link>
+        </h3>
+    );
+
     return (
         <div
             data-slot="thread-card"
             className={cn(
-                'relative flex flex-col gap-2 border-b border-border py-4',
+                'group relative flex flex-col gap-2 border-b border-border py-4',
+                /* A rounded surface under the pointer, so a row answers
+                   before it is pressed. The whole row is the target -- the
+                   title's stretched pseudo-element covers it -- and nothing
+                   said so until the cursor happened to cross the words.
+
+                   Surface and radius only. No shadow: this is a ruled list,
+                   not a deck of cards, and elevation on hover would claim the
+                   row lifts off the page it is ruled into. No transform
+                   either -- a row that moves shifts every row beneath it. */
+                'rounded-xl transition-[background-color] duration-[var(--duration-hover)] ease-standard',
+                /* `surface-hover`, the token that exists for this, rather
+                   than a translucent `surface`: at 60% over a 14% ground the
+                   dark theme's lift was about two points of lightness, which
+                   is a change you have to look for. */
+                'hover:bg-surface-hover',
                 className,
             )}
             {...props}
         >
-            <div className="flex flex-wrap items-center gap-2 px-5">
+            <div className={cn('flex flex-wrap items-center gap-2', inset)}>
                 <BoardAvatar slug={thread.board} size={20} decorative />
                 <MachineValue className="text-foreground">
                     {thread.board}
@@ -113,34 +169,45 @@ function ThreadCard({
                 ) : null}
             </div>
 
-            <h3 className="px-5 font-display text-[17px] leading-snug font-semibold text-balance text-foreground">
-                {/* The hover lives on the title and nowhere else.
-                    
-                    The row used to tint entirely, which is a lot of movement
-                    for a pointer that happens to cross a feed, and it made
-                    thirty rows flicker on the way down the page. The title is
-                    the thing being pointed at and the only thing that
-                    navigates, so it is the only thing that reacts. The
-                    stretched pseudo-element still makes the whole row
-                    clickable; it just no longer announces itself. */}
-                <Link
-                    href={titleHref}
-                    className="static transition-colors duration-[var(--duration-hover)] ease-standard after:absolute after:inset-0 after:content-[''] hover:text-primary"
-                >
-                    {thread.title}
-                </Link>
-            </h3>
-
-            {/* Thumbnail only. A feed of thirty rows fetching originals would
-                pull tens of megabytes for images most anons scroll past; the
-                full file loads when one is opened. */}
-            {thread.media ? (
-                <div className="relative px-5">
-                    <PostAttachment media={thread.media} />
+            {mediaLayout === 'thumbnail' ? (
+                /* The results register: title on the left, attachment as a
+                   small square at the trailing edge. The thumbnail is
+                   decorative and unlinked -- the stretched title link already
+                   covers the whole row, and a second control inside that
+                   stretch would be a link inside a link. */
+                <div className={cn('flex items-start gap-3', inset)}>
+                    <div className="min-w-0 flex-1">{title}</div>
+                    <ResultThumbnail media={thread.media} />
                 </div>
-            ) : null}
+            ) : (
+                <>
+                    <div className={inset}>{title}</div>
 
-            <div className="relative flex items-center gap-5 px-5">
+                    {/* A feed of thirty rows fetching originals would pull tens
+                        of megabytes for images most anons scroll past, so every
+                        one of these is lazy; the full file loads when one is
+                        opened. */}
+                    {thread.media ? (
+                        <div className={cn('relative', inset)}>
+                            {/* The viewer opened from a row is still a
+                                place: it names the board, and its drawer
+                                fetches this thread's replies the first time
+                                it is opened, with the way into the thread at
+                                their foot. The row itself still navigates --
+                                the title's stretched link covers everything
+                                but the picture. */}
+                            <PostAttachment
+                                media={thread.media}
+                                board={thread.board}
+                                threadHref={titleHref}
+                                repliesUrl={`${titleHref}/replies`}
+                            />
+                        </div>
+                    ) : null}
+                </>
+            )}
+
+            <div className={cn('relative flex items-center gap-5', inset)}>
                 {/* Both stats name their own unit. An icon plus a bare number
                     reads as "318" to a screen reader, which is a figure with no
                     subject; the icon carries the meaning for sighted anons only. */}

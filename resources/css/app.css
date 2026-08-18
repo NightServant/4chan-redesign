@@ -125,7 +125,10 @@
     --bg: oklch(14.18% 0.0042 165.2);
     --surface: oklch(19.06% 0.0074 164.1);
     --surface-elevated: oklch(22.01% 0.0095 159.2);
-    --surface-hover: oklch(24.44% 0.0115 156.3);
+    /* Lifted from 24.44%. It reads against `--surface` (19.06%) in a menu,
+       but a feed row hovers against `--bg` (14.18%) and needs to answer at a
+       glance rather than on inspection. */
+    --surface-hover: oklch(27.5% 0.0125 156.3);
     --scrim: oklch(8% 0.006 165 / 0.72);
 
     /* Text */
@@ -216,14 +219,53 @@
 :root {
     --measure-page: 1180px;
     --measure-column: 760px;
-    --measure-rail: 330px;
+    /* Sized against the post column beside it, not against the page. It was
+       330px next to a 560px column, which read as two columns competing
+       rather than one and its margin; it is 320px next to 720px now. */
+    --measure-rail: 320px;
+    /* The width a post is actually drawn at: the cap on an attachment's box,
+       and the cap on the column that holds the cards carrying them. One
+       value, because when they were two the column grew to 760px while the
+       image stayed at 560 and every row ended in 200px of nothing.
+
+       720px rather than the 560px it started at: with the chrome and the
+       body both measured against the shell below, 560 left the whole
+       application sitting in the middle of a wide display with a third of
+       the screen empty either side. */
+    --measure-media: 720px;
+    /* The shell: the post column, the rail, and the gap between them. The
+       chrome is measured against this rather than against `--measure-page`,
+       so the header's search field starts where a post starts and its
+       controls end where the rail ends. Derived rather than typed, so the
+       1536px step below moves all of it at once.
+
+       The `3rem` is the `px-6` every consumer carries. Each box measured
+       against this is padded, so the padding belongs in the measure: without
+       it the box was the right width but its *content* was 48px short, the
+       two columns inside shrank to fit, and the search field -- capped at
+       the post column's own measure rather than sharing its row -- kept its
+       full width and hung past them. */
+    /* The attachment being viewed, set per image by `post-image.tsx`. They
+       are declared here so a class referencing one always resolves: the
+       viewer's panel and its image are bounded by these, and a `var()` that
+       resolves to nothing takes its whole declaration down with it. The
+       defaults are the "no dimensions known" case -- fill the box, square
+       ratio -- which is what a local upload that failed to measure gets. */
+    --file-w: 100%;
+    --file-h: 100%;
+    --file-ratio: 1;
+
+    --measure-shell: calc(
+        var(--measure-media) + var(--measure-rail) + 1.75rem + 3rem
+    );
 }
 
 @media (min-width: 1536px) {
     :root {
         --measure-page: 1440px;
         --measure-column: 840px;
-        --measure-rail: 400px;
+        --measure-rail: 360px;
+        --measure-media: 860px;
     }
 }
 
@@ -459,8 +501,29 @@
         @apply border-border;
     }
 
+    /* The browser's own clear control on `input[type="search"]`.
+    
+       Both search fields draw their own -- one that clears the box, refocuses
+       it and returns to the suggestions screen, which the native one does not
+       do. WebKit's sat beside it, so the bar carried two crosses a pixel
+       apart doing different things. Firefox draws none, which is why this
+       only ever showed on one engine. */
+    input[type='search']::-webkit-search-cancel-button,
+    input[type='search']::-webkit-search-decoration {
+        appearance: none;
+    }
+
     html {
         font-optical-sizing: auto;
+        /* Reserve the scrollbar's width whether or not one is showing.
+
+           The header is sticky and spans the viewport; the page beneath it
+           scrolls. Without a reserved gutter the two are centred in boxes
+           that differ by the scrollbar's width, so the search field sat
+           about 20px left of the post column it is measured to match --
+           the same measure, two different centres. It also stops the whole
+           layout shifting sideways when a short page becomes a long one. */
+        scrollbar-gutter: stable;
     }
 
     body {
@@ -506,4 +569,44 @@
         transparent var(--pattern-dot)
     );
     background-size: var(--pattern-size-dense) var(--pattern-size-dense);
+}
+
+/*
+|-------------------------------------------------------------------------------
+| Touch target
+|-------------------------------------------------------------------------------
+|
+| 44x44 is the touch minimum (task 5); the pointer minimum this app was built
+| to is 34-38px, deliberately tighter for the desktop chrome. Growing every
+| icon button's own box to 44px would coarsen that chrome, so this grows the
+| hit area instead of the painted control: a transparent, empty pseudo-element
+| centred on whatever carries this class, sized to the larger of 44px or the
+| control's own box in each axis independently. A control already 44px or
+| wider in an axis is unaffected in that axis; the pseudo-element sits out of
+| normal flow, so neither the control's own size nor the row it sits in ever
+| changes.
+|
+| Gated to `pointer-coarse` -- the input mechanism doing the pointing -- not
+| to a viewport width. `pagination.tsx` had already solved this same problem
+| once with a `md:`-gated inset before this utility existed, and `md:` is the
+| wrong axis to gate on: a touchscreen tablet in a wide landscape window is
+| still a touchscreen, and a narrow pointer-driven browser window is still a
+| mouse.
+|
+*/
+@utility touch-target-44 {
+    position: relative;
+
+    &::before {
+        content: '';
+        position: absolute;
+
+        @variant pointer-coarse {
+            top: 50%;
+            left: 50%;
+            width: max(44px, 100%);
+            height: max(44px, 100%);
+            transform: translate(-50%, -50%);
+        }
+    }
 }

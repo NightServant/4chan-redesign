@@ -28,6 +28,21 @@ vi.mock('@inertiajs/react', () => ({
 }));
 
 describe('AnonBanner', () => {
+    /**
+     * The shield is decoration, and on a phone it was expensive decoration:
+     * 44px plus a 16px gap out of a 272px line, over a fifth of the measure,
+     * to say nothing the sentence does not. The copy set at roughly ten
+     * characters a line beside it.
+     */
+    it('drops its decorative mark below `sm`', () => {
+        const { container } = render(<AnonBanner />);
+
+        const mark = container.querySelector('[aria-hidden="true"].size-11');
+
+        expect(mark).toHaveClass('hidden');
+        expect(mark).toHaveClass('sm:grid');
+    });
+
     it('states the anonymous-browsing copy verbatim', () => {
         render(<AnonBanner />);
 

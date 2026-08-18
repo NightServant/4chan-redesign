@@ -163,8 +163,18 @@ describe('useBookmark', () => {
  *
  * Reading the pages as files is crude and it is the only thing that catches
  * the next screen somebody adds a card to.
+ *
+ * `<HistoryEntryList` is a second marker, not just `<ThreadCard`, because
+ * `history.tsx` no longer renders `ThreadCard` directly -- the day-grouped
+ * list that does now lives in its own component, shared with the account
+ * screen's History tab. A page that renders that component still owes it a
+ * real `onBookmark`, the same as a page rendering the card itself; checking
+ * only the literal tag would have let history.tsx quietly drop out of this
+ * guard the moment the card moved one level down.
  */
 const PAGES_DIR = join(process.cwd(), 'resources/js/pages');
+
+const CARD_MARKERS = ['<ThreadCard', '<HistoryEntryList'];
 
 function pageFiles(dir: string): string[] {
     return readdirSync(dir).flatMap((entry) => {
@@ -181,9 +191,11 @@ function pageFiles(dir: string): string[] {
 }
 
 describe('every page that renders a ThreadCard', () => {
-    const withCards = pageFiles(PAGES_DIR).filter((path) =>
-        readFileSync(path, 'utf8').includes('<ThreadCard'),
-    );
+    const withCards = pageFiles(PAGES_DIR).filter((path) => {
+        const contents = readFileSync(path, 'utf8');
+
+        return CARD_MARKERS.some((marker) => contents.includes(marker));
+    });
 
     it('finds the pages it is meant to be checking', () => {
         expect(withCards.length).toBeGreaterThanOrEqual(6);

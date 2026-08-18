@@ -1,29 +1,13 @@
-import { Link, router } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { LayoutGridIcon } from 'lucide-react';
-import { useState } from 'react';
 import { EmptyState } from '@/components/clover/empty-state';
-import { FormField } from '@/components/clover/form-field';
 import { PageHeader } from '@/components/clover/page-header';
 import { SectionLabel } from '@/components/clover/section-label';
-import { BoardCard } from '@/components/communities/board-card';
-import { Input } from '@/components/ui/input';
+import { BoardRow } from '@/components/communities/board-row';
+import { useBoardSubscription } from '@/hooks/use-board-subscription';
 import { plural } from '@/lib/utils';
-import { subscribe as subscribeToBoard } from '@/routes/boards';
 import { edit as editSettings } from '@/routes/settings';
 import type { BoardDirectoryEntry } from '@/types/clover';
-
-/** Subscription state, keyed by slug. Local: there is no backend. */
-function matches(entry: BoardDirectoryEntry, query: string): boolean {
-    const needle = query.trim().toLowerCase();
-
-    if (needle === '') {
-        return true;
-    }
-
-    return [entry.slug, entry.name, entry.description].some((field) =>
-        field.toLowerCase().includes(needle),
-    );
-}
 
 /**
  * Categories in the order the directory first mentions them, rather than
@@ -63,15 +47,40 @@ export interface BoardDirectoryProps {
  * The filtering used to happen here, on a list that already held every board.
  * That is not a boundary — data the browser holds is data the anon has — so it
  * moved into the query and this component lost its `showsMature` prop.
+ *
+ * ## No search box of its own
+ *
+ * There was a "Search boards" field here, filtering the list in the browser.
+ * Search is the header's job: it has its own page, its own results tabs and a
+ * Communities tab among them (task 7). A second field with its own matching
+ * rules, reachable only from this one screen, was a second search that behaved
+ * differently from the one every other screen offers — and it filtered a list
+ * of 53 that the ruled layout now fits far more of on a phone anyway. The
+ * state, the matcher and the tests that only existed for it are gone rather
+ * than hidden behind a breakpoint.
+ *
+ * ## Below `md` this is a ruled list
+ *
+ * `divide-y` on the list draws the hairline between rows; the grid and the
+ * gaps between cards only start at `md`. See `BoardRow` for the other half of
+ * that contract.
  */
 export function BoardDirectory({
     boards,
     hiddenCount = 0,
 }: BoardDirectoryProps) {
-    const [query, setQuery] = useState('');
+    /**
+     * The shared hook, not a fourth copy of the same call. The copy this
+     * component carried wrote through the router correctly but had no
+     * `AuthGate`, and the subscribe routes sit behind `auth`: a signed-out
+     * anon pressing Join on a page that is open to read was bounced to the
+     * login form. The hook returns the gate with the toggle so a caller cannot
+     * take one and forget the other.
+     */
+    const { toggleSubscription, authGate } = useBoardSubscription();
 
     /* Nothing to filter: the server sent exactly the boards this anon may
-       see. `permitted` stays as the name every count and the grid read from,
+       see. `permitted` stays as the name every count and the list read from,
        so the guarantee it carried is unchanged — it is now upheld a layer
        down instead of here. */
     const permitted = boards;
@@ -79,24 +88,6 @@ export function BoardDirectory({
     const subscribedCount = permitted.filter(
         (entry) => entry.subscribed,
     ).length;
-    const visible = permitted.filter((entry) => matches(entry, query));
-
-    /**
-     * Following is stored, so the pressed state and the count come back from
-     * the server. This was local state seeded from the prop and then diverging
-     * from it — a button reporting `aria-pressed` for something nothing kept.
-     */
-    function toggleSubscription(entry: BoardDirectoryEntry) {
-        const url = subscribeToBoard(entry.id).url;
-
-        if (entry.subscribed) {
-            router.delete(url, { preserveScroll: true });
-
-            return;
-        }
-
-        router.post(url, {}, { preserveScroll: true });
-    }
 
     return (
         <>
@@ -125,28 +116,15 @@ export function BoardDirectory({
                 </p>
             ) : null}
 
-            <FormField
-                label="Search boards"
-                className="max-w-[420px]"
-                labelClassName="text-meta"
-            >
-                <Input
-                    type="search"
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Slug, name or description"
-                />
-            </FormField>
-
-            {visible.length === 0 ? (
+            {permitted.length === 0 ? (
                 <EmptyState
                     icon={<LayoutGridIcon />}
-                    title="No boards match"
-                    body={`Nothing matches "${query}".`}
+                    title="No boards to show"
+                    body="Nothing is listed here right now."
                 />
             ) : (
                 <div className="flex flex-col gap-8">
-                    {categoriesOf(visible).map((category) => (
+                    {categoriesOf(permitted).map((category) => (
                         <section
                             key={category}
                             aria-label={category}
@@ -154,8 +132,17 @@ export function BoardDirectory({
                         >
                             <SectionLabel>{category}</SectionLabel>
 
-                            <ul className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4">
-                                {visible
+                            {/* One row per line below `md`, ruled between
+                                rows. At `md` the deck comes back:
+                                `minmax(min(320px,100%),1fr)`, not a bare
+                                `minmax(320px,1fr)`, because a bare 320px
+                                minimum overflows a narrow container by forcing
+                                the track wider than the space there is. */}
+                            <ul
+                                data-slot="board-list"
+                                className="flex flex-col divide-y divide-border border-b border-border md:grid md:grid-cols-[repeat(auto-fill,minmax(min(320px,100%),1fr))] md:gap-4 md:divide-y-0 md:border-0"
+                            >
+                                {permitted
                                     .filter(
                                         (entry) => entry.category === category,
                                     )
@@ -164,7 +151,7 @@ export function BoardDirectory({
                                             key={entry.slug}
                                             className="flex flex-col"
                                         >
-                                            <BoardCard
+                                            <BoardRow
                                                 entry={entry}
                                                 subscribed={entry.subscribed}
                                                 onToggleSubscribe={() =>
@@ -178,6 +165,8 @@ export function BoardDirectory({
                     ))}
                 </div>
             )}
+
+            {authGate}
         </>
     );
 }

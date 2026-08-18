@@ -61,7 +61,11 @@ describe('ThreadCard', () => {
 
         expect(container.querySelector('[data-slot="card"]')).toBeNull();
         expect(row?.className).toMatch(/border-b/);
-        expect(row?.className).not.toMatch(/shadow-lift|rounded-xl/);
+        /* Still not a card: no border box and no elevation, resting or
+           hovered. The radius is there for the hover surface's own corners --
+           a tint with square edges on a ruled list reads as a highlight bar,
+           not as the row answering. */
+        expect(row?.className).not.toMatch(/shadow-lift/);
     });
 
     /**
@@ -70,18 +74,34 @@ describe('ThreadCard', () => {
      * row frequently said the same thing twice at two sizes.
      */
     /**
-     * A whole row tinting is a lot of movement for a pointer that happens to
-     * cross a feed, and thirty of them flicker on the way down the page. The
-     * title is the thing being pointed at and the only thing that navigates.
+     * The whole row answers the pointer now (Gabe, 2026-08-17).
+     *
+     * It used to react on the title alone, on the reasoning that thirty rows
+     * tinting on the way down a feed is a lot of movement. That reasoning was
+     * about *tinting*; what it missed is that the whole row is the target --
+     * the title's stretched pseudo-element covers it -- so a row that only
+     * responded where the words happened to be was hiding the size of its own
+     * hit area.
+     *
+     * Surface and radius only -- no shadow, because this is a ruled list
+     * rather than a deck of cards, and no transform, because a row that moves
+     * shifts every row beneath it. That last part is the flicker the old rule
+     * was actually worried about.
      */
-    it('reacts on the title alone, and never on the row', () => {
+    it('lifts the whole row under the pointer, and still marks the title', () => {
         const { container } = render(<ThreadCard thread={baseThread} />);
 
         const row = container.querySelector('[data-slot="thread-card"]');
         const title = screen.getByRole('link', { name: baseThread.title });
 
-        expect(row?.className).not.toMatch(/hover:/);
-        expect(title.className).toMatch(/hover:text-primary/);
+        expect(row?.className).toMatch(/hover:bg-surface/);
+        expect(row?.className).toMatch(/rounded-xl/);
+        expect(row?.className).not.toMatch(/hover:shadow/);
+        expect(row?.className).not.toMatch(/hover:-?translate/);
+        /* One hover state, not two: the row tints and the title marks
+           together, from the same pointer. */
+        expect(row?.className).toMatch(/(^|\s)group(\s|$)/);
+        expect(title.className).toMatch(/group-hover:text-primary/);
     });
 
     it('prints no excerpt under the title', () => {
@@ -306,5 +326,64 @@ describe('ThreadCard', () => {
         expect(writeText).toHaveBeenCalledWith(
             `${window.location.origin}/g/58210441`,
         );
+    });
+});
+
+/**
+ * The search results page draws the same row in a denser register (task 7):
+ * the attachment becomes a thumbnail at the trailing edge instead of a
+ * full-width image under the title. Same row, same controls, same links —
+ * the results page does not grow a second thread row of its own.
+ */
+describe('ThreadCard — the results layout', () => {
+    it('draws the attachment as a thumbnail rather than at full width', () => {
+        const media = makeAttachment();
+
+        render(
+            <ThreadCard
+                thread={{ ...baseThread, media }}
+                mediaLayout="thumbnail"
+            />,
+        );
+
+        /* The 250px thumbnail, which is the right source at this size and
+           the wrong one at full width. */
+        expect(screen.getByRole('presentation')).toHaveAttribute(
+            'src',
+            media.thumbnailUrl,
+        );
+        expect(
+            screen.queryByRole('button', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        ).not.toBeInTheDocument();
+    });
+
+    it('keeps the title link and the controls it always had', () => {
+        render(
+            <ThreadCard
+                thread={{ ...baseThread, media: makeAttachment() }}
+                mediaLayout="thumbnail"
+            />,
+        );
+
+        expect(
+            screen.getByRole('link', { name: baseThread.title }),
+        ).toHaveAttribute('href', '/g/58210441');
+        expect(
+            screen.getByRole('button', { name: /bookmark thread/i }),
+        ).toBeInTheDocument();
+    });
+
+    it('still draws the full-width image by default', () => {
+        const media = makeAttachment();
+
+        render(<ThreadCard thread={{ ...baseThread, media }} />);
+
+        expect(
+            screen.getByRole('img', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        ).toHaveAttribute('src', media.fullUrl);
     });
 });

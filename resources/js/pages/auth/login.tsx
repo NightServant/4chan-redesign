@@ -34,60 +34,59 @@ export default function Login({ status, canResetPassword }: Props) {
             <Form
                 {...store.form()}
                 resetOnSuccess={['password']}
-                className="flex flex-col gap-6"
+                className="flex flex-col gap-5"
             >
                 {({ processing, errors }) => (
                     <>
-                        <div className="flex flex-col gap-4">
-                            <FormField
-                                id="email"
-                                label="Email address"
-                                error={errors.email}
-                            >
-                                <AuthInput
-                                    icon={AtSign}
-                                    type="email"
-                                    name="email"
-                                    required
-                                    autoFocus
-                                    autoComplete="email"
-                                    placeholder="email@example.com"
-                                />
-                            </FormField>
+                        <FormField
+                            id="email"
+                            label="Email address"
+                            error={errors.email}
+                        >
+                            <AuthInput
+                                icon={AtSign}
+                                type="email"
+                                name="email"
+                                required
+                                autoFocus
+                                autoComplete="email"
+                                placeholder="email@example.com"
+                                shortPlaceholder="you@site.com"
+                            />
+                        </FormField>
 
-                            <FormField
-                                id="password"
-                                label="Password"
-                                error={errors.password}
-                            >
-                                <AuthPasswordInput
-                                    name="password"
-                                    required
-                                    autoComplete="current-password"
-                                    placeholder="Password"
-                                />
-                            </FormField>
+                        <FormField
+                            id="password"
+                            label="Password"
+                            error={errors.password}
+                        >
+                            <AuthPasswordInput
+                                name="password"
+                                required
+                                autoComplete="current-password"
+                                placeholder="Password"
+                            />
+                        </FormField>
 
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                                <div className="flex items-center gap-2.5">
-                                    <Checkbox id="remember" name="remember" />
-                                    <Label
-                                        htmlFor="remember"
-                                        className="text-body-sm text-muted-foreground"
-                                    >
-                                        Remember me
-                                    </Label>
-                                </div>
-
-                                {canResetPassword && (
-                                    <AuthLink
-                                        href={request()}
-                                        className="text-body-sm"
-                                    >
-                                        Forgot password?
-                                    </AuthLink>
-                                )}
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5">
+                                <Checkbox id="remember" name="remember" />
+                                <Label
+                                    htmlFor="remember"
+                                    className="text-body-sm text-muted-foreground"
+                                >
+                                    Remember me
+                                </Label>
                             </div>
+
+                            {canResetPassword && (
+                                <AuthLink
+                                    href={request()}
+                                    className="text-body-sm"
+                                >
+                                    Forgot password?
+                                </AuthLink>
+                            )}
                         </div>
 
                         <Button

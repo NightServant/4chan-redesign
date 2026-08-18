@@ -73,19 +73,30 @@ export default function PasskeyVerify({
                 )}
             </div>
 
-            <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                    <Separator className="w-full" />
-                </div>
-                {/* The chip masks the rule behind it, so its fill has to match
-                    whatever it sits on. This renders inside the auth card,
-                    which is `bg-surface`; on `bg-bg` it read as a slightly
-                    darker rectangle floating over the line. */}
-                <div className="relative flex justify-center">
-                    <span className="bg-surface px-2 text-label font-semibold tracking-[1.2px] text-faint uppercase">
-                        {separator ?? 'Or continue with email'}
-                    </span>
-                </div>
+            {/* A real row: rule, label, rule.
+
+                It was an `absolute inset-0` rule with the label floated over
+                it on a `bg-surface` chip that masked the line behind it. That
+                works only while the label sets on one line. "Or continue with
+                email" does; "Or confirm with password" on the confirm-password
+                screen wraps to two at ~320px, and because the label is in flow
+                and the rule is not, the row grew while the rule stayed
+                vertically centred — the line ran straight through the middle
+                of the text.
+
+                As siblings the row's height is the label's height at any
+                width, and the rules sit either side of it however many lines it
+                takes. The masking fill goes with the overlay: there is nothing
+                behind the label to mask, so it no longer has to guess what
+                colour it is sitting on. */}
+            <div className="my-6 flex items-center gap-3">
+                <Separator className="flex-1" />
+
+                <span className="text-center text-label font-semibold tracking-[1.2px] text-faint uppercase">
+                    {separator ?? 'Or continue with email'}
+                </span>
+
+                <Separator className="flex-1" />
             </div>
         </>
     );

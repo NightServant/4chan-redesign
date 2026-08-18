@@ -25,61 +25,61 @@ export default function Register({ passwordRules }: Props) {
                 {...store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
-                className="flex flex-col gap-6"
+                className="flex flex-col gap-5"
             >
                 {({ processing, errors }) => (
                     <>
-                        <div className="flex flex-col gap-4">
-                            {/* No name field. Registration asked for a full
-                                name on a site whose premise is anonymity, and
-                                people gave their real one -- it was then the
-                                heading on their public profile, because the
-                                handle fell back to it. The account needs an
-                                address to reach you at and a password; it does
-                                not need to know who you are. */}
-                            <FormField
-                                id="email"
-                                label="Email address"
-                                error={errors.email}
-                            >
-                                <AuthInput
-                                    icon={Mail}
-                                    type="email"
-                                    name="email"
-                                    required
-                                    autoComplete="email"
-                                    placeholder="email@example.com"
-                                />
-                            </FormField>
+                        {/* No name field. Registration asked for a full
+                            name on a site whose premise is anonymity, and
+                            people gave their real one -- it was then the
+                            heading on their public profile, because the
+                            handle fell back to it. The account needs an
+                            address to reach you at and a password; it does
+                            not need to know who you are. */}
+                        <FormField
+                            id="email"
+                            label="Email address"
+                            error={errors.email}
+                        >
+                            <AuthInput
+                                icon={Mail}
+                                type="email"
+                                name="email"
+                                required
+                                autoComplete="email"
+                                placeholder="email@example.com"
+                                shortPlaceholder="you@site.com"
+                            />
+                        </FormField>
 
-                            <FormField
-                                id="password"
-                                label="Password"
-                                error={errors.password}
-                            >
-                                <AuthPasswordInput
-                                    name="password"
-                                    required
-                                    autoComplete="new-password"
-                                    placeholder="Password"
-                                    passwordrules={passwordRules}
-                                />
-                            </FormField>
+                        <FormField
+                            id="password"
+                            label="Password"
+                            error={errors.password}
+                        >
+                            <AuthPasswordInput
+                                name="password"
+                                required
+                                autoComplete="new-password"
+                                placeholder="Password"
+                                passwordrules={passwordRules}
+                            />
+                        </FormField>
 
-                            <FormField
-                                id="password_confirmation"
-                                label="Confirm password"
-                                error={errors.password_confirmation}
-                            >
-                                <AuthPasswordInput
-                                    name="password_confirmation"
-                                    required
-                                    autoComplete="new-password"
-                                    placeholder="Confirm password"
-                                    passwordrules={passwordRules}
-                                />
-                            </FormField>
-                        </div>
+                        <FormField
+                            id="password_confirmation"
+                            label="Confirm password"
+                            error={errors.password_confirmation}
+                        >
+                            <AuthPasswordInput
+                                name="password_confirmation"
+                                required
+                                autoComplete="new-password"
+                                placeholder="Confirm password"
+                                shortPlaceholder="Confirm"
+                                passwordrules={passwordRules}
+                            />
+                        </FormField>
 
                         <Button
                             type="submit"

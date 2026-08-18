@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { Bookmark, ImageIcon, MessageSquare } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { BoardAvatar } from '@/components/clover/board-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
 import { PostBody } from '@/components/clover/post-body';
@@ -25,6 +26,17 @@ import type { Thread } from '@/types/clover';
  */
 type OriginalPostProps = {
     thread: Thread;
+    /**
+     * What the full-image viewer's drawer holds below `md`: the thread's own
+     * replies and the way into the composer. Passed down rather than fetched,
+     * because the page already has both and a second source for the comment
+     * tree behind a picture is a second tree to keep in step.
+     */
+    viewerDrawer?: ReactNode;
+    /** Names that drawer's control, e.g. "312 replies". */
+    viewerDrawerLabel?: string;
+    /** Where the viewer's own way in points. The composer, from this page. */
+    viewerCtaHref?: string;
     /** Held by the caller: this component owns no state of its own. */
     bookmarked?: boolean;
     onBookmark?: () => void;
@@ -45,6 +57,9 @@ function boardToken(slug: Thread['board']): string {
 
 function OriginalPost({
     thread,
+    viewerDrawer,
+    viewerDrawerLabel,
+    viewerCtaHref,
     bookmarked = false,
     onBookmark,
     className,
@@ -106,7 +121,13 @@ function OriginalPost({
 
             {/* The thread being read, so the file itself rather than a
                 250px thumbnail of it. */}
-            <PostAttachment media={thread.media} variant="post" />
+            <PostAttachment
+                media={thread.media}
+                variant="post"
+                viewerDrawer={viewerDrawer}
+                viewerDrawerLabel={viewerDrawerLabel}
+                threadHref={viewerCtaHref}
+            />
 
             <footer className="flex flex-wrap items-center gap-5">
                 {/* The thread's own address, built the same way the card

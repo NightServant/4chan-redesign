@@ -1,11 +1,14 @@
-import { EyeIcon } from 'lucide-react';
+import { Link } from '@inertiajs/react';
+import { ChevronUp, EyeIcon } from 'lucide-react';
 import { useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
+import { CommentTree } from '@/components/clover/comment-tree';
 import { MachineValue } from '@/components/clover/machine-value';
 import { MediaPlaceholder } from '@/components/clover/media-placeholder';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import type { Attachment } from '@/types/clover';
+import type { Attachment, Comment } from '@/types/clover';
 
 /**
  * A post's attachment: thumbnail inline, full image in a dialog.
@@ -78,37 +81,6 @@ function intrinsicBox(media: Attachment): {
 }
 
 /**
- * How large the image is allowed to draw.
- *
- * The image fills the column's full width, and that is the load-bearing part.
- * Sizing from the height cap instead (`w-auto` under a `max-h`) leaves every
- * landscape image short of the right edge by however much its aspect ratio
- * happens to differ — a ragged margin down one side of the feed that reads as
- * a layout bug rather than a decision.
- *
- * So width is fixed and height follows the image's own ratio, capped. The cap
- * is what stops a 1920x4000 infographic taking over the page, and `object-cover`
- * is what happens when it bites: a very tall image is cropped to the cap
- * rather than letterboxed, because letterboxing would put the gaps back, just
- * on both sides instead of one.
- *
- * Only genuinely tall images are ever cropped. A landscape or roughly square
- * one scaled to the column width lands under the cap and is untouched. Opening
- * the image shows it whole either way.
- */
-/**
- * `object-contain`, not `object-cover`.
- *
- * `cover` fills the box and crops whatever does not fit, which on a board
- * where a good share of attachments are screenshots, comics and tall infographics
- * meant the top and bottom of the actual content were cut off. The point of an
- * attachment is the attachment.
- *
- * The height cap stays: a 5000px tall image would otherwise push every other
- * thread off the screen. Contained rather than cropped, a tall image is shown
- * whole and small, which is the honest presentation and still opens full size.
- */
-/**
  * The accessible name for an attachment.
  *
  * It was the bare filename, which on 4chan is very often `1712345678901.jpg` —
@@ -126,26 +98,187 @@ function altFor(media: Attachment): string {
     return `Attached image: ${media.filename}`;
 }
 
-const VARIANT_CLASSES: Record<PostImageVariant, string> = {
-    card: 'h-auto max-h-[520px] w-full object-contain',
-    post: 'h-auto max-h-[720px] w-full object-contain',
+/**
+ * The width the box stops at, whatever the column happens to be.
+ *
+ * Gabe, 2026-08-17: "Some of the images in larger screens felt too much wide."
+ * The reading column is 760px, and 840px past 1536px, so a full-bleed
+ * attachment was the widest element on the page by a wide margin — it read as
+ * a banner rather than as one part of a post. The box takes the column up to
+ * this and stops.
+ *
+ * Unprefixed on purpose. This is a cap on the box, not a phone accommodation,
+ * so it holds at 390 and at 2545 alike; a `md:`-gated version would be exactly
+ * the half-measure the request was about.
+ */
+/* The shared measure, not a number of its own. `--measure-media` is also
+   what caps the feed column, so the box and the column it sits in cannot
+   drift apart -- which is exactly what left every feed row ending in 200px
+   of empty paper. */
+const MAX_BOX_WIDTH = 'max-w-(--measure-media)';
+
+/**
+ * The box each variant draws, and the image inside it.
+ *
+ * **`card` is a fixed, cover-cropped box.** A feed is a uniform grid, and a
+ * 400x4000 infographic must not be allowed to set the height of the row it
+ * happens to land in — under a height cap alone it still varied every row by
+ * however tall it was under that cap. A fixed ratio makes every row the same
+ * row, and cropping is what fills it.
+ *
+ * `object-top`, not the default centre. An OP's subject is nearly always at the
+ * top of the file — the screenshot's window, the panel, the face — and
+ * centre-cropping a tall image is precisely what loses it. Anchoring the crop
+ * to the top keeps the part that was the reason for posting.
+ *
+ * **`post` is unchanged and uncropped.** The thread page is where the file is
+ * actually being looked at, so it is contained under a height cap and shown
+ * whole. Only the width cap above applies to both, because that one is about
+ * the box's place on the page rather than about what may be cut off.
+ *
+ * Either way, opening the attachment shows it whole at full size.
+ *
+ * ## Why only the post box is centred, and why with `self-center`
+ *
+ * The cap above is a `max-width`, and a box narrower than its container hugs
+ * the leading edge unless it is told otherwise. On the thread page that put
+ * roughly 300px of empty column to the right of the image while the post's
+ * header, title and footer all ran the full width — the image read as having
+ * failed to load the rest of itself.
+ *
+ * `self-center`, not `mx-auto`: every parent this variant has is a
+ * `flex flex-col` (`thread/original-post.tsx` and `clover/comment-tree.tsx`),
+ * so horizontal placement here is cross-axis alignment and `align-self` is the
+ * property that decides it — an auto margin only reaches the same result by
+ * being allowed to override the container's `align-items`. One rule, named
+ * after the thing it does; `mx-auto` is deliberately not also present, because
+ * two rules for one job leaves nobody able to tell which is load-bearing.
+ *
+ * Nothing else about the variant changes: no upscaling to fill the column, no
+ * crop and no fixed ratio. A 557px image blown up to 857px is worse than a gap.
+ *
+ * The card box is deliberately left where it is. A feed row's image sits under
+ * that row's title and stats, and aligning it to their leading edge is what
+ * makes it read as part of the row rather than as a centred illustration.
+ */
+const VARIANT_BOX_CLASSES: Record<PostImageVariant, string> = {
+    /* 16:9, not 4:3. The box fills the post column, and at 720px a 4:3 box
+       is 540px tall -- one card then owns most of a laptop screen and the
+       feed reads as a slideshow. The wider ratio keeps the row's height
+       proportionate to the column it grew into; the crop is unchanged. */
+    card: `aspect-[16/9] ${MAX_BOX_WIDTH}`,
+    /* The box hugs the file, and sits in the middle of the column.
+
+       Three earlier attempts all left a gap, each for its own reason: a
+       560px cap kept the image small while the column grew; removing the cap
+       made the box full width, and `object-contain` then painted a portrait
+       file centred inside it with empty bands either side. So the box is
+       sized to what it holds -- `w-fit`, bounded by the column -- and
+       centred in the flex column both its parents are. */
+    post: 'w-fit max-w-full self-center',
+};
+
+const VARIANT_IMAGE_CLASSES: Record<PostImageVariant, string> = {
+    card: 'h-full w-full object-cover object-top',
+    /* `w-auto`, so the file keeps its own proportions inside a box already
+       sized to it. `w-full` here is what letterboxed a portrait image. */
+    post: 'h-auto max-h-[720px] w-auto max-w-full object-contain',
 };
 
 type PostImageProps = {
     media: Attachment;
     /** Defaults to `card`, the tighter cap. */
     variant?: PostImageVariant;
+    /**
+     * What the viewer's drawer holds below `md`, if anything.
+     *
+     * Optional because this component is used in three places and only one of
+     * them has replies in hand: a feed row knows nothing about the thread's
+     * comments, and inventing a fetch here would put a second source of the
+     * comment tree behind a picture. The thread page passes its own.
+     */
+    viewerDrawer?: ReactNode;
+    /** Names the drawer's control, e.g. "312 replies". */
+    viewerDrawerLabel?: string;
+    /**
+     * The thread this picture belongs to, which is what makes the viewer a
+     * place rather than a lightbox: the community at the top, the replies in
+     * the drawer, and the way in at the foot.
+     *
+     * `repliesUrl` is fetched the first time the drawer opens. A feed row
+     * carries no comments, and sending every thread's tree with the feed
+     * would be tens of thousands of rows for the handful anyone opens; the
+     * thread page passes `viewerDrawer` instead and never fetches.
+     */
+    board?: string;
+    threadHref?: string;
+    repliesUrl?: string;
     className?: string;
 };
 
-function PostImage({ media, variant = 'card', className }: PostImageProps) {
+function PostImage({
+    media,
+    variant = 'card',
+    viewerDrawer,
+    viewerDrawerLabel = 'Replies',
+    board,
+    threadHref,
+    repliesUrl,
+    className,
+}: PostImageProps) {
     /* Concealment is the initial state, not a permanent one: revealing is a
        per-attachment decision an anon makes and it does not persist. */
     const [revealed, setRevealed] = useState(media.concealed === null);
     const [expanded, setExpanded] = useState(false);
+    /* Closed on arrival. The viewer is opened to look at the picture, so the
+       replies wait behind a control rather than taking half the screen from
+       the thing that was tapped. */
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    /* Fetched once, the first time the drawer opens, and only when the caller
+       did not hand its content over. */
+    const [fetched, setFetched] = useState<Comment[] | null>(null);
+    const [loadingReplies, setLoadingReplies] = useState(false);
     const [failed, setFailed] = useState(false);
 
     const box = intrinsicBox(media);
+
+    const drawerContent =
+        viewerDrawer ??
+        (fetched === null ? null : <CommentTree comments={fetched} />);
+    const hasDrawer = viewerDrawer !== undefined || repliesUrl !== undefined;
+
+    async function openDrawer(): Promise<void> {
+        setDrawerOpen(!drawerOpen);
+
+        if (
+            drawerOpen ||
+            viewerDrawer !== undefined ||
+            repliesUrl === undefined ||
+            fetched !== null
+        ) {
+            return;
+        }
+
+        setLoadingReplies(true);
+
+        try {
+            const response = await fetch(repliesUrl, {
+                headers: { Accept: 'application/json' },
+            });
+            const data = response.ok
+                ? ((await response.json()) as { comments: Comment[] })
+                : null;
+
+            setFetched(data?.comments ?? []);
+        } catch {
+            /* An empty list rather than a spinner that never stops: the
+               drawer is a convenience over the thread page, which is one tap
+               away and always has the real tree. */
+            setFetched([]);
+        } finally {
+            setLoadingReplies(false);
+        }
+    }
 
     /**
      * A file 4chan has since pruned still has a `tim`, so the URL is
@@ -211,6 +344,7 @@ function PostImage({ media, variant = 'card', className }: PostImageProps) {
                     /* Full width too: an image that fills its box is still
                        inset if the box itself does not fill the column. */
                     'group block w-full overflow-hidden rounded-lg border border-border bg-surface-elevated',
+                    VARIANT_BOX_CLASSES[variant],
                     'transition-colors duration-[var(--duration-hover)] ease-standard hover:border-border-strong',
                     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                     className,
@@ -227,43 +361,247 @@ function PostImage({ media, variant = 'card', className }: PostImageProps) {
                        at least keeps which page an anon was reading out of it. */
                     referrerPolicy="no-referrer"
                     onError={() => setFailed(true)}
-                    className={cn('block', VARIANT_CLASSES[variant])}
+                    className={cn('block', VARIANT_IMAGE_CLASSES[variant])}
                 />
             </button>
 
             <Dialog open={expanded} onOpenChange={setExpanded}>
-                {/* Sized to whatever it holds rather than to a fixed column:
-                    the dialog exists to show one image at its own proportions,
-                    so a portrait shot should not sit in a landscape box with
-                    empty space either side of it. `w-fit` lets the panel
-                    shrink to the image; the viewport caps keep a large one on
-                    screen. */}
-                <DialogContent className="w-fit max-w-[min(94vw,1400px)] sm:max-w-[min(94vw,1400px)]">
+                {/* The whole screen on a phone, a panel on a desktop.
+                
+                    It was a centred card at every width, which on a phone
+                    gave the file *less* room than the thread page had already
+                    given it and put the only way out in a corner as a 24px
+                    cross. Below `md` it fills the viewport: the image takes
+                    the middle, and the controls sit in a bar at the bottom
+                    where a thumb is. At `md` and up the panel comes back,
+                    sized to the image rather than to a fixed column, so a
+                    portrait shot is not boxed in a landscape frame. */}
+                <DialogContent
+                    /* The file's own size, inherited by the image inside.
+                       The panel is sized from it at `md` and up rather than
+                       from `fit-content`: fitting to the image while the
+                       image is bounded by the panel is a circle, and it
+                       resolved to a 698px panel holding a 964px picture. */
+                    style={
+                        {
+                            '--file-w':
+                                media.width === null
+                                    ? '100%'
+                                    : `${media.width}px`,
+                            '--file-h':
+                                media.height === null
+                                    ? '100%'
+                                    : `${media.height}px`,
+                            /* Unitless, so `calc()` can turn a height bound
+                               into the width that bound implies. Without it
+                               the panel could only be told "at most the
+                               file's width", which on a height-limited image
+                               left it 1313px wide around a 964px picture. */
+                            '--file-ratio':
+                                media.width === null || media.height === null
+                                    ? '1'
+                                    : String(media.width / media.height),
+                        } as CSSProperties
+                    }
+                    className="grid h-dvh w-full max-w-none grid-cols-1 grid-rows-[auto_1fr_auto] gap-0 rounded-none border-0 bg-bg p-0 sm:max-w-none md:h-auto md:w-[min(94vw,var(--file-w),calc(82vh*var(--file-ratio)))] md:max-w-[min(94vw,1400px)] md:rounded-2xl md:border md:p-6"
+                >
                     <DialogTitle className="sr-only">
                         {media.filename}
                     </DialogTitle>
 
-                    <img
-                        src={media.fullUrl}
-                        alt={altFor(media)}
-                        width={media.width ?? undefined}
-                        height={media.height ?? undefined}
-                        referrerPolicy="no-referrer"
-                        onError={() => {
-                            setFailed(true);
-                            setExpanded(false);
-                        }}
-                        /* Both axes automatic, bounded by the viewport. The
-                           `width` and `height` attributes above are the file's
-                           real dimensions and would otherwise fix the rendered
-                           size, so `h-auto w-auto` is what actually hands the
-                           proportions back to the image. */
-                        className="h-auto max-h-[82vh] w-auto max-w-full justify-self-center rounded-md object-contain"
-                    />
+                    {/* The file's name, and room for the close control
+                        `DialogContent` draws in the corner. One way out, not
+                        two: a second close button of our own would have sat
+                        beside the built-in one at every width, and the built-in
+                        one now carries a 44px hit area of its own. */}
+                    {/* The community first, the file second. A viewer that
+                        names only the file is a lightbox; naming the board
+                        says which conversation this picture belongs to,
+                        which is the thing the drawer below then shows. */}
+                    <div /* `h-16`, not padding. `DialogContent` positions its close
+                            control absolutely at `top-4` with a `size-8` box,
+                            so its centre is 32px from the panel's top edge
+                            whatever this row does -- and a `py-3` row put the
+                            board and the filename 4px above it. A 64px row
+                            centres its own contents on the same line. */
+                        className="flex h-16 min-w-0 items-center gap-2 overflow-hidden border-b border-border px-3 pr-14 md:hidden"
+                    >
+                        {board !== undefined ? (
+                            <span className="shrink-0 text-body-sm font-semibold text-foreground">
+                                {board}
+                            </span>
+                        ) : null}
+                        <MachineValue className="min-w-0 truncate text-faint">
+                            {media.filename}
+                        </MachineValue>
+                    </div>
 
-                    <MachineValue className="text-center text-faint">
-                        {media.label}
-                    </MachineValue>
+                    {/* `min-w-0` as well as `min-h-0`. A grid item's minimum
+                        is `auto`, which is its content's intrinsic size -- so
+                        a 1024px file made this track 1024px wide inside a
+                        320px dialog and the picture ran off both edges. The
+                        same rule is why the header row beside the close
+                        control needs one. */}
+                    <div className="flex min-h-0 min-w-0 items-center justify-center overflow-hidden p-2 md:p-0">
+                        <img
+                            src={media.fullUrl}
+                            alt={altFor(media)}
+                            width={media.width ?? undefined}
+                            height={media.height ?? undefined}
+                            referrerPolicy="no-referrer"
+                            /* The file's own size, as custom properties
+                               rather than inline `max-width` / `max-height`.
+
+                               Never larger than the file itself is the rule:
+                               `h-full w-full` fills the viewer, which is what
+                               a 1440px photograph wants and what a 96px
+                               reaction image very much does not. But an
+                               inline declaration beats every class, so
+                               capping this way took `md:max-h-[82vh]` out of
+                               the cascade with it -- on a wide screen the
+                               image was then free to render at its natural
+                               1440x1080 inside a panel capped at 94vw, and
+                               was simply clipped by it. Feeding the numbers
+                               to the classes instead leaves each breakpoint
+                               able to bound them.
+
+                               Below `md` the bound is the box, not the file:
+                               `max-w-[var(--file-w)]` let a 1170px file size
+                               the element from its own width inside a 429px
+                               panel, and it ran 208px past the edge. The
+                               panel is the whole screen there, so the box is
+                               already the right bound and the file's numbers
+                               have no work to do.
+
+                               `grid-cols-1` on the panel is what makes that
+                               bound real. The implicit column is `auto`,
+                               which sizes to its content -- and the content
+                               is an image whose `height: 100%` and intrinsic
+                               ratio ask for 769px. The column took it, so the
+                               row was 662px inside a 429px panel and the
+                               picture ran off the screen. `1fr` is a definite
+                               share of the panel instead.
+
+                               At `md` and up the bound is the viewport --
+                               `94vw` and `82vh` -- rather than `100%`. The
+                               panel is `w-fit`, so a percentage there asks
+                               the parent for a width the parent is deriving
+                               from this image: the circle resolved small, and
+                               a 1440px file opened at 649px on a 1440px
+                               screen. */
+                            onError={() => {
+                                setFailed(true);
+                                setExpanded(false);
+                            }}
+                            /* Both axes automatic, bounded by the box it sits
+                               in. The `width` and `height` attributes above
+                               are the file's real dimensions and would
+                               otherwise fix the rendered size, so `h-auto
+                               w-auto` is what hands the proportions back to
+                               the image. */
+                            /* Fills the space the viewer gives it, ratio
+                               intact. `h-auto w-auto` let the file render at
+                               its intrinsic size, so a 1024x760 image sat
+                               small in the middle of a phone's screen with
+                               black either side of it -- a viewer that shows
+                               a picture smaller than the row it was opened
+                               from. `object-contain` is what keeps the
+                               proportions while the box does the sizing. At
+                               `md` and up the panel is sized to the image
+                               instead, so the old rule holds there. */
+                            className="h-full max-h-full w-full max-w-full rounded-md object-contain md:h-auto md:max-h-[min(82vh,var(--file-h))] md:w-auto md:max-w-full"
+                        />
+                    </div>
+
+                    {/* The bottom bar. Every control in it is a real touch
+                        target rather than a line of small print: `label` is
+                        the file's own size and dimensions, and the link is
+                        the file itself on 4chan's CDN, which is the one
+                        action this component has any source for. Bookmarking
+                        and sharing belong to the post, not to its
+                        attachment, and this component has never been given
+                        one. */}
+                    <div className="flex flex-col md:mt-4">
+                        {/* The drawer, below `md` only and only where the
+                            caller had replies to give. Closed on arrival, and
+                            it takes at most half the screen when open so the
+                            picture it belongs to is still visible above it. */}
+                        {hasDrawer ? (
+                            <div className="border-t border-border md:hidden">
+                                <button
+                                    type="button"
+                                    onClick={openDrawer}
+                                    aria-expanded={drawerOpen}
+                                    className="touch-target-44 flex w-full items-center justify-between gap-3 px-3 py-3 text-left text-body-sm text-foreground"
+                                >
+                                    {viewerDrawerLabel}
+                                    <ChevronUp
+                                        aria-hidden="true"
+                                        className={cn(
+                                            'size-4 shrink-0 text-faint transition-transform duration-[var(--duration-state)] ease-standard',
+                                            drawerOpen && 'rotate-180',
+                                        )}
+                                    />
+                                </button>
+
+                                {drawerOpen ? (
+                                    <div className="flex max-h-[50dvh] flex-col gap-4 overflow-y-auto border-t border-border px-3 py-3">
+                                        {loadingReplies ? (
+                                            <p className="text-body-sm text-muted-foreground">
+                                                Loading replies…
+                                            </p>
+                                        ) : (
+                                            (drawerContent ?? (
+                                                <p className="text-body-sm text-muted-foreground">
+                                                    No replies yet.
+                                                </p>
+                                            ))
+                                        )}
+                                    </div>
+                                ) : null}
+                            </div>
+                        ) : null}
+
+                        {/* The way in, at the very bottom of the viewer
+                            rather than inside the drawer that scrolls. It is
+                            the last row of the panel's grid, so it holds its
+                            place whether the replies are open, closed or
+                            being scrolled through. */}
+                        {threadHref !== undefined ? (
+                            <div className="border-t border-border px-3 py-3 md:hidden">
+                                <Button
+                                    variant="outline"
+                                    asChild
+                                    className="w-full"
+                                >
+                                    <Link href={threadHref}>
+                                        Join the conversation
+                                    </Link>
+                                </Button>
+                            </div>
+                        ) : null}
+
+                        {/* The file's own line, `md` and up only. On a phone
+                            it was the last thing in the viewer, under the
+                            replies and the way into them -- a filename and a
+                            byte count holding the position an anon's thumb
+                            lands on. The picture is the claim; its weight is
+                            not. */}
+                        <div className="hidden min-w-0 items-center justify-center gap-3 border-t border-border px-3 py-2 md:flex md:border-0 md:py-0">
+                            <MachineValue className="min-w-0 truncate text-faint">
+                                {media.label}
+                            </MachineValue>
+
+                            {/* No "Original file" link. It sent an anon to
+                                4chan's CDN for the same picture already
+                                filling the screen -- a way out of Clover
+                                rather than a use of it, and on a phone it
+                                opened a bare image with no way back. The
+                                file's own line stays: its size and dimensions
+                                are the one claim here the viewer cannot make
+                                by showing the thing itself. */}
+                        </div>
+                    </div>
                 </DialogContent>
             </Dialog>
         </>
@@ -278,18 +616,13 @@ function PostImage({ media, variant = 'card', className }: PostImageProps) {
  */
 function PostAttachment({
     media,
-    variant,
-    className,
-}: {
-    media: Attachment | null;
-    variant?: PostImageVariant;
-    className?: string;
-}) {
+    ...props
+}: Omit<PostImageProps, 'media'> & { media: Attachment | null }) {
     if (media === null) {
         return null;
     }
 
-    return <PostImage media={media} variant={variant} className={className} />;
+    return <PostImage media={media} {...props} />;
 }
 
 export { PostAttachment, PostImage };

@@ -73,7 +73,12 @@ function DialogContent({
                 {children}
                 <DialogPrimitive.Close
                     className={cn(
-                        'absolute top-4 right-4 inline-flex size-8 items-center justify-center rounded-md text-faint',
+                        /* A real touch target on a coarse pointer. At 32px
+                           this was under the 44px minimum, and it is the only
+                           way out of a dialog that fills the screen on a
+                           phone -- task 5 flagged it and scoped it out; the
+                           full-image viewer is what brought it back. */
+                        'touch-target-44 absolute top-4 right-4 inline-flex size-8 items-center justify-center rounded-md text-faint',
                         'transition-colors duration-[var(--duration-hover)] ease-[var(--ease-standard)]',
                         'hover:not-disabled:bg-surface-hover hover:not-disabled:text-foreground',
                         'disabled:pointer-events-none disabled:opacity-60',

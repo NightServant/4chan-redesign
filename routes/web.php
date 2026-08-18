@@ -156,4 +156,23 @@ Route::post('{board}/{thread}/replies', [ReplyController::class, 'store'])
     ->where(['board' => $boardPattern, 'thread' => '[0-9]+'])
     ->name('replies.store');
 
+/**
+ * A thread's replies as JSON, for the full-image viewer's drawer. Public, in
+ * the same group as the board pages, because reading needs no account.
+ */
+Route::get('{board}/{thread}/replies', [ReplyController::class, 'index'])
+    ->where(['board' => $boardPattern, 'thread' => '[0-9]+'])
+    ->name('replies.index');
+
+/**
+ * The composer as its own page, which is how a phone writes a reply. Behind
+ * `auth` like the route it posts to: a composer an anon could reach without an
+ * account would take a reply and then bounce them to a login form with what
+ * they wrote gone.
+ */
+Route::get('{board}/{thread}/reply', [ReplyController::class, 'create'])
+    ->middleware('auth')
+    ->where(['board' => $boardPattern, 'thread' => '[0-9]+'])
+    ->name('replies.create');
+
 require __DIR__.'/settings.php';

@@ -5,10 +5,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SearchField } from '@/components/clover/search-field';
 import { readSearchHistory, rememberSearch } from '@/lib/search-history';
 
-const { router } = vi.hoisted(() => ({ router: { visit: vi.fn() } }));
+const { router, mockPage } = vi.hoisted(() => ({
+    router: { visit: vi.fn() },
+    /**
+     * Signed out by default, which is what most visitors are and is the case
+     * the history gate is about. Individual tests sign in by assigning to
+     * `mockPage.props.auth.user` before rendering.
+     */
+    mockPage: {
+        props: { auth: { user: null as { id: number } | null } },
+        url: '/',
+    },
+}));
 
 vi.mock('@inertiajs/react', () => ({
     router,
+    usePage: () => mockPage,
     Link: ({
         href,
         children,
@@ -19,6 +31,9 @@ vi.mock('@inertiajs/react', () => ({
         </a>
     ),
 }));
+
+/** Enough of a user for `Boolean(auth.user)`, which is all this field reads. */
+const SIGNED_IN = { id: 7 };
 
 const RESULTS = {
     query: 'g',
@@ -57,6 +72,7 @@ beforeEach(() => {
     vi.useRealTimers();
     router.visit.mockClear();
     localStorage.clear();
+    mockPage.props.auth.user = null;
 });
 
 afterEach(() => {
@@ -76,6 +92,34 @@ describe('SearchField', () => {
 
         expect(screen.getByRole('combobox')).toBeInTheDocument();
         expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    });
+
+    /**
+     * A plain native placeholder, and no ghost span.
+     *
+     * This field wore a `before:content-['Search']` /
+     * `md:before:content-['Search boards and threads']` span so the wording
+     * could shorten below `md`, where the field had roughly 160px to work
+     * with. Task 6 removed that case: below `md` the header renders a button
+     * that visits the search page, and this component sits inside
+     * `hidden md:block`. The short branch was styling for a width this
+     * component is never painted at.
+     */
+    it('places its one placeholder on the input itself', () => {
+        mockFetch();
+
+        const { container } = render(<SearchField />);
+
+        const input = screen.getByRole('combobox');
+        expect(input).toHaveAttribute(
+            'placeholder',
+            'Search boards and threads',
+        );
+        expect(input).toHaveAccessibleName('Search boards and threads');
+
+        expect(
+            container.querySelector('[class*="content-[\'Search\']"]'),
+        ).toBeNull();
     });
 
     it('opens the dropdown on focus and asks the server for suggestions', async () => {
@@ -294,11 +338,51 @@ describe('SearchField recent searches', () => {
     it('records a search when one is run', async () => {
         const user = userEvent.setup();
         mockFetch();
+        mockPage.props.auth.user = SIGNED_IN;
 
         render(<SearchField />);
         await user.type(screen.getByRole('combobox'), 'init systems{Enter}');
 
         expect(readSearchHistory()).toEqual(['init systems']);
+    });
+
+    /**
+     * Task 13, fix 1. `runSearch` has no page context, so a signed-out
+     * visitor's terms were being written to `clover:search-history` and shown
+     * back to them — a search log for somebody the site is not supposed to
+     * know. The field knows who is signed in, so the field is what answers.
+     *
+     * Asserted against real storage rather than a spy: the complaint is about
+     * what lands in `localStorage`, and a spy on `rememberSearch` would still
+     * pass with the gate on the wrong side of the write.
+     */
+    it('records nothing when a signed-out anon runs a search', async () => {
+        const user = userEvent.setup();
+        mockFetch();
+
+        render(<SearchField />);
+        await user.type(screen.getByRole('combobox'), 'init systems{Enter}');
+
+        expect(readSearchHistory()).toEqual([]);
+        expect(localStorage.getItem('clover:search-history')).toBeNull();
+        expect(router.visit).toHaveBeenCalledWith('/search?q=init%20systems');
+    });
+
+    /**
+     * The read is untouched. Signing out does not erase what was recorded, and
+     * the dropdown still offers it — the gate is on the write only.
+     */
+    it('still shows history already stored to a signed-out anon', async () => {
+        const user = userEvent.setup();
+        mockFetch({ query: '', boards: [], threads: [] });
+        rememberSearch('btrfs');
+
+        render(<SearchField />);
+        await user.click(screen.getByRole('combobox'));
+
+        expect(
+            await screen.findByRole('option', { name: /btrfs/ }),
+        ).toBeInTheDocument();
     });
 
     it('shows no recent group before anything has been searched', async () => {

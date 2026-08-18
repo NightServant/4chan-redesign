@@ -1,4 +1,5 @@
 import { EditProfileDialog } from '@/components/account/edit-profile-dialog';
+import { SettingsDrawer } from '@/components/account/settings-drawer';
 import { AnonAvatar } from '@/components/clover/anon-avatar';
 import { MachineValue } from '@/components/clover/machine-value';
 import { PatternField } from '@/components/clover/pattern-field';
@@ -56,41 +57,72 @@ function ProfileHeader({ profile, stats }: ProfileHeaderProps) {
         <section
             aria-label="Profile"
             data-slot="profile-header"
-            className="border border-border"
+            /* Boxed at `md` and up, ruled below it. A border around the top
+               of a page built on hairlines is a card inside a card, and on a
+               320px screen its two side borders are spent on nothing. */
+            className="md:border md:border-border"
         >
             <PatternField depth={40}>
-                <div className="flex flex-wrap items-start gap-5 border-b border-border p-6">
+                {/* A column of rows, not one wrapping row.
+
+                    Avatar, name and the chip all sat in a single
+                    `flex-wrap` row, and the chip does not shrink: between
+                    roughly 340px and 440px it stayed on the first line and
+                    squeezed the text column to almost nothing, so the handle
+                    ran under the chip and the bio broke mid-word -- "Just
+                    wonderi / ng / aroun / d". Nothing wraps its way out of
+                    that, because the column had no width left to wrap in.
+
+                    So the identity line is avatar + name only, and the bio
+                    and the chip each get a row of their own beneath it.
+                    Nothing on this block competes for horizontal space with
+                    anything that cannot yield. */}
+                <div className="flex flex-col gap-4 border-b border-border p-4 md:p-6">
                     {/* Square, and in the flow. It used to be a circle
                         overhanging the bottom edge of a cover band, which is
                         a shape that only makes sense when there is a
                         photograph behind it. */}
-                    <AnonAvatar
-                        seed={profile.handle}
-                        size={72}
-                        className="shrink-0 rounded-none border border-border"
-                    />
+                    <div className="flex items-start gap-4">
+                        <AnonAvatar
+                            seed={profile.handle}
+                            size={72}
+                            className="shrink-0 rounded-none border border-border"
+                        />
 
-                    <div className="flex min-w-0 flex-1 flex-col gap-2">
-                        <div className="flex flex-wrap items-baseline gap-3">
-                            <h1 className="font-display text-h1 font-semibold tracking-[-0.5px] text-foreground">
-                                {profile.handle}
-                            </h1>
+                        <div className="flex min-w-0 flex-1 flex-col gap-2">
+                            <div className="flex flex-wrap items-baseline gap-3">
+                                {/* `min-w-0` and `break-words`: a handle is
+                                    one unbroken token by construction, so
+                                    without them it sets the column's minimum
+                                    width and pushes everything beside it off
+                                    the screen. */}
+                                <h1 className="min-w-0 font-display text-h1 font-semibold tracking-[-0.5px] break-words text-foreground">
+                                    {profile.handle}
+                                </h1>
 
-                            {profile.tripcode ? (
-                                <MachineValue className="border border-border px-1.5 py-0.5">
-                                    {profile.tripcode}
-                                </MachineValue>
-                            ) : null}
+                                {profile.tripcode ? (
+                                    <MachineValue className="border border-border px-1.5 py-0.5">
+                                        {profile.tripcode}
+                                    </MachineValue>
+                                ) : null}
+                            </div>
+
+                            <MachineValue>{metaLine(profile)}</MachineValue>
                         </div>
-
-                        {profile.bio ? (
-                            <p className="max-w-[60ch] text-body-sm text-pretty text-muted-foreground">
-                                {profile.bio}
-                            </p>
-                        ) : null}
-
-                        <MachineValue>{metaLine(profile)}</MachineValue>
                     </div>
+
+                    {profile.bio ? (
+                        /* `break-words`, because a bio is whatever an anon
+                           typed and an anon can type "HAHAHAHAHAHAHAHAHA"
+                           with no space in it. A single unbroken word has
+                           nowhere to wrap, so it ran out of its column and
+                           past the edge of the block. It gets the full
+                           measure now rather than whatever the chip beside it
+                           left over, which is what made it break mid-word. */
+                        <p className="max-w-[60ch] text-body-sm text-pretty break-words text-muted-foreground">
+                            {profile.bio}
+                        </p>
+                    ) : null}
 
                     {/* A dialog over the profile rather than a link to
                         settings. It used to navigate to the settings form,
@@ -103,19 +135,51 @@ function ProfileHeader({ profile, stats }: ProfileHeaderProps) {
                         which is whichever anon is signed in, so the "shared"
                         link showed the recipient their own profile rather than
                         the sender's. */}
-                    <EditProfileDialog profile={profile} />
+                    {/* The chip and, below `md`, a settings control beside
+                        it. Gabe's decision, 2026-08-17: settings are not part
+                        of a profile, they are what an anon goes to from one,
+                        so they open in a drawer rather than sitting stacked
+                        at the foot of this page. At `md` and up the avatar
+                        dropdown still carries them and this control does not
+                        render. */}
+                    <div className="flex items-center gap-2 self-start">
+                        <EditProfileDialog profile={profile} />
+                        <SettingsDrawer />
+                    </div>
                 </div>
 
                 {/* The figures, at the size figures deserve when they are the
                     content rather than a caption on it. Label under value, so
                     the eye lands on the number first; `dt` still precedes its
                     `dd` in the DOM, which is what the reversed column is for. */}
-                <dl className="flex flex-wrap">
+                {/* A grid, not a wrapping flex row. `flex-wrap` with a
+                    basis dropped the third figure onto its own line somewhere
+                    around 340px -- two up, one below, which reads as a
+                    mistake rather than a layout. `auto-fit` with a zero
+                    minimum keeps however many figures there are on one line
+                    at every width. */}
+                <dl className="grid grid-cols-[repeat(auto-fit,minmax(0,1fr))]">
                     {stats.map((stat, index) => (
                         <div
                             key={stat.label}
+                            /* `basis-0` below `md`, so three short numbers
+                               share one row on a phone. `basis-40` is 160px:
+                               at 320px each figure claimed more than half the
+                               row, the three of them stacked, and the block
+                               spent roughly 250px before the tabs came into
+                               view. The wider basis returns at `md`, where
+                               there is room for it. */
+                            /* `px-2` at the narrow end, and it is not a taste
+                               call: at 320px three columns are ~106px each,
+                               `px-3` left 82px of that for the label, and
+                               "BOOKMARKS" — nine characters at `text-label`
+                               with 1.2px of tracking — needs about 78px. It
+                               was clipped at the right edge. `px-2` leaves
+                               90px, which fits it with room; the wider
+                               padding returns as soon as there is width to
+                               spend on it. */
                             className={cn(
-                                'flex flex-1 basis-40 flex-col-reverse gap-1 px-6 py-5',
+                                'flex min-w-0 flex-col-reverse gap-1 px-2 py-4 sm:px-3 md:px-6 md:py-5',
                                 index > 0 && 'border-l border-border',
                             )}
                         >
@@ -123,7 +187,7 @@ function ProfileHeader({ profile, stats }: ProfileHeaderProps) {
                                 <SectionLabel>{stat.label}</SectionLabel>
                             </dt>
                             <dd>
-                                <MachineValue className="font-display text-[28px] leading-none font-semibold text-foreground">
+                                <MachineValue className="font-display text-[22px] leading-none font-semibold text-foreground md:text-[28px]">
                                     {stat.value}
                                 </MachineValue>
                             </dd>

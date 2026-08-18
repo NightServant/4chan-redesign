@@ -1,28 +1,109 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     makeAttachment,
+    makeHistoryEntry,
     makeProfile,
     makeProfileComment,
     makeStat,
+    makeThread,
 } from '@/fixtures/factories';
 import Account from '@/pages/account';
+import type { User } from '@/types/auth';
+
+/**
+ * A router double whose `post`/`delete` are *methods* on the object rather
+ * than plain functions, matching `use-bookmark.test.tsx`'s own double: a
+ * detached `{ post: vi.fn() }` cannot reproduce the failure the real bug
+ * had, since `useBookmark` calls these on `router` rather than picking them
+ * off it, and a detached copy loses `this`.
+ *
+ * `SIGNED_IN_USER` lives inside this call rather than beside it: `vi.hoisted`
+ * runs before the rest of the module's top-level `const`s are evaluated, so
+ * a reference to an outer one throws `Cannot access before initialization`.
+ */
+const { visit, patch, router, pageProps, SIGNED_IN_USER } = vi.hoisted(() => {
+    const visit = vi.fn();
+
+    const signedInUser = {
+        id: 1,
+        email: 'anon@example.com',
+        email_verified_at: null,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+    };
+
+    return {
+        visit,
+        patch: vi.fn(),
+        router: {
+            visit,
+            post(url: string, data?: unknown, options?: unknown) {
+                return this.visit(url, {
+                    ...(options ?? {}),
+                    method: 'post',
+                    data,
+                });
+            },
+            delete(url: string, options?: unknown) {
+                return this.visit(url, {
+                    ...(options ?? {}),
+                    method: 'delete',
+                });
+            },
+        },
+        pageProps: {
+            auth: { user: signedInUser as User | null },
+            sidebarBoards: [] as unknown[],
+            showsMatureBoards: false,
+        },
+        SIGNED_IN_USER: signedInUser,
+    };
+});
 
 vi.mock('@inertiajs/react', () => ({
     Head: () => null,
-    /* AccountOverview reads the sidebar's board list off the shared props. */
-    usePage: () => ({ props: { sidebarBoards: [] } }),
+    router: { ...router, patch },
+    /* AccountOverview reads the sidebar's board list off the shared props;
+       `MatureBoardsToggle` (the below-`md` adult-boards row) reads
+       `showsMatureBoards` off the same shared object; `useBookmark` reads
+       `auth.user` off it too, since the History tab's cards carry the same
+       bookmark control the feed's do. */
+    usePage: () => ({ props: pageProps }),
     Link: ({
         href,
+        as,
         children,
         ...props
     }: {
-        href: string | { url: string };
+        href: string | { url: string; method?: string };
+        as?: string;
         children: ReactNode;
     } & Record<string, unknown>) => {
         const url = typeof href === 'string' ? href : href.url;
+        /* A bare string carries no method, so Inertia sends GET. Wayfinder's
+           route objects carry their own -- `logout()` is `{ url, method:
+           'post' }` -- and that difference is the whole of whether sign out
+           works. The double used to throw both away and render the tag, so a
+           `Link` pointed at the string "/logout" passed every assertion here
+           while issuing a GET to a POST-only route in a browser. */
+        const method =
+            typeof href === 'string' ? 'get' : (href.method ?? 'get');
+
+        if (as === 'button') {
+            return (
+                <button
+                    type="button"
+                    data-href={url}
+                    data-method={method}
+                    {...props}
+                >
+                    {children}
+                </button>
+            );
+        }
 
         return (
             <a href={url} {...props}>
@@ -78,8 +159,17 @@ function accountProps() {
         comments: PROFILE_COMMENTS,
         media: [],
         saved: [],
+        history: [],
     };
 }
+
+beforeEach(() => {
+    patch.mockReset();
+    visit.mockClear();
+    pageProps.auth = { user: SIGNED_IN_USER };
+    pageProps.sidebarBoards = [];
+    pageProps.showsMatureBoards = false;
+});
 
 describe('Account', () => {
     it('has exactly one first-level heading, naming the anon', () => {
@@ -91,7 +181,15 @@ describe('Account', () => {
         expect(headings[0]).toHaveTextContent('anon_4412');
     });
 
-    it('offers three profile tabs and no settings tab', () => {
+    /**
+     * History is the fourth tab, and it is `md:hidden` -- at `md` and up
+     * `/history` is its own page reached from the avatar menu, and this tab
+     * does not exist there. jsdom cannot evaluate the media query, so both
+     * facts are asserted separately: all four tabs are in the markup (this
+     * test), and the fourth carries the class that hides it above `md` (the
+     * "History tab" tests below).
+     */
+    it('offers four profile tabs -- Comments, Media, Saved, History -- and no settings tab', () => {
         render(<Account {...accountProps()} />);
 
         const tablist = screen.getByRole('tablist');
@@ -100,7 +198,7 @@ describe('Account', () => {
             within(tablist)
                 .getAllByRole('tab')
                 .map((tab) => tab.textContent),
-        ).toEqual(['Comments', 'Media', 'Saved']);
+        ).toEqual(['Comments', 'Media', 'Saved', 'History']);
     });
 
     it('opens on Comments, which is what an anon has here', () => {
@@ -213,5 +311,197 @@ describe('Account', () => {
             'aria-selected',
             'true',
         );
+    });
+
+    /**
+     * Change 3: History moves onto the account screen below `md`. The tab
+     * reads what `/history` shows -- the same `ThreadCard`, newest first,
+     * grouped by day -- through the same `HistoryEntryList` component
+     * `history.tsx` renders, not a second list built to match it by hand.
+     */
+    describe('History tab', () => {
+        it('is `md:hidden`, on both the trigger and its content', () => {
+            render(<Account {...accountProps()} />);
+
+            expect(screen.getByRole('tab', { name: 'History' })).toHaveClass(
+                'md:hidden',
+            );
+        });
+
+        it('shows an empty state pointing at the real history screen when there is none', async () => {
+            render(<Account {...accountProps()} />);
+
+            await openTab('History');
+
+            expect(
+                screen.getByRole('heading', { name: /no history/i }),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByRole('link', { name: /open history/i }),
+            ).toHaveAttribute('href', '/history');
+        });
+
+        it("draws each entry with the feed's own card, grouped by day", async () => {
+            const entries = [
+                makeHistoryEntry({
+                    thread: makeThread({ title: 'Read this morning', no: 1 }),
+                    day: 'Today',
+                    when: 'Today, 09:00',
+                }),
+            ];
+
+            const { container } = render(
+                <Account {...accountProps()} history={entries} />,
+            );
+
+            await openTab('History');
+
+            expect(
+                container.querySelectorAll('[data-slot="thread-card"]'),
+            ).toHaveLength(1);
+            expect(screen.getByText('Read this morning')).toBeInTheDocument();
+        });
+
+        /**
+         * The tab is capped server-side (`AccountController::HISTORY`), so
+         * there can always be more than it shows -- unlike the Saved tab's
+         * empty-state-only link, this one is offered whenever there is
+         * anything in the list, since "the rest" only exists once the list
+         * is non-empty.
+         */
+        it('links onward to the full history screen when there are entries, not only when empty', async () => {
+            const entries = [makeHistoryEntry({ day: 'Today' })];
+
+            render(<Account {...accountProps()} history={entries} />);
+
+            await openTab('History');
+
+            expect(
+                screen.getByRole('link', { name: /view full history/i }),
+            ).toHaveAttribute('href', '/history');
+        });
+
+        it('wires a real bookmark handler to each card, like every other screen', async () => {
+            const user = userEvent.setup();
+            const thread = makeThread({ id: 12, no: 12, bookmarked: false });
+            const entries = [makeHistoryEntry({ thread, day: 'Today' })];
+
+            render(<Account {...accountProps()} history={entries} />);
+
+            await openTab('History');
+
+            const [save] = screen.getAllByRole('button', {
+                name: /save|bookmark/i,
+            });
+            await user.click(save);
+
+            /* A missing handler would leave this unclicked-through rather
+               than throwing, which is exactly the defect `use-bookmark.
+               test.tsx`'s file scan exists to catch across every page: the
+               button renders, looks identical to a working one, and does
+               nothing at all. */
+            expect(visit).toHaveBeenCalledWith(
+                '/threads/12/bookmark',
+                expect.objectContaining({ method: 'post' }),
+            );
+        });
+    });
+
+    /**
+     * Change 4 and change 5: what the avatar dropdown carried below `md`
+     * that has nowhere else to go. `Show adult boards` moves the same way
+     * History does; `Two-factor authentication` and `Sign out` are new here
+     * -- the dropdown itself is hidden below `md` in `app-header.tsx`, and
+     * neither had any other home.
+     */
+    /**
+     * The four settings rows moved off the page and into a drawer opened from
+     * a control beside "Edit profile" (Gabe, 2026-08-17). They were stacked at
+     * the foot of a screen an anon opens to read their own replies, in three
+     * different idioms, with the loudest one being sign out.
+     *
+     * These guards open the drawer rather than asserting the rows are on the
+     * page, which is the point: a row nobody can reach is the defect this
+     * codebase keeps shipping, so each one is checked through the control an
+     * anon actually presses.
+     */
+    describe('account settings drawer', () => {
+        async function openSettings() {
+            const user = userEvent.setup();
+
+            await user.click(
+                screen.getByRole('button', { name: 'Account settings' }),
+            );
+
+            return screen.findByRole('dialog');
+        }
+
+        it('is reached from a control beside Edit profile, hidden at `md` and up', () => {
+            render(<Account {...accountProps()} />);
+
+            const trigger = screen.getByRole('button', {
+                name: 'Account settings',
+            });
+
+            expect(trigger).toHaveClass('md:hidden');
+        });
+
+        it('rises from the bottom edge rather than opening centred', async () => {
+            render(<Account {...accountProps()} />);
+
+            const drawer = await openSettings();
+
+            expect(drawer.dataset.slot).toBe('sheet-content');
+            expect(drawer.dataset.side).toBe('bottom');
+        });
+
+        it('renders the real adult-boards toggle, not a third copy of the control', async () => {
+            pageProps.showsMatureBoards = true;
+
+            render(<Account {...accountProps()} />);
+            await openSettings();
+
+            expect(
+                screen.getByRole('switch', { name: 'Show adult boards' }),
+            ).toBeChecked();
+        });
+
+        it('offers the theme as a row, since the header no longer carries it below `md`', async () => {
+            render(<Account {...accountProps()} />);
+            await openSettings();
+
+            expect(screen.getByText('Appearance')).toBeInTheDocument();
+        });
+
+        it('links to the two-factor page', async () => {
+            render(<Account {...accountProps()} />);
+            await openSettings();
+
+            expect(
+                screen.getByRole('link', {
+                    name: /two-factor authentication/i,
+                }),
+            ).toHaveAttribute('href', '/settings/two-factor');
+        });
+
+        /**
+         * Both halves of the contract, because only one of them was guarded.
+         *
+         * The tag was: dropping `as="button"` turned this red. The destination
+         * was not -- `href` never reached the double, so `href="/logout"` in
+         * place of `href={logout()}` passed here and in `app-header.test.tsx`,
+         * forty-five tests green over a GET to a POST-only route and sign out
+         * dead on every screen.
+         */
+        it('still posts to sign out, kept a real button rather than a plain link', async () => {
+            render(<Account {...accountProps()} />);
+            await openSettings();
+
+            const signOut = screen.getByRole('button', { name: /sign out/i });
+
+            expect(signOut.tagName).toBe('BUTTON');
+            expect(signOut).toHaveAttribute('data-href', '/logout');
+            expect(signOut).toHaveAttribute('data-method', 'post');
+        });
     });
 });

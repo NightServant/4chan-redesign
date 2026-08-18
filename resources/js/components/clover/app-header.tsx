@@ -4,8 +4,10 @@ import {
     BellIcon,
     BookmarkIcon,
     LogOutIcon,
+    MenuIcon,
     MessageSquareIcon,
     MoonIcon,
+    SearchIcon,
     ShieldIcon,
     SunIcon,
     UserIcon,
@@ -25,19 +27,91 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { SheetTrigger } from '@/components/ui/sheet';
 import { useAppearance } from '@/hooks/use-appearance';
+import { useCurrentUrl } from '@/hooks/use-current-url';
 import { ACCOUNT_MENU, PRIMARY_NAV } from '@/lib/navigation';
 import { cn, plural } from '@/lib/utils';
-import { account, login, logout, register } from '@/routes';
+import { account, login, logout, register, search } from '@/routes';
 import { update as boardPreference } from '@/routes/board-preference';
 import { edit as editTwoFactor } from '@/routes/two-factor';
 import type { CloverNavItem } from '@/types/navigation';
 
 /**
- * The sticky bar across the top of the app: search, a compose action, icon
- * actions and the account. It sits above content on `z-30`, one above the
+ * The sticky bar across the top of the app: search, icon actions and the
+ * account. It sits above content on `z-30`, one above the
  * sidebar's `z-20`, and reads its destinations from `PRIMARY_NAV` rather than
  * holding a second copy of the chrome's nav.
+ *
+ * Below `lg` it also carries the trigger for the sidebar drawer. The trigger
+ * has to live somewhere always on screen, since the drawer it opens is
+ * closed by default; `AppHeader` renders on every page the drawer does, so it
+ * is where the trigger lives rather than a header carrying one only
+ * sometimes. It is a `SheetTrigger`, which reads the drawer's open state from
+ * the `Sheet` `AppLayout` renders around this component — nothing is passed
+ * down as a prop, so this component does not need to know whether it is
+ * mounted inside one until it actually renders.
+ *
+ * Below `md`, signed in or out, the row is exactly two controls: the
+ * hamburger and the search bar. It was three until the theme toggle moved to
+ * the account screen's Appearance row (Gabe, 2026-08-17) -- a theme is set
+ * once, and the search bar wanted the width back. Nothing else fits there,
+ * and nothing else is meant to.
+ *
+ * That started from a screenshot of this row carrying five — hamburger,
+ * magnifier, bell, theme toggle, avatar — with the search box squeezed into
+ * the ~96px between the hamburger and the right-hand group, sitting at 110px
+ * instead of near the centre. The bell
+ * drops below `md` because Notifications has its own bottom-bar slot there;
+ * the avatar and its dropdown drop because every row the dropdown carried has
+ * a home below `md` on the account screen now (`Sign out` and `Two-factor
+ * authentication` included — see `AccountController` and `pages/account.tsx`
+ * before assuming the dropdown can just disappear, the same thing this
+ * component's own history got wrong once already). `Log in` / `Create
+ * account` stay hidden below `md` as they already were. At `md` and up
+ * every one of these is back, unchanged: the bell, the avatar, the dropdown,
+ * the auth buttons, the wider gap.
+ *
+ * The search control below `md` is a button drawn as a search bar — border,
+ * radius, magnifier inside, the word "Search" — that visits `/search`, where
+ * the whole screen is the field. It is not the `SearchField` beside it: a
+ * dropdown inside a 164px control was the shape Gabe rejected, and a field
+ * that opens a panel over the row it lives in is not what a phone wants
+ * anyway. `SearchField` is still here, gated `hidden md:block`, and is the
+ * control at `md` and up.
+ *
+ * The button carries the same accessible name as the field, so an anon
+ * reaches "Search boards and threads" whichever one their width renders.
+ *
+ * Giving it room is the arithmetic `gap-4 md:gap-7` exists for. At a 320px
+ * viewport, with only the 38px hamburger beside it: 320 − 48 (`px-6`) − 38 =
+ * 234px before gaps, and `gap-4` (16px) spends 16 of that, leaving 218px.
+ * It was 164px while the theme toggle still sat on this row, which was over
+ * the field's own 160px minimum but not by much — moving the toggle to the
+ * account screen is what bought the rest. `md:gap-7` restores the wider gap
+ * at `md` and up, where the field is already the larger inline one this
+ * arithmetic does not apply to.
+ *
+ * Pressing that button visits `/search`. Only pressing: it carried an
+ * `onFocus` doing the same thing, which on a control that takes focus only
+ * from Tab or a screen reader meant tabbing off the hamburger left the header
+ * before anything beside it could be reached. `/search` with no query is a
+ * suggestions page (recent searches, busiest boards), the same two sources
+ * the dropdown already draws from; see `pages/search.tsx`. That page draws
+ * its own app bar (back control, the real field, focused on arrival) below
+ * `md`, in this header's place, so this header hides itself entirely below
+ * `md` while `usePage().url` matches `/search` — including
+ * `/search?q=...`, since `useCurrentUrl` compares by pathname and the query
+ * string does not change it. At `md` and up the search page is not
+ * special: the header, and its dropdown, are unchanged there.
+ *
+ * `⌘K` stays the desktop field's own shortcut, decided rather than left to
+ * fall out however it fell: `SearchField` stays mounted below `md` (only
+ * its wrapper is `hidden`, not the component), so the listener is still
+ * live, but `input.current.focus()` on a `display: none` element focuses
+ * nothing in a real browser. Below `md` the shortcut is inert instead of
+ * doing something surprising, without this file needing to know `⌘K`
+ * exists at all.
  */
 
 /** Bounded to what the notifications menu previews before "See all". */
@@ -92,6 +166,15 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
     const { resolvedAppearance, updateAppearance } = useAppearance();
     const isDark = resolvedAppearance === 'dark';
 
+    /**
+     * `/search` and `/search?q=...` both have the pathname `/search` —
+     * `isCurrentUrl` compares by pathname, so a query string does not
+     * defeat this. The search page supplies its own app bar below `md`
+     * whenever this is true; see the docblock above.
+     */
+    const { isCurrentUrl } = useCurrentUrl();
+    const onSearchPage = isCurrentUrl(search());
+
     const bookmarksItem = findNavItem('Bookmarks');
     const historyItem = findNavItem('History');
     const notificationsItem = findNavItem('Notifications');
@@ -110,6 +193,10 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
             data-slot="app-header"
             className={cn(
                 'sticky top-0 z-30 h-16 border-b border-border bg-bg',
+                /* The search page draws its own app bar in this header's
+                   place below `md`; see the docblock above. Unaffected at
+                   `md` and up, where the search page is not special. */
+                onSearchPage && 'hidden md:block',
                 className,
             )}
             {...props}
@@ -121,19 +208,87 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                     full-bleed bar. It was capped at 520px against a 760px
                     column, which read as two grids that happened to share a
                     page. */}
-                <div className="mx-auto flex h-16 w-full max-w-(--measure-page) items-center gap-7 px-6">
-                    <div className="max-w-(--measure-column) min-w-0 flex-1">
-                        <SearchField />
+                <div
+                    data-slot="app-header-row"
+                    className="mx-auto flex h-16 w-full max-w-(--measure-shell) items-center gap-4 px-6 md:gap-7"
+                >
+                    {/* Below `lg` the sidebar is a drawer rather than a
+                        persistent rail, so this is the only way back into it
+                        once it is closed. Named to match the sidebar's own
+                        "Collapse sidebar" / "Expand sidebar" toggles, since it
+                        opens that same component. Hidden at `lg` and up,
+                        where the rail is back and a trigger for a drawer
+                        nothing can reach would do nothing. */}
+                    <SheetTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Open sidebar"
+                            className="lg:hidden"
+                        >
+                            <MenuIcon aria-hidden="true" />
+                        </Button>
+                    </SheetTrigger>
+
+                    {/* Two controls sharing one slot, not one control
+                        changing behaviour by width: the dropdown-capable
+                        `SearchField` (`md` and up, unchanged) and a plain
+                        button beside it (`md:hidden`) that visits the
+                        search page instead of opening a dropdown in ~164px.
+                        See this file's own docblock for why, and
+                        `SearchField` for the ghost placeholder that answers
+                        "Search" below `md` and "Search boards and threads"
+                        at `md` and up -- matched here so the same accessible
+                        name reaches an anon whichever control is on screen. */}
+                    <div className="max-w-(--measure-media) min-w-0 flex-1">
+                        {/* Click only. This carried an `onFocus` that visited
+                            the same page, on the reading that "tapping or
+                            focusing the search field" meant both -- but that
+                            is a button, and the only ways a button takes
+                            focus are Tab and a screen reader's swipe. Below
+                            `md` the tab order is hamburger, this, theme
+                            toggle, so tabbing off the hamburger navigated
+                            away before the toggle could ever be reached, and
+                            a swipe did the same thing to a VoiceOver user
+                            every time they came back. A tap fires `focus`
+                            then `click`, so it also issued two visits per
+                            press. */}
+                        <button
+                            type="button"
+                            aria-label="Search boards and threads"
+                            onClick={() => router.visit(search().url)}
+                            className="touch-target-44 flex h-9.5 w-full items-center gap-2 rounded-md border border-border bg-surface px-3 text-left text-body-sm text-muted-foreground md:hidden"
+                        >
+                            <SearchIcon
+                                aria-hidden="true"
+                                className="size-4 shrink-0 text-faint"
+                            />
+                            Search
+                        </button>
+
+                        <div className="hidden md:block">
+                            <SearchField />
+                        </div>
                     </div>
 
-                    <div className="ml-auto flex items-center gap-2">
+                    {/* Hidden below `md`: the bell has its own bottom-bar
+                        slot there (Notifications), and every row the avatar
+                        dropdown carries below it has a home on the account
+                        screen instead (`Sign out` and `Two-factor
+                        authentication` included). `md:inline-flex` restores
+                        it at `md` and up, where the dropdown is still the
+                        only way to reach any of them. */}
+                    <div
+                        data-slot="app-header-actions"
+                        className="ml-auto flex items-center gap-2"
+                    >
                         {isSignedIn && (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="relative"
+                                        className="relative hidden md:inline-flex"
                                         aria-label={
                                             unreadCount === 0
                                                 ? 'Notifications, nothing new'
@@ -207,9 +362,16 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                             </DropdownMenu>
                         )}
 
+                        {/* Hidden below `md`, where the theme lives on the
+                            account screen as an Appearance row instead.
+                            Gabe's decision, 2026-08-17: a hamburger and a
+                            search bar are how an anon moves through the app,
+                            a theme is set once, and the search bar wanted the
+                            ~50px this was holding. */}
                         <Button
                             variant="ghost"
                             size="icon"
+                            className="hidden md:inline-flex"
                             aria-label={
                                 isDark
                                     ? 'Switch to light theme'
@@ -233,6 +395,7 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                                         variant="ghost"
                                         size="icon"
                                         aria-label="Account menu"
+                                        className="hidden md:inline-flex"
                                     >
                                         <AnonAvatar seed={String(user.id)} />
                                     </Button>
@@ -331,10 +494,29 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                             </DropdownMenu>
                         ) : (
                             <>
-                                <Button variant="ghost" asChild>
+                                {/* Hidden below `md`: a hamburger, a search
+                                    control and a theme toggle are already the
+                                    full width of a 320px row, and these two
+                                    full-size buttons do not fit next to them.
+                                    Neither branch is deleted — both links
+                                    stay in the markup at every width, only
+                                    hidden below `md` and visible again
+                                    unchanged at `md` and up — since a
+                                    signed-out anon on a narrower screen still
+                                    needs the styles and markup ready the
+                                    moment the viewport grows past this one. */}
+                                <Button
+                                    variant="ghost"
+                                    asChild
+                                    className="hidden md:inline-flex"
+                                >
                                     <Link href={login()}>Log in</Link>
                                 </Button>
-                                <Button variant="primary" asChild>
+                                <Button
+                                    variant="primary"
+                                    asChild
+                                    className="hidden md:inline-flex"
+                                >
                                     <Link href={register()}>
                                         Create account
                                     </Link>

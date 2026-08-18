@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { MobileNav } from '@/components/clover/mobile-nav';
 import { toUrl } from '@/lib/utils';
-import { dashboard, popular } from '@/routes';
+import { account, dashboard, login, notifications, rules } from '@/routes';
 
 const { usePage } = vi.hoisted(() => ({ usePage: vi.fn() }));
 
@@ -46,36 +46,98 @@ function mockPage({
 }
 
 describe('MobileNav', () => {
-    it('renders only the public destinations when signed out', () => {
+    /**
+     * The bar became Home, Rules, Alerts, You after task 4 (task 4 called
+     * the third slot "Notifications"; task 5 renamed it "Alerts" — the bar's
+     * own label only, same route, same sidebar entry).
+     * Popular and Latest are reachable from the drawer (the sidebar's own
+     * list below `lg`), and History moved onto the account screen.
+     */
+    it('renders Home, Rules and the sign-in slot when signed out, and no Alerts', () => {
         mockPage({ signedIn: false });
 
         render(<MobileNav />);
 
         expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'Rules' })).toBeInTheDocument();
         expect(
-            screen.getByRole('link', { name: 'Popular' }),
-        ).toBeInTheDocument();
+            screen.queryByRole('link', { name: 'Alerts' }),
+        ).not.toBeInTheDocument();
+        expect(
+            screen.queryByRole('link', { name: 'Popular' }),
+        ).not.toBeInTheDocument();
         expect(
             screen.queryByRole('link', { name: 'History' }),
         ).not.toBeInTheDocument();
-        expect(
-            screen.queryByRole('link', { name: 'Messages' }),
-        ).not.toBeInTheDocument();
+    });
+
+    /**
+     * `requiresAuth` items drop out for a signed-out anon, but the fourth
+     * slot is never one of them: it reads "Log in" and points at `/login`
+     * instead of disappearing. It has to be exactly one control, not zero
+     * and not two.
+     */
+    it('offers exactly one sign-in control, reading "Log in" and pointing at /login, when signed out', () => {
+        mockPage({ signedIn: false });
+
+        render(<MobileNav />);
+
+        const signIn = screen.getAllByRole('link', { name: 'Log in' });
+
+        expect(signIn).toHaveLength(1);
+        expect(signIn[0]).toHaveAttribute('href', toUrl(login()));
         expect(
             screen.queryByRole('link', { name: 'You' }),
         ).not.toBeInTheDocument();
     });
 
-    it('renders all four destinations when signed in', () => {
+    it('renders all four destinations when signed in, the fourth reading "You"', () => {
         mockPage({ signedIn: true });
 
         render(<MobileNav />);
 
         expect(
             screen.getAllByRole('link', {
-                name: /Home|Popular|History|You/,
+                name: /Home|Rules|Alerts|You/,
             }),
         ).toHaveLength(4);
+        expect(
+            screen.queryByRole('link', { name: 'Log in' }),
+        ).not.toBeInTheDocument();
+    });
+
+    it('points the fourth slot at /account when signed in', () => {
+        mockPage({ signedIn: true });
+
+        render(<MobileNav />);
+
+        expect(screen.getByRole('link', { name: 'You' })).toHaveAttribute(
+            'href',
+            toUrl(account()),
+        );
+    });
+
+    it('points Rules at the existing /rules page', () => {
+        mockPage({ signedIn: false });
+
+        render(<MobileNav />);
+
+        expect(screen.getByRole('link', { name: 'Rules' })).toHaveAttribute(
+            'href',
+            toUrl(rules()),
+        );
+    });
+
+    /** The bar's label is "Alerts"; the route underneath it is still /notifications. */
+    it('points Alerts at /notifications when signed in', () => {
+        mockPage({ signedIn: true });
+
+        render(<MobileNav />);
+
+        expect(screen.getByRole('link', { name: 'Alerts' })).toHaveAttribute(
+            'href',
+            toUrl(notifications()),
+        );
     });
 
     /**
@@ -91,17 +153,17 @@ describe('MobileNav', () => {
             'aria-current',
             'page',
         );
-        expect(
-            screen.getByRole('link', { name: 'Popular' }),
-        ).not.toHaveAttribute('aria-current');
+        expect(screen.getByRole('link', { name: 'Rules' })).not.toHaveAttribute(
+            'aria-current',
+        );
     });
 
     it('does not convey the active state by colour alone', () => {
-        mockPage({ url: toUrl(popular()), signedIn: true });
+        mockPage({ url: toUrl(rules()), signedIn: true });
 
         render(<MobileNav />);
 
-        const active = screen.getByRole('link', { name: 'Popular' });
+        const active = screen.getByRole('link', { name: 'Rules' });
         const rest = screen.getByRole('link', { name: 'Home' });
 
         expect(active).toHaveAttribute('aria-current', 'page');
@@ -113,7 +175,7 @@ describe('MobileNav', () => {
 
         render(<MobileNav />);
 
-        for (const name of ['Home', 'Popular']) {
+        for (const name of ['Home', 'Rules', 'Log in']) {
             const link = screen.getByRole('link', { name });
             expect(link).toHaveAccessibleName(name);
         }
@@ -127,13 +189,13 @@ describe('MobileNav', () => {
         expect(screen.getByRole('navigation')).toBeInTheDocument();
     });
 
-    it('lays out two items and four items without a fixed column-count assumption', () => {
+    it('lays out three items and four items without a fixed column-count assumption', () => {
         mockPage({ signedIn: false });
 
         const { container: signedOutContainer } = render(<MobileNav />);
         const signedOutLinks = signedOutContainer.querySelectorAll('a');
 
-        expect(signedOutLinks).toHaveLength(2);
+        expect(signedOutLinks).toHaveLength(3);
 
         mockPage({ signedIn: true });
 
@@ -141,5 +203,27 @@ describe('MobileNav', () => {
         const signedInLinks = signedInContainer.querySelectorAll('a');
 
         expect(signedInLinks).toHaveLength(4);
+    });
+
+    /**
+     * Task 5's 44px touch target does not touch this bar: `min-h-12` is
+     * 48px, already over the minimum, and each slot's own width (`flex-1`
+     * of a signed-in 320px bar, the narrowest case) is 80px, also over it.
+     * `touch-target-44` grows a control up to 44px in an axis that falls
+     * short of it and leaves an axis alone that already clears it, so
+     * applying it here would be a no-op in both axes -- there is nothing
+     * for it to do. This guards the arithmetic staying true rather than
+     * the class being present, since no class was added.
+     */
+    it('already clears the 44px touch minimum in both axes, so nothing here changed for task 5', () => {
+        mockPage({ signedIn: true });
+
+        render(<MobileNav />);
+
+        const link = screen.getByRole('link', { name: 'Home' });
+
+        expect(link).toHaveClass('min-h-12');
+        expect(link).toHaveClass('flex-1');
+        expect(link).not.toHaveClass('touch-target-44');
     });
 });
