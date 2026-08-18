@@ -414,6 +414,22 @@ function PostImage({
                             width={media.width ?? undefined}
                             height={media.height ?? undefined}
                             referrerPolicy="no-referrer"
+                            /* Never larger than the file itself.
+                            
+                               `h-full w-full` fills the viewer, which is what
+                               a 1440px photograph wants and what a 96px
+                               reaction image very much does not: blown up to
+                               a phone's screen it is a wall of mush. The cap
+                               is the file's own dimensions, so a small file
+                               sits at its true size in the middle of the
+                               viewer and a large one still fills it. 4chan
+                               sends both for every attachment; where it does
+                               not, there is no cap to apply and the fill
+                               stands. */
+                            style={{
+                                maxWidth: media.width ?? undefined,
+                                maxHeight: media.height ?? undefined,
+                            }}
                             onError={() => {
                                 setFailed(true);
                                 setExpanded(false);

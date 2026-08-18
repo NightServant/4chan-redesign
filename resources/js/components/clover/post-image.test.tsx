@@ -374,6 +374,66 @@ describe('PostImage', () => {
         expect(full?.parentElement).toHaveClass('overflow-hidden');
     });
 
+    /**
+     * The extremes, because an imageboard carries both.
+     *
+     * A 96x96 reaction image blown up to a phone's screen is a wall of mush;
+     * a 4000px photograph left at its own size runs off every edge. Filling
+     * the viewer handles the second and breaks the first, so the fill is
+     * capped at the file's own dimensions: small files sit true, large ones
+     * fill.
+     */
+    it.each([
+        ['a tiny file', 96, 96],
+        ['a huge file', 4000, 3000],
+        ['a very tall file', 500, 6000],
+    ])('never renders %s larger than itself', async (_label, width, height) => {
+        const user = userEvent.setup();
+        const media = makeAttachment({ width, height });
+
+        render(<PostImage media={media} />);
+
+        await user.click(
+            screen.getByRole('button', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        );
+
+        const full = screen
+            .getAllByRole('img', { name: `Attached image: ${media.filename}` })
+            .at(-1);
+
+        expect(full).toHaveStyle({
+            maxWidth: `${width}px`,
+            maxHeight: `${height}px`,
+        });
+    });
+
+    /**
+     * 4chan sends dimensions for every attachment, but a local upload that
+     * failed to measure has none. No cap to apply then, and the fill stands
+     * rather than the image collapsing to nothing.
+     */
+    it('applies no cap when the file carries no dimensions', async () => {
+        const user = userEvent.setup();
+        const media = makeAttachment({ width: null, height: null });
+
+        render(<PostImage media={media} />);
+
+        await user.click(
+            screen.getByRole('button', {
+                name: `Attached image: ${media.filename}`,
+            }),
+        );
+
+        const full = screen
+            .getAllByRole('img', { name: `Attached image: ${media.filename}` })
+            .at(-1);
+
+        expect(full?.style.maxWidth).toBe('');
+        expect(full).toHaveClass('w-full');
+    });
+
     it('fills the viewer below `md` and sizes to the image above it', async () => {
         const user = userEvent.setup();
         const media = makeAttachment();
