@@ -64,6 +64,33 @@ it('renders the composer page for a signed-in anon', function (): void {
  * without one would collect a reply and then bounce the anon to a login form
  * with what they wrote gone.
  */
+/**
+ * A thread with no subject is ordinary on an imageboard, and this page names
+ * the thread an anon is writing into -- so it has to say what a reader
+ * recognises it by. `displayTitle` already knows: the subject, else the OP's
+ * opening line, else the post number.
+ *
+ * This path was written out by hand here first, calling a method `Post` does
+ * not have. phpstan caught it in CI; these tests did not, because every
+ * fixture had a subject.
+ */
+it('names a subjectless thread by its opening line', function (): void {
+    $board = Board::factory()->slug('g')->create(['max_comment_chars' => 2000]);
+    $thread = Thread::factory()->for($board)->create(['subject' => null]);
+    Post::factory()->for($thread)->op()->create([
+        'body' => "Mainline boots but the GPU does nothing.\nSecond line, unused.",
+    ]);
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get("/g/{$thread->no}/reply")
+        ->assertOk()
+        ->assertInertia(
+            fn (AssertableInertia $page) => $page
+                ->where('thread.title', 'Mainline boots but the GPU does nothing.')
+        );
+});
+
 it('sends a signed-out anon to sign in', function (): void {
     [, $thread] = composerTarget();
 

@@ -59,11 +59,16 @@ class ReplyController extends Controller
             'thread' => [
                 'no' => $target->no,
                 'board' => '/'.$model->slug.'/',
-                /* Whatever the thread is actually called. A thread with no
-                   subject is ordinary on an imageboard, and the OP's opening
-                   line is what a reader recognises it by in that case -- the
-                   same fallback the thread page's own heading uses. */
-                'title' => $target->subject ?: $target->originalPost?->excerpt() ?? '',
+                /* `displayTitle`, not a second copy of its rules. A thread
+                   with no subject is ordinary on an imageboard, and the model
+                   already knows what a reader recognises it by: the subject,
+                   else the OP's opening line, else the post number. Writing
+                   that out again here is how the composer's heading and the
+                   thread's would drift -- and the version written here called
+                   a method `Post` does not have, which phpstan caught and the
+                   feature tests did not, because they only ever built threads
+                   that had a subject. */
+                'title' => $target->displayTitle(),
             ],
             /**
              * The board's own limit, not the shared fallback. It is 2000,
