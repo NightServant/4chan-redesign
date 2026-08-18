@@ -70,6 +70,17 @@ describe('Communities page', () => {
         pageProps.showsMatureBoards = false;
     });
 
+    /** Shell-wide, like the account screen and the chrome above both. */
+    it('is measured against the shell', () => {
+        const { container } = render(
+            <Communities boards={WORKSAFE} hiddenCount={1} />,
+        );
+
+        expect(container.querySelector('div')?.className).toContain(
+            'max-w-(--measure-shell)',
+        );
+    });
+
     it('renders the directory under a single page heading', () => {
         render(<Communities boards={WORKSAFE} hiddenCount={1} />);
 
