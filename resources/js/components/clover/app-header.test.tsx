@@ -583,13 +583,16 @@ describe('AppHeader', () => {
             name: /search boards and threads/i,
         });
 
-        /* Both measures come from one place now, so the header and the feed
-           cannot drift apart when the page widens on a large display. */
+        /* The field is capped at the measure a post is drawn at, and the row
+           around it at the shell -- post column plus rail plus the gap. So
+           the field starts where a post starts, the controls end where the
+           rail ends, and the chrome cannot drift from the body when the page
+           widens on a large display. */
         expect(
-            search.closest('[class*="max-w-(--measure-column)"]'),
+            search.closest('[class*="max-w-(--measure-media)"]'),
         ).not.toBeNull();
         expect(
-            search.closest('[class*="max-w-(--measure-page)"]'),
+            search.closest('[class*="max-w-(--measure-shell)"]'),
         ).not.toBeNull();
     });
 

@@ -210,7 +210,7 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                     page. */}
                 <div
                     data-slot="app-header-row"
-                    className="mx-auto flex h-16 w-full max-w-(--measure-page) items-center gap-4 px-6 md:gap-7"
+                    className="mx-auto flex h-16 w-full max-w-(--measure-shell) items-center gap-4 px-6 md:gap-7"
                 >
                     {/* Below `lg` the sidebar is a drawer rather than a
                         persistent rail, so this is the only way back into it
@@ -240,7 +240,7 @@ function AppHeader({ className, ...props }: AppHeaderProps) {
                         "Search" below `md` and "Search boards and threads"
                         at `md` and up -- matched here so the same accessible
                         name reaches an anon whichever control is on screen. */}
-                    <div className="max-w-(--measure-column) min-w-0 flex-1">
+                    <div className="max-w-(--measure-media) min-w-0 flex-1">
                         {/* Click only. This carried an `onFocus` that visited
                             the same page, on the reading that "tapping or
                             focusing the search field" meant both -- but that

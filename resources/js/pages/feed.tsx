@@ -79,7 +79,7 @@ export default function Feed({ sort, threads, library }: FeedProps) {
                 description={META_DESCRIPTIONS[sort]}
             />
 
-            <div className="mx-auto flex w-full max-w-(--measure-page) gap-7 px-6 py-6">
+            <div className="mx-auto flex w-full max-w-(--measure-shell) gap-7 px-6 py-6">
                 <div
                     data-slot="feed-column"
                     /* `--measure-media`, the same token the attachment box

@@ -216,19 +216,28 @@
 :root {
     --measure-page: 1180px;
     --measure-column: 760px;
-    --measure-rail: 330px;
+    /* Narrower than it was (330px). Beside a 560px post column the rail was
+       carrying nearly as much width as the thread it annotates, which reads
+       as two columns competing rather than one and its margin. */
+    --measure-rail: 280px;
     /* The width a post is actually drawn at: the cap on an attachment's box,
        and the cap on the column that holds the cards carrying them. One
        value, because when they were two the column grew to 760px while the
        image stayed at 560 and every row ended in 200px of nothing. */
     --measure-media: 560px;
+    /* The shell: the post column, the rail, and the gap between them. The
+       chrome is measured against this rather than against `--measure-page`,
+       so the header's search field starts where a post starts and its
+       controls end where the rail ends. Derived rather than typed, so the
+       1536px step below moves all of it at once. */
+    --measure-shell: calc(var(--measure-media) + var(--measure-rail) + 1.75rem);
 }
 
 @media (min-width: 1536px) {
     :root {
         --measure-page: 1440px;
         --measure-column: 840px;
-        --measure-rail: 400px;
+        --measure-rail: 320px;
         --measure-media: 620px;
     }
 }
