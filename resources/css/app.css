@@ -481,6 +481,15 @@
 
     html {
         font-optical-sizing: auto;
+        /* Reserve the scrollbar's width whether or not one is showing.
+
+           The header is sticky and spans the viewport; the page beneath it
+           scrolls. Without a reserved gutter the two are centred in boxes
+           that differ by the scrollbar's width, so the search field sat
+           about 20px left of the post column it is measured to match --
+           the same measure, two different centres. It also stops the whole
+           layout shifting sideways when a short page becomes a long one. */
+        scrollbar-gutter: stable;
     }
 
     body {

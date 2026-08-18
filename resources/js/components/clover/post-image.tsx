@@ -159,7 +159,11 @@ const MAX_BOX_WIDTH = 'max-w-(--measure-media)';
  * makes it read as part of the row rather than as a centred illustration.
  */
 const VARIANT_BOX_CLASSES: Record<PostImageVariant, string> = {
-    card: `aspect-[4/3] ${MAX_BOX_WIDTH}`,
+    /* 16:9, not 4:3. The box fills the post column, and at 720px a 4:3 box
+       is 540px tall -- one card then owns most of a laptop screen and the
+       feed reads as a slideshow. The wider ratio keeps the row's height
+       proportionate to the column it grew into; the crop is unchanged. */
+    card: `aspect-[16/9] ${MAX_BOX_WIDTH}`,
     /* The box hugs the file, and sits in the middle of the column.
 
        Three earlier attempts all left a gap, each for its own reason: a

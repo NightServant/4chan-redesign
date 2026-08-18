@@ -68,21 +68,21 @@ describe('PostImage', () => {
 
         const { unmount } = render(<PostImage media={media} variant="card" />);
 
-        expect(screen.getByRole('button')).toHaveClass('aspect-[4/3]');
+        expect(screen.getByRole('button')).toHaveClass('aspect-[16/9]');
         expect(screen.getByRole('img')).not.toHaveClass('max-h-[520px]');
 
         unmount();
 
         render(<PostImage media={media} variant="post" />);
 
-        expect(screen.getByRole('button')).not.toHaveClass('aspect-[4/3]');
+        expect(screen.getByRole('button')).not.toHaveClass('aspect-[16/9]');
         expect(screen.getByRole('img')).toHaveClass('max-h-[720px]');
     });
 
     it('defaults to the card variant, the cropped box', () => {
         render(<PostImage media={makeAttachment()} />);
 
-        expect(screen.getByRole('button')).toHaveClass('aspect-[4/3]');
+        expect(screen.getByRole('button')).toHaveClass('aspect-[16/9]');
         expect(screen.getByRole('img')).toHaveClass('object-cover');
     });
 
@@ -147,7 +147,7 @@ describe('PostImage', () => {
 
             expect(screen.getByRole('button').className).toBe(tallBox);
             expect(screen.getByRole('img').className).toBe(tallImage);
-            expect(tallBox).toContain('aspect-[4/3]');
+            expect(tallBox).toContain('aspect-[16/9]');
         });
 
         /**
