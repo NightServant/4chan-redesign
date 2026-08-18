@@ -91,6 +91,12 @@ interface SearchProps {
      * arrival — the suggestions screen's second source, below `md`.
      */
     busiestBoards: Board[];
+    /**
+     * The other half of the suggestions screen. A board is a place to go and
+     * a thread is something to read; an anon who has not typed anything yet
+     * may want either, and this screen offered only boards.
+     */
+    busiestThreads: Thread[];
 }
 
 export default function Search({
@@ -102,6 +108,7 @@ export default function Search({
     threads,
     comments,
     busiestBoards,
+    busiestThreads,
 }: SearchProps) {
     const { auth } = usePage().props;
     const { toggleBookmark, authGate } = useBookmark();
@@ -150,7 +157,7 @@ export default function Search({
 
     const mobileResults =
         mobileQuery.trim() === ''
-            ? { boards: busiestBoards, threads: [] }
+            ? { boards: busiestBoards, threads: busiestThreads }
             : liveResults;
 
     function submit(term: string): void {

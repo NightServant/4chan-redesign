@@ -131,8 +131,14 @@ export function SearchResultsList({
                 </SearchGroup>
             ) : null}
 
+            {/* "Busiest" before anything is typed, "Threads" once something
+                is: the first is a standing reply count, the second is what
+                matched. One name for both would claim the untyped list had
+                matched something. */}
             {results.threads.length > 0 ? (
-                <SearchGroup heading="Threads">
+                <SearchGroup
+                    heading={query === '' ? 'Busiest threads' : 'Threads'}
+                >
                     {results.threads.map((thread) => (
                         <li key={thread.id} role="presentation">
                             <Link

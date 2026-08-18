@@ -125,6 +125,15 @@ class SearchController extends Controller
             'busiestBoards' => BoardResource::collection(
                 $this->busiestBoards($showsMature)->limit(self::SUGGEST_BOARDS)->get(),
             ),
+
+            /**
+             * The other half of the suggestions screen. A board is a place to
+             * go and a thread is something to read; an anon who has not typed
+             * yet may be after either, and the screen offered only the first.
+             */
+            'busiestThreads' => ThreadResource::collection(
+                $this->busiestThreads($showsMature)->limit(self::SUGGEST_THREADS)->get(),
+            ),
         ]);
     }
 
@@ -153,6 +162,29 @@ class SearchController extends Controller
                     $this->threads($query, $showsMature)->limit(self::SUGGEST_THREADS)->get(),
                 ),
         ]);
+    }
+
+    /**
+     * The busiest threads, by the only measure this application counts: how
+     * many replies a thread has. Offered on the suggestions screen beside the
+     * busiest boards, because a board is a place and a thread is something to
+     * read, and an anon who has not typed anything yet may want either.
+     *
+     * Not "trending": that word claims a rate of change, and nothing here
+     * records how fast a thread is moving. This is a standing count, and the
+     * heading says so.
+     *
+     * @return Builder<Thread>
+     */
+    private function busiestThreads(bool $showsMature): Builder
+    {
+        /** @var Builder<Thread> $query */
+        $query = Thread::query()
+            ->onVisibleBoard($showsMature)
+            ->with(['board', 'originalPost', 'bookmarks'])
+            ->orderByDesc('replies_count');
+
+        return $query;
     }
 
     /**

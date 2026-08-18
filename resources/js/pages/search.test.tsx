@@ -61,6 +61,14 @@ const BUSIEST_BOARDS = [
     makeBoard({ slug: '/int/', name: 'International' }),
 ];
 
+/* The other half of the suggestions screen: what an anon might read, beside
+   where they might go. Ranked by replies, which is the only measure this
+   application counts. */
+const BUSIEST_THREADS = [
+    makeThread({ title: 'Anons are still arguing about init systems' }),
+    makeThread({ title: 'Mainline kernel support or vendor tree' }),
+];
+
 function searchProps(overrides: Partial<Parameters<typeof Search>[0]> = {}) {
     return {
         query: '',
@@ -71,6 +79,7 @@ function searchProps(overrides: Partial<Parameters<typeof Search>[0]> = {}) {
         threads: [],
         comments: [],
         busiestBoards: BUSIEST_BOARDS,
+        busiestThreads: BUSIEST_THREADS,
         ...overrides,
     };
 }

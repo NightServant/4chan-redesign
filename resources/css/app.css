@@ -501,6 +501,18 @@
         @apply border-border;
     }
 
+    /* The browser's own clear control on `input[type="search"]`.
+    
+       Both search fields draw their own -- one that clears the box, refocuses
+       it and returns to the suggestions screen, which the native one does not
+       do. WebKit's sat beside it, so the bar carried two crosses a pixel
+       apart doing different things. Firefox draws none, which is why this
+       only ever showed on one engine. */
+    input[type='search']::-webkit-search-cancel-button,
+    input[type='search']::-webkit-search-decoration {
+        appearance: none;
+    }
+
     html {
         font-optical-sizing: auto;
         /* Reserve the scrollbar's width whether or not one is showing.

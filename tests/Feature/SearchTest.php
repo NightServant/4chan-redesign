@@ -6,6 +6,7 @@ use App\Models\Board;
 use App\Models\Post;
 use App\Models\Thread;
 use App\Models\User;
+use Inertia\Testing\AssertableInertia;
 
 /**
  * Search, over this application's database.
@@ -447,6 +448,31 @@ it('does not apply the time filter to communities', function (): void {
     $this->get('/search?q=Technology&type=communities&time=today')
         ->assertOk()
         ->assertInertia(fn ($page) => $page->has('boards', 1));
+});
+
+/**
+ * The suggestions screen offers both halves of what an anon might want before
+ * they have typed: where to go, and what to read. It carried only boards.
+ *
+ * Ranked by replies, which is the only measure this application counts --
+ * there is no view count, no rate of change, and so nothing that could
+ * honestly be called trending.
+ */
+it('offers the busiest threads beside the busiest boards', function (): void {
+    $board = Board::factory()->slug('g')->create();
+    $quiet = Thread::factory()->for($board)->create(['replies_count' => 2]);
+    $busy = Thread::factory()->for($board)->create(['replies_count' => 900]);
+    Post::factory()->for($quiet)->op()->create();
+    Post::factory()->for($busy)->op()->create();
+
+    $this->get('/search')
+        ->assertOk()
+        ->assertInertia(
+            fn (AssertableInertia $page) => $page
+                ->component('search')
+                ->where('busiestThreads.0.no', $busy->no)
+                ->has('busiestBoards')
+        );
 });
 
 it('resolves every combination of tab, sort and time', function (): void {
