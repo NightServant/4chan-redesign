@@ -1,5 +1,5 @@
 import { ImagePlus, TriangleAlert, X } from 'lucide-react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { AnonAvatar } from '@/components/clover/anon-avatar';
 import { FormField } from '@/components/clover/form-field';
@@ -19,8 +19,40 @@ export interface ReplyComposerProps {
      * shared fallback for callers with no board in hand.
      */
     maxCommentChars?: number;
-    /** Fires with the typed body and any attached image when a reply is posted. */
-    onReply?: (body: string, media: File | null) => void;
+    /**
+     * Fires with the typed body and any attached image when a reply is posted.
+     *
+     * Returning `false` — or a promise resolving to it — means the server
+     * refused, and the composer keeps what was typed. Anything else, `void`
+     * included, is taken as stored. The caller owns the request, so it is the
+     * only thing that can know, and until it reported back this component
+     * cleared the field the instant a submit was attempted.
+     */
+    onReply?: (
+        body: string,
+        media: File | null,
+    ) => void | boolean | Promise<boolean | void>;
+    /**
+     * A validation message from the server for the body, shown against the
+     * field. Passed down rather than read from `usePage()` here, because this
+     * component is rendered in two places and only one of them is a page.
+     */
+    error?: string;
+    /**
+     * Hands the caller a way to quote a post into this field.
+     *
+     * A prop carrying the post number and an effect writing it into the body
+     * was the obvious shape, and it is the one `react-hooks` rejects: a
+     * `setState` inside an effect is a cascading render, and this file already
+     * carries a docblock agreeing with that rule about the attachment URL. So
+     * the caller gets a function and calls it from the event instead, which is
+     * where the state change belongs.
+     *
+     * This is what the Reply control on each comment drives. Without anywhere
+     * for it to land it had nothing to do, which is precisely why it did
+     * nothing.
+     */
+    onReady?: (api: { quote: (no: number) => void }) => void;
     /**
      * What the server will accept, so the picker offers the same set the
      * validator does. A file dialog listing formats the request will reject is
@@ -45,6 +77,8 @@ export function ReplyComposer({
     threadNo,
     maxCommentChars = POST_MAX_LENGTH,
     onReply,
+    error,
+    onReady,
     accept = DEFAULT_ACCEPT,
     className,
 }: ReplyComposerProps) {
@@ -64,6 +98,7 @@ export function ReplyComposer({
         url: string;
     } | null>(null);
     const fileInput = useRef<HTMLInputElement>(null);
+    const field = useRef<HTMLTextAreaElement>(null);
     const baseId = useId();
     const hintId = `${baseId}-hint`;
     const counterId = `${baseId}-counter`;
@@ -89,6 +124,36 @@ export function ReplyComposer({
             }
         };
     }, [attachment]);
+
+    /**
+     * Append a `>>` reference and take focus.
+     *
+     * Appended to whatever is already typed rather than replacing it: an anon
+     * halfway through a sentence who quotes a post has not asked to lose the
+     * sentence. Quoting the same post twice writes it twice, because that is
+     * what pressing Reply twice means.
+     */
+    const quote = useCallback((no: number): void => {
+        setBody((current) => {
+            const reference = `>>${no}`;
+
+            if (current === '') {
+                return `${reference}\n`;
+            }
+
+            return current.endsWith('\n')
+                ? `${current}${reference}\n`
+                : `${current}\n${reference}\n`;
+        });
+
+        field.current?.focus();
+    }, []);
+
+    /* Registration only -- no state changes here, which is the whole point of
+       handing a function out rather than watching a prop. */
+    useEffect(() => {
+        onReady?.({ quote });
+    }, [onReady, quote]);
 
     function handleFile(event: ChangeEvent<HTMLInputElement>): void {
         const file = event.target.files?.[0] ?? null;
@@ -121,7 +186,7 @@ export function ReplyComposer({
         }
     }
 
-    function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
 
         if (!canSubmit) {
@@ -132,7 +197,15 @@ export function ReplyComposer({
            The tree is not appended to here — the server has the reply and the
            page reloads its props, which is the only version of the thread
            worth rendering. */
-        onReply?.(trimmed, attachment?.file ?? null);
+        const stored = await onReply?.(trimmed, attachment?.file ?? null);
+
+        /* Only on the caller's word. Clearing here unconditionally is what
+           made a rejected reply lose everything an anon had written, in
+           silence: the request had not finished, let alone succeeded. */
+        if (stored === false) {
+            return;
+        }
+
         setBody('');
         clearMedia();
     }
@@ -145,8 +218,9 @@ export function ReplyComposer({
             <AnonAvatar seed={String(threadNo)} className="mt-1" />
 
             <div className="flex flex-1 flex-col gap-2">
-                <FormField label="Reply to this thread">
+                <FormField label="Reply to this thread" error={error}>
                     <Textarea
+                        ref={field}
                         value={body}
                         onChange={(event) => setBody(event.target.value)}
                         placeholder="Write a reply. Start a line with > for greentext."
