@@ -106,7 +106,9 @@ final class PageMetadata
             ],
 
             'board' => self::board($props) ?? $default,
-            'thread' => self::thread($props) ?? $default,
+            /* No fallback: a thread page without a title is a pruned thread,
+               which `thread()` answers for in its own words. */
+            'thread' => self::thread($props),
 
             'communities' => [
                 'title' => 'Communities',
@@ -157,9 +159,9 @@ final class PageMetadata
 
     /**
      * @param  array<string, mixed>  $props
-     * @return array{title: string, socialTitle: string, description: string, type: string}|null
+     * @return array{title: string, socialTitle: string, description: string, type: string}
      */
-    private static function thread(array $props): ?array
+    private static function thread(array $props): array
     {
         $title = Arr::get($props, 'thread.title');
 

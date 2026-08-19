@@ -78,9 +78,48 @@ class FortifyServiceProvider extends ServiceProvider
 
     /**
      * Configure rate limiting.
+     *
+     * `login`, `two-factor` and `passkeys` are named because Fortify resolves
+     * them from `config('fortify.limiters')` and applies them itself.
+     *
+     * `register` and `password-reset` are named for the same reason and applied
+     * a different way: this version of Fortify reads a limiter from config for
+     * those four routes only, and registers `register`, `forgot-password` and
+     * `reset-password` with `guest` and nothing else. `ThrottleFortifyRoutes`,
+     * in the `web` group, is what puts them on. Defining them here anyway keeps
+     * every limit on an auth route in one file.
      */
     private function configureRateLimiting(): void
     {
+        /**
+         * Registration, by address. Every attempt runs a bcrypt hash whether
+         * or not the address is already taken, so this is expensive to answer
+         * and free to ask; five a minute is more accounts than anyone opens by
+         * hand and no use at all for filling a table.
+         */
+        RateLimiter::for('register', function (Request $request) {
+            return Limit::perMinute(5)->by($request->ip());
+        });
+
+        /**
+         * Both halves of a password reset, by address and by the address given.
+         *
+         * Asking for a link sends mail to an inbox the caller chose but does
+         * not own, which is how a reset form becomes a way to post someone
+         * else's mail from Clover's sending reputation. Submitting a new one
+         * guesses at a token. Keyed on both so that neither a single client
+         * working through many addresses nor many clients working on one gets
+         * a free run.
+         */
+        RateLimiter::for('password-reset', function (Request $request) {
+            $email = $request->input('email');
+
+            return [
+                Limit::perMinute(5)->by('ip|'.$request->ip()),
+                Limit::perMinute(5)->by('email|'.Str::transliterate(Str::lower(is_string($email) ? $email : ''))),
+            ];
+        });
+
         RateLimiter::for('two-factor', function (Request $request) {
             return Limit::perMinute(5)->by($request->session()->get('login.id'));
         });

@@ -6,6 +6,7 @@ use App\Models\Board;
 use App\Models\Post;
 use App\Models\Thread;
 use App\Models\User;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Inertia\Testing\AssertableInertia;
 
 /**
@@ -475,7 +476,19 @@ it('offers the busiest threads beside the busiest boards', function (): void {
         );
 });
 
+/**
+ * Forty-eight requests in one test, which is more than the search route's
+ * throttle allows in a minute — deliberately, since that throttle exists to
+ * stop exactly this pattern coming from one address.
+ *
+ * The limiter is dropped for this case rather than raised for everyone: what
+ * is under test is that every tab, sort and time combination resolves, and
+ * `RateLimitTest` is where the ceiling itself is asserted. Raising the real
+ * limit to fit a test would be the test dictating the security posture.
+ */
 it('resolves every combination of tab, sort and time', function (): void {
+    $this->withoutMiddleware(ThrottleRequests::class);
+
     tabFixture();
 
     foreach (['all', 'posts', 'communities', 'comments'] as $type) {
