@@ -23,21 +23,24 @@ Boards, threads and posts are ingested from 4chan's read-only JSON API into Eloq
 ## Features
 
 - **Token foundation** &mdash; every colour authored once in OKLCH, mapped through Tailwind's `@theme` to both shadcn aliases and Clover-native utilities; dark by default with a fully authored light scope, and no neutral pure black or white
-- **Component library** &mdash; 109 components across 23 pages: primitives, Clover-specific components and page sections, each built test-first
+- **Component library** &mdash; 107 components across 23 pages: primitives, Clover-specific components and page sections, each built test-first
 - **Overlays on Radix** &mdash; dialog, sheet, dropdown, context menu, tabs, tooltip and select, so focus trapping, roving tabindex and typeahead are correct rather than approximated
 - **Search from the keyboard** &mdash; ⌘K / Ctrl+K focuses the header's search field from anywhere in the app
 - **App chrome that reshapes** &mdash; a collapsible sidebar with persisted state above `lg` and the same list as a drawer below it; a header carrying the account and notification menus on a desktop and the drawer trigger plus a search field on a phone; a bottom bar for signed-in anons, and in its place a dock for signed-out ones that says what Clover is before asking anyone to join
 - **One set of measures** &mdash; the shell, the thread column, the rail and the media box are custom properties, so a width is decided in one place and every screen reads it, and the rail is not reserved at widths where it never renders. Every control clears 44px on a coarse pointer
-- **Community layer** &mdash; thread cards with a stretched-link target so the share and bookmark buttons stay independently focusable, and a comment tree nested from quotelinks, since 4chan's own posts are flat
+- **Community layer** &mdash; thread cards with a stretched-link target so the share and bookmark buttons stay independently focusable, and a comment tree nested from quotelinks, since 4chan's own posts are flat. A `>>` reference jumps to the post it names and Reply quotes it into the composer &mdash; and no control is drawn where nothing has agreed to handle it
 - **Feed, boards and threads** &mdash; three feed sorts, a board page per slug with a real empty state, and a thread view that handles a post number matching nothing as an ordinary case rather than an error
 - **Search over the synced database** &mdash; a header dropdown that suggests boards and threads as you type, and a results page with All, Posts, Communities and Comments tabs plus sort and time filters at every width. Recent searches are kept in the browser for an anon who is signed in, and recorded for nobody who is not
 - **Real data, read-only upstream** &mdash; 77 boards, their catalogs and their posts ingested from 4chan's JSON API by `clover:sync`, rate limited to one request a second and conditional on `If-Modified-Since`; nothing is ever written back
 - **Greentext that works** &mdash; post bodies are parsed from 4chan's HTML to plain text on ingest, then rendered line by line with quote lines styled and `>>` references picked out; no post body ever reaches React as markup
 - **Adult boards behind an opt-in** &mdash; `ws_board` drives it, the preference is account-level and off by default, and a board you have not opted into answers 404 rather than 403 so its existence is not confirmed
 - **Imageboard URLs** &mdash; `/g/` is a board and `/g/109522303` a thread, constrained to the synced slug list so they cannot shadow the site's own pages
+- **Titles a crawler can read** &mdash; every public page resolves its own `<title>`, description and social card on the server, from the same props the component renders. Inertia's `<Head>` writes after hydration, which no search engine and no unfurl waits for
+- **Figures that say what they measure** &mdash; counts scoped to what a reader may see are labelled as such, and the heading is derived from the same flag that scoped the query, so the words and the numbers cannot drift apart
+- **Hardened by default** &mdash; rate limits on search, registration, password reset and posting; `nosniff`, `X-Frame-Options` and a referrer policy on every response; a session cookie whose `Secure` flag follows `APP_URL`
 - **Attachments that render** &mdash; images served straight from 4chan's CDN, addressed by the id it stores them under; spoilered files and everything on a not-worksafe board sit behind a cover that fetches nothing until asked. A feed row crops its image to a fixed box, a thread page shows the file whole, and a viewer opens it full screen with the replies a drawer away
 - **Attachments an anon can post** &mdash; a reply carries an image of up to 4 MB, stored on this application's own disk and never sent anywhere; the account screen's media tab lists what that account has uploaded
-- **Composers that persist** &mdash; a reply form inline where replying belongs, and its own page below `md` where a phone keyboard leaves no room for a form under a thread; both refuse empty input, both enforce the board's own `max_comment_chars` rather than one global guess, and both write a post that survives a reload
+- **Composers that persist** &mdash; a reply form inline where replying belongs, and its own page below `md` where a phone keyboard leaves no room for a form under a thread; both refuse empty input, both enforce the board's own `max_comment_chars` rather than one global guess, and both keep what was typed when the server refuses it and say why, rather than clearing the field on the attempt
 - **An account layer of its own** &mdash; saved threads, reading history and followed boards, each private to the anon and none of it attached to anything they post. Settings sit behind one drawer (appearance, adult boards, two-factor, sign out) and Edit profile is a sheet on a phone. There is no voting: blessings and curses were retired, because 4chan has no votes to import and almost nothing cast here ever carried any
 - **Marketing homepage** &mdash; a hero over live threads, boards as a carousel, a trending ticker, features that become an accordion on a phone, and a footer whose every destination resolves to a real page
 - **Accessibility as a build constraint** &mdash; focus rings never removed, state never carried by colour alone, tests asserting accessible names and keyboard paths instead of class strings
@@ -141,7 +144,7 @@ Open [http://localhost:8000](http://localhost:8000). Served by [Laravel Herd](ht
 
 ### Useful commands
 
-The suite is 1,285 frontend tests and 411 backend ones. `ci:check` runs all of
+The suite is 1,307 frontend tests and 460 backend ones. `ci:check` runs all of
 it alongside the linters, the formatters and Larastan — the same set the three
 GitHub checks run, so a branch that passes it locally passes there.
 
@@ -163,6 +166,7 @@ vendor/bin/pint          # PHP formatting
 - **Threads cannot be started here.** Replying works, persists and takes an image; opening a thread was removed along with its dialog, route and controller, because at the time Clover accepted no uploads and a board where every new thread opens without an image is not the board it mirrors. Replies carry attachments now, so the reason has expired and this is a gap rather than a decision.
 - **Only the history screen pages.** The feed, board pages and search results are each one query with a limit, so what is past it is unreachable. Paging a server-backed feed needs a cursor on the prop, not a button that puts itself back.
 - **`php artisan route:cache` freezes the board list.** The `/{board}` constraint is built from the synced table, so a deployment that caches routes must re-cache them after a sync adds boards.
+- **There is no contact address anywhere on the site.** That suits a product with no support promise, but it also means a privacy or data request has nowhere to go. Adding one needs a real address rather than an invented one.
 - **A checkout with no scheduler running goes stale.** The schedule exists — the catalog every fifteen minutes, the five newest threads a board has every hour — but nothing runs it locally unless `php artisan schedule:work` is up, and the pages keep rendering an old bump order without saying so.
 
 ## Data notes
@@ -180,6 +184,10 @@ Boards 4chan marks `ws_board: 0` are hidden unless an anon opts in, and a signed
 Several figures the design carried were removed rather than estimated, because nothing publishes them: a per-board "anons online" count, per-thread views, and the rail's site-wide presence panel. Where a number has no source it is not shown. The same rule took the profile's achievement badges and its janitor scope — one measured nothing, the other named a moderation system that does not exist — and emptied the rail's moderation panel, which had claimed a specific live board was under slow mode.
 
 **Everything an account does is its own, and private.** Saved threads, reading history and followed boards are visible to nobody else, and a post carries no identity at all: a reply written here is `Anonymous` whoever wrote it, and the only thing that can appear beside it is a tripcode an anon opted into. Nothing is ever sent upstream — the API accepts `GET`, `HEAD` and `OPTIONS` only — so a reply written on Clover stays on Clover.
+
+**Deleting an account deletes the files it uploaded.** The posts stay, as the anonymous rows they always were, but every image goes with the account and the row stops pointing at a file that is no longer there. The privacy page promised this long before anything enforced it; a `deleting` observer is what made the sentence true, and the guard fails if the observer is ever detached.
+
+**Search engines are asked for Clover's own pages and not the mirror.** `robots.txt` allows the homepage, the directory and the four standing pages, and disallows board and thread paths. The content is not Clover's to publish, the adult-board opt-in cannot travel with a search result, and a thread pruned upstream becomes a result leading nowhere.
 
 Direct messages were removed rather than built. Two anons have no way to find each other here: there is no directory, no profile page for anyone but yourself, and no identity on a post to start from. The screen assumed a social graph the product's own premise rules out.
 
