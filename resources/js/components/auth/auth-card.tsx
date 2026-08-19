@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { Wordmark } from '@/components/clover/wordmark';
 import { cn } from '@/lib/utils';
@@ -26,6 +26,9 @@ type AuthCardProps = {
 };
 
 function AuthCard({ title, description, children, className }: AuthCardProps) {
+    const { auth } = usePage().props;
+    const signedIn = Boolean(auth?.user);
+
     return (
         <div
             data-slot="auth-card"
@@ -39,13 +42,28 @@ function AuthCard({ title, description, children, className }: AuthCardProps) {
             )}
         >
             <div className="flex flex-col gap-2">
-                <Link
-                    href={home()}
-                    aria-label="Clover home"
-                    className="mb-2 w-fit rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                >
-                    <Wordmark size={24} />
-                </Link>
+                {/* A link out to the marketing homepage, but only for someone
+                    who has not signed in yet.
+
+                    Two of the screens this card renders -- Confirm password
+                    and Verify email -- are reached while signed in, and from
+                    those the link took an anon out of the product and back to
+                    the pitch for it. That is the exact case `AppSidebar`'s
+                    wordmark stopped being a link for; the same trap was left
+                    standing here. Signed in, the mark stays as a mark. */}
+                {signedIn ? (
+                    <div className="mb-2 w-fit">
+                        <Wordmark size={24} />
+                    </div>
+                ) : (
+                    <Link
+                        href={home()}
+                        aria-label="Clover home"
+                        className="mb-2 w-fit rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                        <Wordmark size={24} />
+                    </Link>
+                )}
 
                 <h1 className="font-display text-h1 font-bold text-balance text-foreground">
                     {title}

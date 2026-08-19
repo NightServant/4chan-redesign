@@ -1,9 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthCard } from '@/components/auth/auth-card';
 
+const { usePage } = vi.hoisted(() => ({ usePage: vi.fn() }));
+
 vi.mock('@inertiajs/react', () => ({
+    usePage,
     Link: ({
         href,
         children,
@@ -18,7 +21,40 @@ vi.mock('@inertiajs/react', () => ({
     ),
 }));
 
+beforeEach(() => {
+    usePage.mockReturnValue({ props: { auth: { user: null } } });
+});
+
 describe('AuthCard', () => {
+    /**
+     * The wordmark is a way out to the marketing homepage for someone who has
+     * not signed in. For someone who has, it is a way *out of the product*,
+     * which is the trap `AppSidebar`'s own wordmark stopped being a link for.
+     *
+     * Two screens this card renders are reached signed in -- Confirm password,
+     * on the way to two-factor settings, and Verify email -- so this is not
+     * hypothetical.
+     */
+    it('links the wordmark home for a signed-out anon', () => {
+        render(<AuthCard title="Sign in">form</AuthCard>);
+
+        expect(
+            screen.getByRole('link', { name: 'Clover home' }),
+        ).toBeInTheDocument();
+    });
+
+    it('does not offer the way out of the product to someone signed in', () => {
+        usePage.mockReturnValue({
+            props: { auth: { user: { id: 1, email: 'anon@example.com' } } },
+        });
+
+        render(<AuthCard title="Confirm password">form</AuthCard>);
+
+        expect(
+            screen.queryByRole('link', { name: 'Clover home' }),
+        ).not.toBeInTheDocument();
+    });
+
     it('renders the title as the page heading', () => {
         render(
             <AuthCard title="Welcome back" description="Sign in to continue.">

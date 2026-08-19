@@ -1,2 +1,36 @@
+# Clover indexes its own pages. It does not ask search engines to index the
+# 4chan content it mirrors.
+#
+# Three reasons, in order of how much they matter:
+#
+#   1. It is not Clover's content. Threads and posts belong to whoever wrote
+#      them on 4chan, which has its own indexed pages for them. A mirror
+#      competing with the original in search results dilutes both and adds
+#      nothing a reader wanted.
+#   2. Boards 4chan marks not worksafe are hidden here behind an account-level
+#      opt-in, and that opt-in cannot travel with a search result. Indexing
+#      them would route people straight past the gate the product built.
+#   3. Threads are ephemeral upstream. 4chan prunes them off the end of a
+#      board within days, Clover does not keep what it has dropped, and an
+#      indexed thread that has been pruned is a search result leading to a
+#      not-found page.
+#
+# Board slugs are lowercase alphanumerics wrapped in slashes -- /g/, /3/,
+# /r9k/ -- so there is no prefix that separates a board path from Clover's own
+# routes. The site's own pages are listed as explicit Allow rules and
+# everything else is disallowed, which is the only ordering that holds when
+# new boards appear upstream without anybody redeploying.
+
 User-agent: *
-Disallow:
+Allow: /$
+Allow: /communities
+Allow: /status
+Allow: /rules
+Allow: /faq
+Allow: /terms
+Allow: /privacy
+Disallow: /
+
+# Search results are generated pages over mirrored content: nothing there is
+# worth a crawl budget, and every one of them is a database query.
+Disallow: /search

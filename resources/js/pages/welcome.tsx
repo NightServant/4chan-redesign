@@ -52,9 +52,16 @@ interface WelcomeProps {
     boards: Board[];
     threads: Thread[];
     trending: TrendingTag[];
+    /** Boards this visitor can reach, counted server-side. See `HowItWorks`. */
+    boardCount: number;
 }
 
-export default function Welcome({ boards, threads, trending }: WelcomeProps) {
+export default function Welcome({
+    boards,
+    threads,
+    trending,
+    boardCount,
+}: WelcomeProps) {
     return (
         <div className="flex min-h-dvh flex-col bg-bg">
             <PageMeta
@@ -78,7 +85,7 @@ export default function Welcome({ boards, threads, trending }: WelcomeProps) {
                     trending={trending}
                 />
                 <Features />
-                <HowItWorks />
+                <HowItWorks boardCount={boardCount} />
             </main>
 
             <SiteFooter />

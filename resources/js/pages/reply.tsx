@@ -167,9 +167,16 @@ export default function Reply({ thread, maxCommentChars }: ReplyPageProps) {
 
                 {attachment !== null ? (
                     <div className="flex items-center gap-3 border-t border-border px-4 py-3">
+                        {/* Named, as its sibling in `ReplyComposer` is. Both
+                            are the same control -- a thumbnail beside the
+                            filename -- and an empty alt on one of them left
+                            the two components disagreeing about whether this
+                            preview is decorative. It is not: it is the only
+                            confirmation an anon gets that the right file was
+                            picked. */}
                         <img
                             src={attachment.preview}
-                            alt=""
+                            alt={`Attached image: ${attachment.file.name}`}
                             className="size-14 rounded-md border border-border object-cover"
                         />
                         <span className="min-w-0 flex-1 truncate text-meta text-muted-foreground">

@@ -112,6 +112,19 @@ class HomeController extends Controller
             ),
 
             'trending' => TrendingTagResource::collection($trending),
+
+            /**
+             * How many boards this visitor can actually reach.
+             *
+             * The step copy said "any of 74 boards", written by hand and
+             * wrong twice over: there are 77, of which 53 are worksafe, so
+             * the number matched neither what the site holds nor what a
+             * signed-out visitor is shown. Counted within this anon's own
+             * visibility for the same reason the feed's library panel is —
+             * a page quoting a figure the directory beside it contradicts is
+             * a page arguing with itself.
+             */
+            'boardCount' => Board::query()->visible($showsMature)->count(),
         ]);
     }
 }

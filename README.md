@@ -16,7 +16,7 @@ Clover treats the underlying model as correct: anonymous posting, subject-scoped
 
 The design lives in a Claude Design project and is treated as a blueprint, not a spec. Where the prototype and good practice disagree, good practice wins and the departure is written down. The prototype animates the sidebar's `width` on collapse, so the width snaps and only colour transitions. Its light theme sets button text to `#FFFFFF`, which measures 3.06:1 against the light green and fails WCAG AA, so the authored `#06130B` ships instead at 6.20:1. Its `Switch` animates `justify-content` to slide the thumb, so the thumb translates.
 
-Some of it is not a port at all. The prototype has no command palette, no thread page and no composer: it stubs the last two with copy claiming the design system ships them, and it does not. Those are net-new work built to sit inside the system rather than beside it.
+Some of it is not a port at all. The prototype has no thread page and no composer: it stubs both with copy claiming the design system ships them, and it does not. Those are net-new work built to sit inside the system rather than beside it.
 
 Boards, threads and posts are ingested from 4chan's read-only JSON API into Eloquent and reach the screens as Inertia props. Everything an account does — replying, saving, following, and the reading history behind it — is this application's own and never leaves it. Clover is two data sources behind one set of typed contracts rather than a mirror.
 
@@ -25,7 +25,7 @@ Boards, threads and posts are ingested from 4chan's read-only JSON API into Eloq
 - **Token foundation** &mdash; every colour authored once in OKLCH, mapped through Tailwind's `@theme` to both shadcn aliases and Clover-native utilities; dark by default with a fully authored light scope, and no neutral pure black or white
 - **Component library** &mdash; 109 components across 23 pages: primitives, Clover-specific components and page sections, each built test-first
 - **Overlays on Radix** &mdash; dialog, sheet, dropdown, context menu, tabs, tooltip and select, so focus trapping, roving tabindex and typeahead are correct rather than approximated
-- **Command palette** &mdash; ⌘K / Ctrl+K over `cmdk`, net-new work the design prototype never covered
+- **Search from the keyboard** &mdash; ⌘K / Ctrl+K focuses the header's search field from anywhere in the app
 - **App chrome that reshapes** &mdash; a collapsible sidebar with persisted state above `lg` and the same list as a drawer below it; a header carrying the account and notification menus on a desktop and the drawer trigger plus a search field on a phone; a bottom bar for signed-in anons, and in its place a dock for signed-out ones that says what Clover is before asking anyone to join
 - **One set of measures** &mdash; the shell, the thread column, the rail and the media box are custom properties, so a width is decided in one place and every screen reads it, and the rail is not reserved at widths where it never renders. Every control clears 44px on a coarse pointer
 - **Community layer** &mdash; thread cards with a stretched-link target so the share and bookmark buttons stay independently focusable, and a comment tree nested from quotelinks, since 4chan's own posts are flat
