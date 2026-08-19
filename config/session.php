@@ -167,9 +167,17 @@ return [
     | to the server if the browser has a HTTPS connection. This will keep
     | the cookie from being sent to you when it can't be done securely.
     |
+    | The fallback follows APP_URL rather than being left unset. Unset meant
+    | no `Secure` flag at all unless someone knew the variable existed, and it
+    | was in no example file to find; a hard `true` would have broken the
+    | plain-HTTP way of running this locally that the README documents
+    | (`composer dev`, http://localhost:8000). Herd serves it over HTTPS and
+    | so does anything deployed, and both say so in APP_URL, so the scheme
+    | already there is the honest answer. SESSION_SECURE_COOKIE still wins.
+    |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    'secure' => env('SESSION_SECURE_COOKIE', str_starts_with((string) env('APP_URL', ''), 'https://')),
 
     /*
     |--------------------------------------------------------------------------

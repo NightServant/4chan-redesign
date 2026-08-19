@@ -3,8 +3,27 @@ import { describe, expect, it } from 'vitest';
 import { HowItWorks } from '@/components/home/how-it-works';
 
 describe('HowItWorks', () => {
+    /**
+     * The count is the server's, not the copy's.
+     *
+     * It read "74 boards", typed in by hand, against a directory holding 77
+     * of which 53 are worksafe -- wrong on either reading, and wrong again
+     * the moment 4chan adds or retires one. This asserts the component
+     * reports what it is given rather than a number of its own.
+     */
+    it('names the board count it is handed rather than one of its own', () => {
+        render(<HowItWorks boardCount={61} />);
+
+        expect(
+            screen.getByText(
+                'Subscribe to /g/, /wg/ or any of 61 boards. Your list syncs, nothing else does.',
+            ),
+        ).toBeInTheDocument();
+        expect(screen.queryByText(/74 boards/)).not.toBeInTheDocument();
+    });
+
     it('renders the section heading', () => {
-        render(<HowItWorks />);
+        render(<HowItWorks boardCount={53} />);
 
         expect(
             screen.getByRole('heading', {
@@ -15,7 +34,7 @@ describe('HowItWorks', () => {
     });
 
     it('renders an ordered list of three steps', () => {
-        render(<HowItWorks />);
+        render(<HowItWorks boardCount={53} />);
 
         const list = screen.getByRole('list');
 
@@ -24,14 +43,14 @@ describe('HowItWorks', () => {
     });
 
     it('renders each step title as a heading and its body verbatim', () => {
-        render(<HowItWorks />);
+        render(<HowItWorks boardCount={53} />);
 
         expect(
             screen.getByRole('heading', { level: 3, name: 'Pick your boards' }),
         ).toBeInTheDocument();
         expect(
             screen.getByText(
-                'Subscribe to /g/, /wg/ or any of 74 boards. Your list syncs, nothing else does.',
+                'Subscribe to /g/, /wg/ or any of 53 boards. Your list syncs, nothing else does.',
             ),
         ).toBeInTheDocument();
 
@@ -63,7 +82,7 @@ describe('HowItWorks', () => {
     /** The zero-padded step number must appear once, not once in markup and
      * once again via the list's own numbering. */
     it('shows each zero-padded step number exactly once', () => {
-        render(<HowItWorks />);
+        render(<HowItWorks boardCount={53} />);
 
         expect(screen.getByText('01')).toBeInTheDocument();
         expect(screen.getByText('02')).toBeInTheDocument();
@@ -71,7 +90,7 @@ describe('HowItWorks', () => {
     });
 
     it('does not announce the step number a second time through list numbering', () => {
-        render(<HowItWorks />);
+        render(<HowItWorks boardCount={53} />);
 
         const list = screen.getByRole('list');
 
@@ -83,7 +102,7 @@ describe('HowItWorks', () => {
      * bordered/backgrounded surface.
      */
     it('is not built from cards', () => {
-        const { container } = render(<HowItWorks />);
+        const { container } = render(<HowItWorks boardCount={53} />);
 
         expect(container.querySelectorAll('[data-slot="card"]')).toHaveLength(
             0,
@@ -101,7 +120,7 @@ describe('HowItWorks', () => {
      * axes, every interior line drawn once, `border-border` throughout.
      */
     it('rules the steps as grid cells on both axes', () => {
-        const { container } = render(<HowItWorks />);
+        const { container } = render(<HowItWorks boardCount={53} />);
 
         const frame = container.querySelector<HTMLElement>(
             '[data-slot="how-it-works-frame"]',
@@ -137,7 +156,7 @@ describe('HowItWorks', () => {
      * them. A short row then still meets a full-width bottom rule.
      */
     it('closes a short last row with the frame rather than by counting columns', () => {
-        render(<HowItWorks />);
+        render(<HowItWorks boardCount={53} />);
 
         const list = screen.getByRole('list');
 
@@ -151,7 +170,7 @@ describe('HowItWorks', () => {
      * The rules changed; the track did not.
      */
     it('keeps the collapsible track that survives a 320px viewport', () => {
-        render(<HowItWorks />);
+        render(<HowItWorks boardCount={53} />);
 
         expect(screen.getByRole('list').getAttribute('style')).toContain(
             'minmax(min(260px, 100%), 1fr)',
@@ -159,7 +178,7 @@ describe('HowItWorks', () => {
     });
 
     it('contains no em dashes anywhere in its rendered text', () => {
-        const { container } = render(<HowItWorks />);
+        const { container } = render(<HowItWorks boardCount={53} />);
 
         expect(container.textContent).not.toMatch(/—|--/);
     });

@@ -30,6 +30,8 @@
             }
         </style>
 
+        @php($meta = \App\Support\PageMetadata::for($page))
+
         {{--
             The social card, and a description, rendered by the server.
 
@@ -43,17 +45,23 @@
 
             `head-key` matches the names `PageMeta` uses, so Inertia replaces
             these rather than appending a second copy of each.
+
+            These were one string for the whole site until `PageMetadata`
+            landed: every URL served the same title and the same description,
+            so the twenty-six distinct titles written in the page components
+            reached browsers and nothing else. They are resolved per page now,
+            from the same props the component renders.
         --}}
-        <meta head-key="description" name="description" content="{{ config('clover.meta_description') }}">
+        <meta head-key="description" name="description" content="{{ $meta['description'] }}">
         <meta head-key="og:site_name" property="og:site_name" content="{{ config('app.name') }}">
-        <meta head-key="og:type" property="og:type" content="website">
-        <meta head-key="og:title" property="og:title" content="{{ config('app.name') }}">
-        <meta head-key="og:description" property="og:description" content="{{ config('clover.meta_description') }}">
+        <meta head-key="og:type" property="og:type" content="{{ $meta['type'] }}">
+        <meta head-key="og:title" property="og:title" content="{{ $meta['socialTitle'] }}">
+        <meta head-key="og:description" property="og:description" content="{{ $meta['description'] }}">
         <meta head-key="og:url" property="og:url" content="{{ url()->current() }}">
         <meta head-key="og:image" property="og:image" content="{{ url('/og.png') }}">
         <meta head-key="twitter:card" name="twitter:card" content="summary_large_image">
-        <meta head-key="twitter:title" name="twitter:title" content="{{ config('app.name') }}">
-        <meta head-key="twitter:description" name="twitter:description" content="{{ config('clover.meta_description') }}">
+        <meta head-key="twitter:title" name="twitter:title" content="{{ $meta['socialTitle'] }}">
+        <meta head-key="twitter:description" name="twitter:description" content="{{ $meta['description'] }}">
         <meta head-key="twitter:image" name="twitter:image" content="{{ url('/og.png') }}">
 
         <link rel="icon" href="/favicon.ico" sizes="any">
@@ -65,7 +73,7 @@
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
         <x-inertia::head>
-            <title>{{ config('app.name') }}</title>
+            <title>{{ $meta['title'] }}</title>
         </x-inertia::head>
     </head>
     <body class="font-sans antialiased">

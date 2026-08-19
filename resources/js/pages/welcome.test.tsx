@@ -55,7 +55,12 @@ const TRENDING = [makeTrendingTag({ tag: '/g/', posts: '4,182 posts' })];
 describe('Welcome', () => {
     it('has exactly one first-level heading', () => {
         render(
-            <Welcome boards={BOARDS} threads={THREADS} trending={TRENDING} />,
+            <Welcome
+                boards={BOARDS}
+                threads={THREADS}
+                trending={TRENDING}
+                boardCount={53}
+            />,
         );
 
         expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
@@ -67,7 +72,12 @@ describe('Welcome', () => {
      */
     it('steps heading levels without skipping one', () => {
         render(
-            <Welcome boards={BOARDS} threads={THREADS} trending={TRENDING} />,
+            <Welcome
+                boards={BOARDS}
+                threads={THREADS}
+                trending={TRENDING}
+                boardCount={53}
+            />,
         );
 
         const levels = screen
@@ -83,7 +93,12 @@ describe('Welcome', () => {
 
     it('lays out the page as banner, main and contentinfo landmarks', () => {
         render(
-            <Welcome boards={BOARDS} threads={THREADS} trending={TRENDING} />,
+            <Welcome
+                boards={BOARDS}
+                threads={THREADS}
+                trending={TRENDING}
+                boardCount={53}
+            />,
         );
 
         expect(screen.getByRole('banner')).toBeInTheDocument();
@@ -97,7 +112,12 @@ describe('Welcome', () => {
      */
     it('points every link at a real path', () => {
         render(
-            <Welcome boards={BOARDS} threads={THREADS} trending={TRENDING} />,
+            <Welcome
+                boards={BOARDS}
+                threads={THREADS}
+                trending={TRENDING}
+                boardCount={53}
+            />,
         );
 
         const links = screen.getAllByRole('link');
@@ -133,7 +153,12 @@ describe('Welcome', () => {
      */
     it('sends a visitor onward to boards and the feed, not to single threads', () => {
         render(
-            <Welcome boards={BOARDS} threads={THREADS} trending={TRENDING} />,
+            <Welcome
+                boards={BOARDS}
+                threads={THREADS}
+                trending={TRENDING}
+                boardCount={53}
+            />,
         );
 
         const hrefs = screen
@@ -161,7 +186,12 @@ describe('Welcome', () => {
      */
     it('contains no em dashes in copy Clover wrote', () => {
         const { container } = render(
-            <Welcome boards={BOARDS} threads={THREADS} trending={TRENDING} />,
+            <Welcome
+                boards={BOARDS}
+                threads={THREADS}
+                trending={TRENDING}
+                boardCount={53}
+            />,
         );
 
         const authored = THREADS.reduce(
@@ -186,7 +216,12 @@ describe('Welcome', () => {
      */
     it('numbers exactly the bands the page actually stacks', () => {
         const { container } = render(
-            <Welcome boards={BOARDS} threads={THREADS} trending={TRENDING} />,
+            <Welcome
+                boards={BOARDS}
+                threads={THREADS}
+                trending={TRENDING}
+                boardCount={53}
+            />,
         );
 
         const onThePage = [...container.querySelectorAll('main section[id]')]
@@ -198,7 +233,12 @@ describe('Welcome', () => {
 
     it('draws a margin either side of every band it numbers', () => {
         const { container } = render(
-            <Welcome boards={BOARDS} threads={THREADS} trending={TRENDING} />,
+            <Welcome
+                boards={BOARDS}
+                threads={THREADS}
+                trending={TRENDING}
+                boardCount={53}
+            />,
         );
 
         for (const id of HOME_SECTION_IDS) {

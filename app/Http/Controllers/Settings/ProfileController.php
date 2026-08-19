@@ -58,6 +58,15 @@ class ProfileController extends Controller
 
     /**
      * Delete the user's profile.
+     *
+     * The only feedback this used to give was that the page changed and the
+     * account menu was gone. Deleting an account is the most consequential
+     * thing an anon can do here and it is irreversible, so it says what
+     * happened -- including the part they cannot see, which is that the files
+     * they uploaded went with it. `UserObserver` is what makes that true.
+     *
+     * Flashed after the session is invalidated, not before: `invalidate()`
+     * empties the session it would otherwise have been written into.
      */
     public function destroy(ProfileDeleteRequest $request): RedirectResponse
     {
@@ -69,6 +78,11 @@ class ProfileController extends Controller
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('Your account is gone, along with anything you uploaded. Posts stay, unsigned.'),
+        ]);
 
         return redirect('/');
     }

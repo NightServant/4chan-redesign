@@ -11,22 +11,39 @@ type Step = {
     body: string;
 };
 
-const STEPS: Step[] = [
-    {
-        title: 'Pick your boards',
-        body: 'Subscribe to /g/, /wg/ or any of 74 boards. Your list syncs, nothing else does.',
-    },
-    {
-        title: 'Read now, account later',
-        body: 'Browsing is open to everyone. Create an account when you want to post or comment.',
-    },
-    {
-        title: 'Bump what deserves it',
-        body: 'Replies bump a thread back to the top. There is nothing to upvote and no score to farm.',
-    },
-];
+type HowItWorksProps = {
+    /**
+     * Boards this visitor can reach, counted by the server.
+     *
+     * The first step used to say "any of 74 boards", typed in by hand. There
+     * are 77, of which 53 are worksafe, so the figure was wrong whether you
+     * read it as the whole directory or as what a signed-out visitor is
+     * shown. A number in marketing copy that nothing recomputes is a claim
+     * with an expiry date on it.
+     */
+    boardCount: number;
+};
 
-function HowItWorks() {
+function steps(boardCount: number): Step[] {
+    return [
+        {
+            title: 'Pick your boards',
+            body: `Subscribe to /g/, /wg/ or any of ${boardCount} boards. Your list syncs, nothing else does.`,
+        },
+        {
+            title: 'Read now, account later',
+            body: 'Browsing is open to everyone. Create an account when you want to post or comment.',
+        },
+        {
+            title: 'Bump what deserves it',
+            body: 'Replies bump a thread back to the top. There is nothing to upvote and no score to farm.',
+        },
+    ];
+}
+
+function HowItWorks({ boardCount }: HowItWorksProps) {
+    const stepList = steps(boardCount);
+
     return (
         <Section
             id="how"
@@ -70,7 +87,7 @@ function HowItWorks() {
                             'repeat(auto-fit, minmax(min(260px, 100%), 1fr))',
                     }}
                 >
-                    {STEPS.map((step, index) => (
+                    {stepList.map((step, index) => (
                         <li
                             key={step.title}
                             className="flex flex-col gap-2 border-r border-b border-border p-6"
@@ -93,3 +110,4 @@ function HowItWorks() {
 }
 
 export { HowItWorks };
+export type { HowItWorksProps };

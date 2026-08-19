@@ -44,6 +44,49 @@ const expectedThreads = THREADS.slice(1, 4);
 
 describe('Trending', () => {
     /**
+     * The row used to carry `hover:text-primary` and nothing else, which moved
+     * no colour at all: both children set their own, and a parent's inherited
+     * colour cannot override a child that has one. The cell pointed somewhere
+     * real and gave no sign the pointer was on it.
+     *
+     * Asserted as a class contract because jsdom computes no styles and fires
+     * no `:hover`. What that can still prove is the mechanism: the row is a
+     * `group`, it moves its own background, and each child answers for its own
+     * colour under `group-hover` -- which is the specific thing that was
+     * missing.
+     */
+    it('reacts as a whole cell rather than only in the link colour', () => {
+        render(<Trending threads={expectedThreads} trending={TRENDING} />);
+
+        const row = screen.getAllByRole('link')[1];
+
+        expect(row.className).toContain('group');
+        expect(row.className).toContain('hover:bg-surface-hover');
+        expect(row.className).toContain('transition-colors');
+
+        const slug = row.firstElementChild;
+        const count = row.lastElementChild;
+
+        expect(slug?.className).toContain('group-hover:text-primary');
+        expect(count?.className).toContain('group-hover:text-foreground');
+
+        for (const part of [slug, count]) {
+            expect(part?.className).toContain('transition-colors');
+        }
+    });
+
+    it('gives the same feedback to a keyboard as to a pointer', () => {
+        render(<Trending threads={expectedThreads} trending={TRENDING} />);
+
+        const row = screen.getAllByRole('link')[1];
+
+        expect(row.className).toContain('focus-visible:bg-surface-hover');
+        expect(row.firstElementChild?.className).toContain(
+            'group-focus-visible:text-primary',
+        );
+    });
+
+    /**
      * The threads were a grid of `ThreadCard`s and are now a ticker, so they
      * are no longer links: a marquee renders its list twice to loop seamlessly,
      * and the whole thing is `aria-hidden` and `inert` because reading every

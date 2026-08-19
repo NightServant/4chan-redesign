@@ -152,8 +152,17 @@ describe('CommentTree', () => {
         expect(screen.getAllByRole('listitem')).toHaveLength(7);
     });
 
+    /**
+     * Kept, with its premise corrected: a quote reference is a focusable
+     * button *when a caller handles it*. This test used to render the tree
+     * with no handler and assert the button anyway, which is exactly the
+     * shape of guard that certifies a dead control -- it proved the element
+     * was pressable while nothing was listening for the press. The
+     * accessibility assertion is worth keeping; the state it was made in
+     * was not.
+     */
     it("renders a reply's quotes as focusable references naming the post they quote", () => {
-        render(<CommentTree comments={COMMENTS} />);
+        render(<CommentTree comments={COMMENTS} onQuoteClick={vi.fn()} />);
 
         // 58210458 is the only reply that quotes 58210449, so this reference
         // is unambiguous in the rendered tree.
@@ -261,6 +270,69 @@ describe('CommentTree', () => {
         await userEvent.click(replyButton);
 
         expect(onReply).toHaveBeenCalledWith(leaf);
+    });
+
+    /**
+     * The rule these three assert: this component never renders a control
+     * nothing has agreed to handle.
+     *
+     * Every caller in the application rendered `<CommentTree comments={...} />`
+     * and passed no handlers at all -- the thread page twice, the image
+     * viewer's drawer once. So on every thread, every comment offered a Reply
+     * button, a `>>` quote reference and, past the depth cap, a "Continue this
+     * thread" button, and all three did precisely nothing when pressed. They
+     * were optional props called through `?.`, which is silent by design.
+     *
+     * Making the caller pass handlers fixes today's instance. Refusing to draw
+     * an unhandled control fixes the next one too, which is the part worth
+     * having: a control that cannot be honoured does not appear.
+     */
+    it('renders no reply control when no caller has agreed to handle one', () => {
+        render(<CommentTree comments={COMMENTS} />);
+
+        expect(
+            screen.queryByRole('button', { name: /^reply$/i }),
+        ).not.toBeInTheDocument();
+    });
+
+    /**
+     * A quote reference is still worth showing without a handler -- it names
+     * the post being answered, which is information. What it must not do is
+     * look pressable.
+     */
+    it('renders a quote reference as text rather than a button when nothing handles it', () => {
+        render(<CommentTree comments={COMMENTS} />);
+
+        const quoting = articleFor(58210452);
+
+        expect(within(quoting).getByText('>>58210447')).toBeInTheDocument();
+        expect(
+            within(quoting).queryByRole('button', { name: /58210447/ }),
+        ).not.toBeInTheDocument();
+    });
+
+    /**
+     * "Continue this thread" is the one of the three that needs nobody's
+     * permission: what it reveals is already in this component's own props.
+     * It expands in place, with no handler wired, because a button hiding
+     * replies behind a caller that may never exist is how it came to be dead.
+     */
+    it('expands past the depth cap on its own, with no handler wired', async () => {
+        render(<CommentTree comments={COMMENTS} maxDepth={2} />);
+
+        expect(
+            screen.queryByText(/Fair\. What is battery like/),
+        ).not.toBeInTheDocument();
+
+        await userEvent.click(
+            within(rowFor(58210452)).getByRole('button', {
+                name: /continue this thread/i,
+            }),
+        );
+
+        expect(
+            screen.getByText(/Fair\. What is battery like/),
+        ).toBeInTheDocument();
     });
 
     it('renders nothing for an empty comment list', () => {

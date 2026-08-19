@@ -98,11 +98,22 @@ function CommentNode({
     onContinueThread,
 }: CommentNodeProps) {
     const [collapsed, setCollapsed] = useState(false);
+    /**
+     * Set by "Continue this thread", which reveals the branch in place.
+     *
+     * Local state rather than a required callback: what the cap hides is
+     * already in this component's own props, so nothing outside it needs to
+     * be consulted to show it. `onContinueThread` still fires for a caller
+     * that wants to know -- a page might want to change the URL -- but the
+     * button works whether or not anybody is listening. It did not before,
+     * which is how it spent every thread doing nothing.
+     */
+    const [continued, setContinued] = useState(false);
     const headingId = useId();
     const hasReplies = comment.replies.length > 0;
     const hiddenCount = countDescendants(comment);
     const childDepth = depth + 1;
-    const cappedAtDepth = hasReplies && childDepth > maxDepth;
+    const cappedAtDepth = hasReplies && childDepth > maxDepth && !continued;
 
     return (
         <li>
@@ -165,18 +176,30 @@ function CommentNode({
                     <>
                         {comment.quotes.length > 0 && (
                             <div className="flex flex-wrap gap-2">
-                                {comment.quotes.map((quoteNo) => (
-                                    <button
-                                        key={quoteNo}
-                                        type="button"
-                                        onClick={() =>
-                                            onQuoteClick?.(quoteNo, comment)
-                                        }
-                                        className={iconButtonClasses}
-                                    >
-                                        <MachineValue className="text-accent-text">{`>>${quoteNo}`}</MachineValue>
-                                    </button>
-                                ))}
+                                {comment.quotes.map((quoteNo) =>
+                                    /* A reference with nowhere to go is still
+                                       worth reading -- it names the post being
+                                       answered -- but it must not look
+                                       pressable. Text when unhandled, a button
+                                       when a caller can act on it. */
+                                    onQuoteClick ? (
+                                        <button
+                                            key={quoteNo}
+                                            type="button"
+                                            onClick={() =>
+                                                onQuoteClick(quoteNo, comment)
+                                            }
+                                            className={iconButtonClasses}
+                                        >
+                                            <MachineValue className="text-accent-text">{`>>${quoteNo}`}</MachineValue>
+                                        </button>
+                                    ) : (
+                                        <MachineValue
+                                            key={quoteNo}
+                                            className="px-1.5 py-1 text-caption text-faint"
+                                        >{`>>${quoteNo}`}</MachineValue>
+                                    ),
+                                )}
                             </div>
                         )}
 
@@ -205,17 +228,25 @@ function CommentNode({
 
                         <footer className="flex items-center gap-3">
                             <ShareControl url={`#p${comment.no}`} size="sm" />
-                            <button
-                                type="button"
-                                onClick={() => onReply?.(comment)}
-                                className={iconButtonClasses}
-                            >
-                                <ReplyIcon
-                                    aria-hidden="true"
-                                    className="size-3.5"
-                                />
-                                Reply
-                            </button>
+                            {/* Drawn only where something answers it. The
+                                image viewer's drawer, for instance, has no
+                                composer to send an anon to and carries its own
+                                call to action instead -- so it renders no
+                                Reply here rather than a Reply that does
+                                nothing. */}
+                            {onReply && (
+                                <button
+                                    type="button"
+                                    onClick={() => onReply(comment)}
+                                    className={iconButtonClasses}
+                                >
+                                    <ReplyIcon
+                                        aria-hidden="true"
+                                        className="size-3.5"
+                                    />
+                                    Reply
+                                </button>
+                            )}
                         </footer>
                     </>
                 )}
@@ -226,7 +257,10 @@ function CommentNode({
                 (cappedAtDepth ? (
                     <ContinueThread
                         count={hiddenCount}
-                        onClick={() => onContinueThread?.(comment)}
+                        onClick={() => {
+                            setContinued(true);
+                            onContinueThread?.(comment);
+                        }}
                     />
                 ) : (
                     <ol

@@ -1,6 +1,7 @@
 import { router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
+import { toast } from 'sonner';
 import { AuthGate } from '@/components/clover/auth-gate';
 import { bookmark as bookmarkThread } from '@/routes/threads';
 import type { Thread } from '@/types/clover';
@@ -51,8 +52,20 @@ export function useBookmark(): UseBookmark {
 
         /* `preserveScroll` because the press happens mid-list and the reply is
            a redirect back: without it the page returns to the top and the row
-           an anon just saved is somewhere above them. */
-        const options = { preserveScroll: true };
+           an anon just saved is somewhere above them.
+
+           `onError` because without it a refusal is invisible. The request
+           went out with nothing but `preserveScroll`, and no screen rendering
+           a bookmark reads `errors` -- so a save the server rejected, whether
+           for a throttle, a session that expired in another tab, or a board
+           the account has since opted out of, left the icon exactly as it was
+           and said nothing. That is indistinguishable from a dead button, and
+           this control has already been a dead button once. */
+        const options = {
+            preserveScroll: true,
+            onError: () =>
+                toast.error('That did not save. Try again in a moment.'),
+        };
 
         /**
          * Called on the router, never picked off it.

@@ -1,6 +1,7 @@
 import { router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
+import { toast } from 'sonner';
 import { AuthGate } from '@/components/clover/auth-gate';
 import { subscribe as subscribeToBoard } from '@/routes/boards';
 import type { Board } from '@/types/clover';
@@ -52,7 +53,14 @@ export function useBoardSubscription(): UseBoardSubscription {
         /* The press happens above the thread list and the reply is a redirect
            back: without this the page returns to the top and the board an anon
            just joined is somewhere above them. */
-        const options = { preserveScroll: true };
+        /* `onError` for the same reason it is on `useBookmark`: a follow the
+           server refuses is otherwise silent, and a control that changes
+           nothing and says nothing reads as broken. */
+        const options = {
+            preserveScroll: true,
+            onError: () =>
+                toast.error('That did not go through. Try again in a moment.'),
+        };
 
         /**
          * Called on the router, never picked off it. Detaching the method

@@ -1,9 +1,16 @@
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AuthLayout from '@/layouts/auth-layout';
 
+/* `AuthCard` reads the shared auth prop to decide whether its wordmark is a
+   way out to the marketing homepage -- signed in, it must not be. Real
+   Inertia always provides `usePage`; a double that omits it only proves the
+   component cannot be rendered. */
+const { usePage } = vi.hoisted(() => ({ usePage: vi.fn() }));
+
 vi.mock('@inertiajs/react', () => ({
+    usePage,
     Link: ({
         href,
         children,
@@ -17,6 +24,10 @@ vi.mock('@inertiajs/react', () => ({
         </a>
     ),
 }));
+
+beforeEach(() => {
+    usePage.mockReturnValue({ props: { auth: { user: null } } });
+});
 
 describe('AuthLayout', () => {
     it('passes the layout props straight through to the split template', () => {

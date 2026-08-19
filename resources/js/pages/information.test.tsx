@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { INFORMATION } from '@/content/information';
@@ -16,6 +16,38 @@ vi.mock('@inertiajs/react', () => ({
 const WRITTEN = Object.keys(INFORMATION);
 
 describe('Information', () => {
+    /**
+     * These four answer neighbouring questions, and until now the only way
+     * between them was back out to the footer -- a reader who had just
+     * finished the rules and wanted to know what happens to their data had to
+     * scroll to the bottom of the page to find where that is written.
+     */
+    it.each(WRITTEN)('links %s onward to the other standing pages', (title) => {
+        render(<Information title={title} />);
+
+        const onward = screen.getByRole('navigation', {
+            name: /other information pages/i,
+        });
+
+        for (const other of WRITTEN.filter((name) => name !== title)) {
+            expect(
+                within(onward).getByRole('link', { name: other }),
+            ).toBeInTheDocument();
+        }
+    });
+
+    it('does not link a page to itself', () => {
+        render(<Information title="Privacy" />);
+
+        const onward = screen.getByRole('navigation', {
+            name: /other information pages/i,
+        });
+
+        expect(
+            within(onward).queryByRole('link', { name: 'Privacy' }),
+        ).not.toBeInTheDocument();
+    });
+
     it.each(WRITTEN)(
         'renders %s as a real page, not a placeholder',
         (title) => {

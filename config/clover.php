@@ -179,10 +179,12 @@ return [
     | it is the only case in which Clover holds a file at all.
     |
     | Images only, and only formats a browser renders without a plugin. `webm`
-    | and `gif` animations are what 4chan is known for and are deliberately not
-    | here: video needs a player, a poster frame and a size budget this feature
-    | does not have, and accepting an upload Clover cannot display would be
-    | worse than declining it.
+    | is what 4chan is known for and is deliberately not here: video needs a
+    | player, a poster frame and a size budget this feature does not have, and
+    | accepting an upload Clover cannot display would be worse than declining
+    | it. `gif` is on the list because it is not that — an animated gif is an
+    | `<img>` like any other and needs nothing built for it. This note used to
+    | put the two together and contradict the list three lines below it.
     |
     */
 

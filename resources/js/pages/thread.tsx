@@ -1,6 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { Archive } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AuthGate } from '@/components/clover/auth-gate';
 import { CommentTree } from '@/components/clover/comment-tree';
 import { EmptyState } from '@/components/clover/empty-state';
@@ -55,11 +55,15 @@ export default function Thread({
     comments,
     maxCommentChars,
 }: ThreadPageProps) {
-    const { auth } = usePage().props;
+    const { auth, errors } = usePage().props;
     const signedIn = Boolean(auth.user);
     const isMobile = useIsMobile();
 
     const [authGateAction, setAuthGateAction] = useState<string | null>(null);
+    /* The composer hands this over when it mounts; the Reply control on each
+       comment calls it. A ref rather than state because nothing renders
+       differently for having it. */
+    const composer = useRef<{ quote: (no: number) => void } | null>(null);
 
     /**
      * Reading a thread records that it was read.
@@ -103,19 +107,63 @@ export default function Thread({
      * read. The composer has said so since it was built; this is what finally
      * makes it true rather than a comment.
      */
-    function handleReply(body: string, media: File | null) {
+    function handleReply(body: string, media: File | null): Promise<boolean> {
         if (!thread) {
-            return;
+            return Promise.resolve(false);
         }
 
-        /* Inertia switches to multipart on its own once a `File` is in the
-           payload, so the attachment needs no special casing here — only that
-           the key is absent rather than null when there is nothing to send. */
-        router.post(
-            storeReply({ board: boardToken(slug), thread: thread.no }).url,
-            media === null ? { body } : { body, media },
-            { preserveScroll: true },
-        );
+        /* Resolved from the request's own callbacks rather than returned
+           straight away, because the composer clears the field on the answer.
+           It used to clear on the attempt, so a reply the server refused --
+           too long, wrong file type, thread pruned between load and submit --
+           vanished without a word. */
+        return new Promise((resolve) => {
+            /* Inertia switches to multipart on its own once a `File` is in the
+               payload, so the attachment needs no special casing here — only
+               that the key is absent rather than null when there is nothing
+               to send. */
+            router.post(
+                storeReply({ board: boardToken(slug), thread: thread.no }).url,
+                media === null ? { body } : { body, media },
+                {
+                    preserveScroll: true,
+                    onSuccess: () => resolve(true),
+                    onError: () => resolve(false),
+                },
+            );
+        });
+    }
+
+    /**
+     * Quote a comment into the composer, which then takes focus. Scrolling is
+     * left to that focus, which browsers already do.
+     */
+    function quoteIntoComposer(comment: Comment): void {
+        composer.current?.quote(comment.no);
+    }
+
+    /* Stable, so the composer's registration effect runs on mount rather than
+       on every render of this page. */
+    const registerComposer = useCallback(
+        (api: { quote: (no: number) => void }) => {
+            composer.current = api;
+        },
+        [],
+    );
+
+    /**
+     * Jump to the post a `>>` reference names.
+     *
+     * Every comment is anchored `p{no}` for exactly this, and has been since
+     * the tree was built -- nothing ever used it. A reference to a post that
+     * is not on this page (the opening post, or one pruned upstream) finds
+     * no element and does nothing, which is the honest outcome: there is
+     * nowhere to go.
+     */
+    function jumpToPost(quoteNo: number): void {
+        const target = document.getElementById(`p${quoteNo}`);
+
+        target?.scrollIntoView({ block: 'center' });
     }
 
     /* Below `md` the reply control is a link into the composer page; at `md`
@@ -211,7 +259,10 @@ export default function Thread({
                     viewerDrawer={
                         comments.length === 0 ? undefined : (
                             <div className="flex flex-col gap-4">
-                                <CommentTree comments={comments} />
+                                <CommentTree
+                                    comments={comments}
+                                    onQuoteClick={jumpToPost}
+                                />
 
                                 {signedIn ? (
                                     <Button variant="outline" asChild>
@@ -268,6 +319,12 @@ export default function Thread({
                         threadNo={thread.no}
                         maxCommentChars={maxCommentChars}
                         onReply={handleReply}
+                        onReady={registerComposer}
+                        /* The server's own message, against the field that
+                           caused it. Before this the page swallowed every
+                           rejection: `router.post` was fired with no error
+                           handler and nothing read `errors`. */
+                        error={errors.body ?? errors.media}
                     />
                 ) : (
                     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-b border-border py-5">
@@ -285,7 +342,16 @@ export default function Thread({
                     </div>
                 )}
 
-                <CommentTree comments={comments} />
+                <CommentTree
+                    comments={comments}
+                    /* Reply quotes into the composer, which only exists at
+                       `md` and up -- below that the composer is a page of its
+                       own and there is no field on this screen to quote into.
+                       Passing nothing there means the control is not drawn at
+                       all, rather than drawn and inert. */
+                    onReply={isMobile ? undefined : quoteIntoComposer}
+                    onQuoteClick={jumpToPost}
+                />
             </div>
 
             <AuthGate

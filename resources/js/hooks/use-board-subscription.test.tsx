@@ -33,6 +33,12 @@ const { usePage, router } = vi.hoisted(() => ({
     },
 }));
 
+const { toast } = vi.hoisted(() => ({
+    toast: { error: vi.fn(), success: vi.fn() },
+}));
+
+vi.mock('sonner', () => ({ toast }));
+
 vi.mock('@inertiajs/react', () => ({
     usePage,
     router,
@@ -87,6 +93,23 @@ beforeEach(() => {
 });
 
 describe('useBoardSubscription', () => {
+    /** The same silence `useBookmark` had, on the same kind of control. */
+    it('says so when the server refuses to follow', async () => {
+        render(<Harness subscribed={false} />);
+
+        await userEvent.click(screen.getByRole('button', { name: 'Toggle' }));
+
+        const options = router.visit.mock.calls.at(-1)?.[1] as {
+            onError?: () => void;
+        };
+
+        expect(options.onError).toBeTypeOf('function');
+
+        options.onError?.();
+
+        expect(toast.error).toHaveBeenCalled();
+    });
+
     it('asks the server to follow a board that is not followed', async () => {
         const user = userEvent.setup();
         render(<Harness subscribed={false} />);

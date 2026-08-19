@@ -1,8 +1,29 @@
+import { Link } from '@inertiajs/react';
 import { FileTextIcon } from 'lucide-react';
 import { EmptyState } from '@/components/clover/empty-state';
 import { PageMeta } from '@/components/clover/page-meta';
 import { SectionLabel } from '@/components/clover/section-label';
 import { INFORMATION } from '@/content/information';
+import { faq, privacy, rules, terms } from '@/routes';
+
+/**
+ * The other three standing pages, from whichever one is open.
+ *
+ * These four answer neighbouring questions -- what belongs here, how the site
+ * behaves, what it does with an account, what it keeps -- and until now the
+ * only way between them was back out to the footer. A reader who has just
+ * finished the rules and wants to know what happens to their data had to
+ * scroll to the bottom of the page to find out where that is written.
+ *
+ * Built from the routes rather than from `INFORMATION`'s keys so a page with
+ * copy but no route, or the reverse, cannot produce a link to nowhere.
+ */
+const STANDING_PAGES = [
+    { title: 'Rules', href: rules().url },
+    { title: 'FAQ', href: faq().url },
+    { title: 'Terms', href: terms().url },
+    { title: 'Privacy', href: privacy().url },
+] as const;
 
 /**
  * Clover's standing pages: Rules, FAQ, Terms and Privacy.
@@ -81,6 +102,28 @@ export default function Information({ title }: { title: string }) {
                         </section>
                     ))}
                 </div>
+
+                <nav
+                    aria-label="Other information pages"
+                    className="flex flex-col gap-3 border-t border-border pt-6"
+                >
+                    <SectionLabel>Also worth reading</SectionLabel>
+
+                    <ul className="flex flex-wrap gap-x-6 gap-y-2">
+                        {STANDING_PAGES.filter(
+                            (page) => page.title !== title,
+                        ).map((page) => (
+                            <li key={page.title}>
+                                <Link
+                                    href={page.href}
+                                    className="text-body-sm text-accent-text transition-colors duration-[var(--duration-hover)] ease-standard hover:text-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                >
+                                    {page.title}
+                                </Link>
+                            </li>
+                        ))}
+                    </ul>
+                </nav>
             </article>
         </>
     );

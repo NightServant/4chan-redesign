@@ -1,5 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeComment, makeThread } from '@/fixtures/factories';
@@ -42,12 +43,37 @@ vi.mock('@inertiajs/react', () => ({
 }));
 
 vi.mock('@/components/thread/reply-composer', () => ({
+    /* Reports the two props the page now drives, so a test can see a quote
+       or a server error actually reach the composer rather than only that
+       the composer is on the page. */
     ReplyComposer: ({
         threadNo,
+        error,
+        onReady,
     }: {
         threadNo: number;
         onReply: (body: string) => void;
-    }) => <div data-testid="reply-composer-stub" data-thread-no={threadNo} />,
+        error?: string;
+        onReady?: (api: { quote: (no: number) => void }) => void;
+    }) => {
+        const [quoted, setQuoted] = useState('');
+
+        /* The real composer registers the same way. A double that skipped
+           registration would make the page's Reply wiring untestable, which
+           is how the control stayed dead for so long. */
+        useEffect(() => {
+            onReady?.({ quote: (no) => setQuoted(String(no)) });
+        }, [onReady]);
+
+        return (
+            <div
+                data-testid="reply-composer-stub"
+                data-thread-no={threadNo}
+                data-quote={quoted}
+                data-error={error ?? ''}
+            />
+        );
+    },
 }));
 
 vi.mock('@/components/clover/auth-gate', () => ({
@@ -112,10 +138,20 @@ function setViewport(isMobile: boolean): void {
     }));
 }
 
-function mockPage({ signedIn = false }: { signedIn?: boolean } = {}) {
+/**
+ * `errors` is shared by Inertia on every response, empty when there is
+ * nothing wrong. The double left it out, which is the shape of double that
+ * hides a bug: the page now reads it to show the server's rejection against
+ * the composer, and a mock missing it would have made that read look
+ * impossible rather than untested.
+ */
+function mockPage({
+    signedIn = false,
+    errors = {},
+}: { signedIn?: boolean; errors?: Record<string, string> } = {}) {
     usePage.mockReturnValue({
         url: `/g/${KNOWN_THREAD.no}`,
-        props: { auth: { user: signedIn ? SIGNED_IN_USER : null } },
+        props: { auth: { user: signedIn ? SIGNED_IN_USER : null }, errors },
     });
 }
 
@@ -430,6 +466,131 @@ describe('Thread', () => {
         expect(
             screen.getByRole('button', { name: 'Bookmark thread' }),
         ).toHaveAttribute('aria-pressed', 'false');
+    });
+
+    /**
+     * The three controls on every comment used to be inert: `CommentTree`
+     * called optional props through `?.` and no caller anywhere passed them.
+     * These assert the page is now one of the callers.
+     */
+    it('quotes a comment into the composer when its reply control is pressed', async () => {
+        mockPage({ signedIn: true });
+
+        render(
+            <Thread
+                slug="/g/"
+                no={KNOWN_THREAD.no}
+                thread={KNOWN_THREAD}
+                comments={COMMENTS}
+                maxCommentChars={2000}
+            />,
+        );
+
+        const [firstComment] = COMMENTS;
+
+        await userEvent.click(
+            within(
+                screen.getByRole('article', {
+                    name: new RegExp(String(firstComment.no)),
+                }),
+            ).getByRole('button', { name: /^reply$/i }),
+        );
+
+        expect(screen.getByTestId('reply-composer-stub')).toHaveAttribute(
+            'data-quote',
+            String(firstComment.no),
+        );
+    });
+
+    it('scrolls to the post a quote reference names', async () => {
+        const scrollIntoView = vi.fn();
+        /* jsdom implements no scrolling at all, so the method has to exist
+           before the handler can call it. */
+        Element.prototype.scrollIntoView = scrollIntoView;
+
+        mockPage({ signedIn: true });
+
+        render(
+            <Thread
+                slug="/g/"
+                no={KNOWN_THREAD.no}
+                thread={KNOWN_THREAD}
+                comments={COMMENTS}
+                maxCommentChars={2000}
+            />,
+        );
+
+        /* The shared fixture quotes nothing -- `makeComment` defaults
+           `quotes` to an empty array -- so this case builds the one shape it
+           is about: a reply that answers the comment above it. */
+        const answered = makeComment({ body: 'Eight cores, 16 GB.' });
+        const answering = makeComment({
+            body: 'That is usable, not fast.',
+            quotes: [answered.no],
+        });
+
+        cleanup();
+        render(
+            <Thread
+                slug="/g/"
+                no={KNOWN_THREAD.no}
+                thread={KNOWN_THREAD}
+                comments={[answered, answering]}
+                maxCommentChars={2000}
+            />,
+        );
+
+        await userEvent.click(
+            screen.getByRole('button', { name: `>>${answered.no}` }),
+        );
+
+        expect(scrollIntoView).toHaveBeenCalled();
+    });
+
+    /**
+     * Below `md` the composer is a page of its own, so there is no field on
+     * this screen for a quote to land in. The control is therefore not drawn
+     * -- rather than drawn and dead, which is how it shipped.
+     */
+    it('draws no reply control on a comment where there is no composer to quote into', () => {
+        mockPage({ signedIn: true });
+        setViewport(true);
+
+        render(
+            <Thread
+                slug="/g/"
+                no={KNOWN_THREAD.no}
+                thread={KNOWN_THREAD}
+                comments={COMMENTS}
+                maxCommentChars={2000}
+            />,
+        );
+
+        expect(
+            screen.queryByRole('button', { name: /^reply$/i }),
+        ).not.toBeInTheDocument();
+    });
+
+    it("shows the server's rejection against the composer", () => {
+        mockPage({
+            signedIn: true,
+            errors: { body: 'The body field is required.' },
+        });
+
+        render(
+            <Thread
+                slug="/g/"
+                no={KNOWN_THREAD.no}
+                thread={KNOWN_THREAD}
+                comments={COMMENTS}
+                maxCommentChars={2000}
+            />,
+        );
+
+        expect(screen.getByTestId('reply-composer-stub')).toHaveAttribute(
+            'data-error',
+            'The body field is required.',
+        );
     });
 
     it("does not render a second <main>: that is AppLayout's job", () => {

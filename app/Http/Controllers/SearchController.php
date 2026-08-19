@@ -14,6 +14,8 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -66,6 +68,20 @@ class SearchController extends Controller
     private const SORTS = ['relevant', 'latest', 'replies'];
 
     private const TIMES = ['all', 'today', 'week', 'month'];
+
+    /**
+     * How much of a search term is searched for.
+     *
+     * The term is read straight off the query string, wrapped in `%` on both
+     * sides and run against every board, thread subject and post body — an
+     * unindexable scan the caller sizes and the server pays for, on two public
+     * routes, one of which fires on a keystroke. Uncapped, a kilobyte of `q`
+     * was a kilobyte compared against a hundred and fifty thousand rows.
+     *
+     * A hundred characters is longer than any subject on the site and far
+     * longer than anything anyone types into a search field.
+     */
+    private const MAX_QUERY_LENGTH = 100;
 
     public function __invoke(Request $request): Response
     {
@@ -224,9 +240,9 @@ class SearchController extends Controller
             ->visible($showsMature)
             ->withCount('threads')
             ->where(function (Builder $scoped) use ($like): void {
-                $scoped->where('slug', 'like', $like)
-                    ->orWhere('title', 'like', $like)
-                    ->orWhere('description', 'like', $like);
+                $scoped->whereRaw($this->likeClause('slug'), [$like])
+                    ->orWhereRaw($this->likeClause('title'), [$like])
+                    ->orWhereRaw($this->likeClause('description'), [$like]);
             });
 
         if ($sort === 'latest') {
@@ -240,7 +256,7 @@ class SearchController extends Controller
            so it outranks a board that merely mentions the letter in its
            description. */
         return $boards
-            ->orderByRaw('case when slug like ? then 0 else 1 end', [$like])
+            ->orderByRaw('case when '.$this->likeClause('slug').' then 0 else 1 end', [$like])
             ->orderByDesc('threads_count');
     }
 
@@ -268,10 +284,10 @@ class SearchController extends Controller
             ->onVisibleBoard($showsMature)
             ->with(['board', 'originalPost'])
             ->where(function (Builder $scoped) use ($like): void {
-                $scoped->where('subject', 'like', $like)
+                $scoped->whereRaw($this->likeClause('subject'), [$like])
                     ->orWhereHas(
                         'originalPost',
-                        fn (Builder $post): Builder => $post->where('body', 'like', $like),
+                        fn (Builder $post): Builder => $post->whereRaw($this->likeClause('body'), [$like]),
                     );
             });
 
@@ -285,7 +301,7 @@ class SearchController extends Controller
             'latest' => $threads->orderByDesc('bumped_at'),
             'replies' => $threads->orderByDesc('replies_count')->orderByDesc('bumped_at'),
             default => $threads
-                ->orderByRaw('case when subject like ? then 0 else 1 end', [$like])
+                ->orderByRaw('case when '.$this->likeClause('subject').' then 0 else 1 end', [$like])
                 ->orderByDesc('bumped_at'),
         };
     }
@@ -324,7 +340,7 @@ class SearchController extends Controller
                 Thread::query()->onVisibleBoard($showsMature)->select('id'),
             )
             ->with(['thread.board', 'thread.originalPost'])
-            ->where('body', 'like', $like);
+            ->whereRaw($this->likeClause('body'), [$like]);
 
         $since = $this->since($time);
 
@@ -397,20 +413,74 @@ class SearchController extends Controller
         };
     }
 
+    /**
+     * The term being searched for, capped at `MAX_QUERY_LENGTH`.
+     *
+     * Truncated rather than rejected, which is the same choice `type`, `sort`
+     * and `time` make above and for the same reason: a URL somebody has is a
+     * page they should still land on, and an error screen for a query string
+     * nobody typed by hand helps no one. Nothing is hidden by it either — the
+     * page is sent the truncated term as `query` and the field shows what was
+     * actually searched for.
+     *
+     * `Str::substr` rather than `substr`, so cutting a multi-byte term leaves
+     * a term and not half a character.
+     */
     private function query(Request $request): string
     {
         $query = $request->query('q');
 
-        return is_string($query) ? trim($query) : '';
+        if (! is_string($query)) {
+            return '';
+        }
+
+        return trim(Str::substr(trim($query), 0, self::MAX_QUERY_LENGTH));
     }
 
     /**
      * `%` and `_` are wildcards in a `LIKE` pattern, so an anon searching for
      * `100%` would otherwise match everything. Escaped rather than stripped,
      * because those characters appear in real thread subjects.
+     *
+     * Escaping alone is only half of it — see `likeClause`, which is what tells
+     * the driver that a backslash is what does the escaping.
      */
     private function escapeLike(string $value): string
     {
         return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
+    }
+
+    /**
+     * A `LIKE` against one column that honours what `escapeLike` did to the
+     * term.
+     *
+     * `where($column, 'like', $pattern)` emits a bare `LIKE`, and the standard
+     * says a `LIKE` with no `ESCAPE` clause has no escape character at all.
+     * SQLite — the driver this runs on — follows that to the letter, so the
+     * backslashes `escapeLike` adds were matched as literal backslashes and a
+     * search for `100%` found nothing rather than everything. It failed closed,
+     * which is why it read as an empty result set and not as a hole.
+     *
+     * The escape character is written twice on MySQL, which treats a backslash
+     * inside a string literal as an escape in its own right and would otherwise
+     * see an unterminated string. SQLite takes the literal as given.
+     *
+     * Both the column and the result are `literal-string`: every caller passes
+     * a constant, the two escape characters are constants, and a concatenation
+     * of literals is still a literal. That is what lets the raw-SQL builders
+     * accept it, and it is also the guarantee worth having -- a raw clause
+     * assembled from anything a request could reach is an injection surface
+     * whatever the callers happen to pass today.
+     *
+     * @param  literal-string  $column
+     * @return literal-string
+     */
+    private function likeClause(string $column): string
+    {
+        $escape = in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)
+            ? '\\\\'
+            : '\\';
+
+        return $column." like ? escape '".$escape."'";
     }
 }

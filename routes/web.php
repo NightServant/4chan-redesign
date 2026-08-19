@@ -38,20 +38,43 @@ Route::get('latest', FeedController::class)->defaults('sort', 'latest')->name('l
 Route::get('communities', CommunityController::class)->name('communities');
 
 /**
- * Search, over this application's own database rather than 4chan: there is no
- * search endpoint upstream and a browser could not call one if there were.
- *
- * Public, like the boards it searches. `suggest` is registered first and more
- * specifically, so it is never swallowed by the page route.
- */
-/**
  * How fresh the mirror is. Public: a visitor deciding whether the site is
  * worth an account should be able to see when it last heard from 4chan.
  */
 Route::get('status', StatusController::class)->name('status');
 
-Route::get('search/suggest', [SearchController::class, 'suggest'])->name('search.suggest');
-Route::get('search', SearchController::class)->name('search');
+/**
+ * Search, over this application's own database rather than 4chan: there is no
+ * search endpoint upstream and a browser could not call one if there were.
+ *
+ * Public, like the boards it searches. `suggest` is registered first and more
+ * specifically, so it is never swallowed by the page route.
+ *
+ * Both are throttled, and they are the only public routes here that are.
+ *
+ * A search is an unindexable `LIKE '%term%'` over every synced post — a
+ * hundred and fifty thousand rows and climbing — so a caller sets the cost and
+ * the server pays it, without needing an account to do so. `suggest` is the
+ * worse of the two because nothing has to be pressed: the header field fires
+ * it on a keystroke, debounced 180ms (`useSearchSuggestions`).
+ *
+ * 60 a minute on `suggest` is a request every second sustained. The debounce
+ * puts the arithmetic ceiling at roughly 330 — one per 180ms — but that is a
+ * machine typing, not a person: real typing produces a handful of requests per
+ * term, during the pauses, and then a stop to read the results. Sixty is around
+ * seven full searches a minute, which no typist reaches and a script clears in
+ * a second. Half that on the page route, which is a navigation: an anon cannot
+ * meaningfully load thirty result pages in a minute.
+ *
+ * Keyed by address rather than by account, because neither route has one.
+ */
+Route::get('search/suggest', [SearchController::class, 'suggest'])
+    ->middleware('throttle:60,1')
+    ->name('search.suggest');
+
+Route::get('search', SearchController::class)
+    ->middleware('throttle:30,1')
+    ->name('search');
 
 Route::middleware('auth')->group(function () {
     Route::get('account', AccountController::class)->name('account');
@@ -151,8 +174,15 @@ Route::get('{board}/{thread}', ThreadController::class)
  * the composer, its route and its controller are gone rather than left
  * offering something the product cannot honour.
  */
+/*
+ * 10 a minute, keyed by account: this route is behind `auth`, so Laravel's
+ * throttle signature is the user id rather than the address, and a household
+ * behind one NAT is not one anon's budget. Ten is well above what anyone
+ * writing replies by hand reaches and well below what makes a four megabyte
+ * upload a way to fill the disk.
+ */
 Route::post('{board}/{thread}/replies', [ReplyController::class, 'store'])
-    ->middleware('auth')
+    ->middleware(['auth', 'throttle:10,1'])
     ->where(['board' => $boardPattern, 'thread' => '[0-9]+'])
     ->name('replies.store');
 
@@ -161,6 +191,7 @@ Route::post('{board}/{thread}/replies', [ReplyController::class, 'store'])
  * the same group as the board pages, because reading needs no account.
  */
 Route::get('{board}/{thread}/replies', [ReplyController::class, 'index'])
+    ->middleware('throttle:60,1')
     ->where(['board' => $boardPattern, 'thread' => '[0-9]+'])
     ->name('replies.index');
 

@@ -280,6 +280,77 @@ describe('ReplyComposer', () => {
     });
 
     /**
+     * What an anon typed survives a rejected submit.
+     *
+     * It did not. `handleSubmit` called `onReply` and then cleared the body
+     * and the attachment unconditionally, in the same tick, before the server
+     * had answered. The page issues the `POST` and never passed the outcome
+     * back, so a reply refused for length, for an unsupported file, or for
+     * being posted to a pruned thread took the anon's text with it and said
+     * nothing at all. Every validation rule in `ReplyController::store` is a
+     * way to reach that.
+     *
+     * `onReply` now reports the outcome, and the field is cleared only on the
+     * strength of it.
+     */
+    it('keeps the typed reply when the server rejects it', async () => {
+        const onReply = vi.fn().mockResolvedValue(false);
+
+        render(<ReplyComposer threadNo={58210441} onReply={onReply} />);
+
+        const field = screen.getByRole('textbox', {
+            name: /reply to this thread/i,
+        });
+
+        await userEvent.type(field, 'Mainline or vendor tree?');
+        await userEvent.click(
+            screen.getByRole('button', { name: 'Post reply' }),
+        );
+
+        expect(onReply).toHaveBeenCalled();
+        expect(field).toHaveValue('Mainline or vendor tree?');
+    });
+
+    it('clears the field once the reply is actually stored', async () => {
+        const onReply = vi.fn().mockResolvedValue(true);
+
+        render(<ReplyComposer threadNo={58210441} onReply={onReply} />);
+
+        const field = screen.getByRole('textbox', {
+            name: /reply to this thread/i,
+        });
+
+        await userEvent.type(field, 'Eight cores, and it is usable.');
+        await userEvent.click(
+            screen.getByRole('button', { name: 'Post reply' }),
+        );
+
+        expect(field).toHaveValue('');
+    });
+
+    /**
+     * The server's own words, next to the field that caused them, rather than
+     * a toast in the corner or nothing at all.
+     */
+    it('shows the error the server gave for the body', () => {
+        render(
+            <ReplyComposer
+                threadNo={58210441}
+                error="The body may not be greater than 2000 characters."
+            />,
+        );
+
+        expect(
+            screen.getByText(
+                'The body may not be greater than 2000 characters.',
+            ),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByRole('textbox', { name: /reply to this thread/i }),
+        ).toHaveAttribute('aria-invalid', 'true');
+    });
+
+    /**
      * The picker has to offer what the validator accepts. A file dialog
      * listing formats the request will reject is a dialog that lies.
      */
