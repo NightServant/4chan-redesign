@@ -383,6 +383,55 @@ describe('Thread', () => {
         expect(backLink).toHaveAttribute('href', '/g');
     });
 
+    /**
+     * The opening post's bookmark control has to report the state the server
+     * sent, not a default.
+     *
+     * It did not. `OriginalPost` takes `bookmarked` and defaults it to false;
+     * this page passed `onBookmark` and never passed `bookmarked`, so a thread
+     * an anon had already saved drew an empty bookmark on the one screen where
+     * they were most likely to check. Pressing it then issued a `POST` to save
+     * a thread that was already saved.
+     *
+     * `aria-pressed` rather than the fill class: the state is what is being
+     * asserted, and it is also what a screen reader announces.
+     */
+    it('shows the opening post as bookmarked when the server says it is', () => {
+        mockPage({ signedIn: true });
+
+        render(
+            <Thread
+                slug="/g/"
+                no={KNOWN_THREAD.no}
+                thread={{ ...KNOWN_THREAD, bookmarked: true }}
+                comments={COMMENTS}
+                maxCommentChars={2000}
+            />,
+        );
+
+        expect(
+            screen.getByRole('button', { name: 'Bookmark thread' }),
+        ).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('shows the opening post as not bookmarked when it is not', () => {
+        mockPage({ signedIn: true });
+
+        render(
+            <Thread
+                slug="/g/"
+                no={KNOWN_THREAD.no}
+                thread={{ ...KNOWN_THREAD, bookmarked: false }}
+                comments={COMMENTS}
+                maxCommentChars={2000}
+            />,
+        );
+
+        expect(
+            screen.getByRole('button', { name: 'Bookmark thread' }),
+        ).toHaveAttribute('aria-pressed', 'false');
+    });
+
     it("does not render a second <main>: that is AppLayout's job", () => {
         render(
             <Thread
