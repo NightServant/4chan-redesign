@@ -187,6 +187,13 @@ export default function Thread({
                     in hand, and its drawer is simply absent. */}
                 <OriginalPost
                     thread={thread}
+                    /* Passed, not defaulted. `OriginalPost` falls back to
+                       false, so omitting this drew an empty bookmark on a
+                       thread the server had already marked saved -- and the
+                       press that followed posted a save for a save that
+                       existed. The handler was here from the start; the state
+                       it reports was not. */
+                    bookmarked={thread.bookmarked}
                     onBookmark={() =>
                         requireAuth('bookmark this thread', toggleBookmark)
                     }

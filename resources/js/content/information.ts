@@ -71,7 +71,8 @@ export const INFORMATION: Record<string, InformationPage> = {
             {
                 heading: 'Does anything I do here reach 4chan?',
                 body: [
-                    'No. 4chan’s API accepts GET, HEAD and OPTIONS only, so there is no way to write to it and Clover never tries. A reply written on Clover stays on Clover, and 4chan never learns you exist.',
+                    'Nothing you write. 4chan’s API accepts GET, HEAD and OPTIONS only, so there is no way to write to it and Clover never tries. A reply written on Clover stays on Clover, and no account, saved thread or preference is ever sent upstream.',
+                    'Your own browser is the exception, and it is worth knowing. Mirrored images load from 4chan’s servers rather than from Clover, so 4chan sees those requests much as it would if you had opened the thread there yourself. Privacy sets out what that does and does not tell them.',
                 ],
             },
             {
@@ -143,6 +144,8 @@ export const INFORMATION: Record<string, InformationPage> = {
                 body: [
                     'An email address and a password, which are how you sign in. Optionally a handle, a tripcode and a short bio, which are yours to set and yours to remove.',
                     'Alongside that: the threads you saved, the boards you follow, the threads you have read, and anything you posted. All of it is private to you.',
+                    'Signing in creates a session, and a session record holds the address you connected from and the browser you used. That is how staying signed in works, and it is deleted when the session ends.',
+                    'What you search for is kept by your browser, not by Clover. The recent searches under the search field live in that browser’s own storage, are never sent here, and go when you clear its data.',
                 ],
             },
             {
@@ -154,7 +157,8 @@ export const INFORMATION: Record<string, InformationPage> = {
             {
                 heading: 'What Clover does not do',
                 body: [
-                    'There is no advertising, no third-party analytics and no tracking script on any page. Nothing about you is sent to 4chan, which cannot receive it in any case, and nothing is sold or shared with anybody.',
+                    'There is no advertising, no third-party analytics and no tracking script on any page. Nothing here is sold or shared with anybody.',
+                    'Clover itself sends nothing about you to 4chan: not your account, not what you read, not what you searched for. What your own browser fetches from 4chan is a separate matter, and it is the next section.',
                 ],
             },
             {
@@ -168,6 +172,7 @@ export const INFORMATION: Record<string, InformationPage> = {
                 heading: 'Deleting what you leave',
                 body: [
                     'Deleting your account removes it and everything private attached to it. Posts stay, because they were anonymous the whole time and carry nothing that points back to you.',
+                    'Any image you attached goes with the account, and the post it was on stays as the text you wrote. That is enforced in the code rather than promised here: an account cannot be deleted without its files going too.',
                 ],
             },
         ],
