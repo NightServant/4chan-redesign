@@ -56,11 +56,36 @@ export interface TrendingProps {
  * each item, so a stack of rows draws one continuous set of hairlines instead
  * of a column of doubled edges.
  */
+/**
+ * The whole cell reacts, not just the link's own colour.
+ *
+ * `hover:text-primary` was on this element on its own, and it changed nothing
+ * anybody could see: both children set their own colour -- the slug is
+ * `text-foreground`, the count is a `MachineValue` -- so an inherited colour
+ * on the parent had nothing left to inherit it. The row looked interactive,
+ * pointed somewhere real, and gave no feedback that the pointer was on it.
+ *
+ * `group` fixes that at the source: the row carries the state and each child
+ * answers for its own colour under `group-hover`, which is the only way to
+ * move a colour a child has already set. The background moves with them, so
+ * the target reads as the whole cell rather than as the two words in it --
+ * these cells are wide and mostly empty, and colouring only the text leaves a
+ * pointer sitting in the middle of a row that looks inert.
+ *
+ * `group-focus-visible` alongside every `group-hover`: the same feedback for
+ * the same control reached by keyboard, which the outline alone does not give
+ * on a cell this size.
+ */
 const boardRowClasses = cn(
-    'flex items-center justify-between gap-3 p-6',
-    'transition-colors duration-[var(--duration-hover)] ease-standard hover:text-primary',
-    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+    'group flex items-center justify-between gap-3 p-6',
+    'transition-colors duration-[var(--duration-hover)] ease-standard',
+    'hover:bg-surface-hover focus-visible:bg-surface-hover',
+    'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
 );
+
+/** Both children transition on the same token, so the row moves as one. */
+const boardRowTransition =
+    'transition-colors duration-[var(--duration-hover)] ease-standard';
 
 /** Every cell draws its own right and bottom; see the list's own comment. */
 const boardCellClasses = 'border-r border-b border-border';
@@ -155,10 +180,23 @@ function Trending({ threads, trending }: TrendingProps) {
                                 )}
                                 className={boardRowClasses}
                             >
-                                <span className="text-body-sm font-semibold text-foreground">
+                                <span
+                                    className={cn(
+                                        'text-body-sm font-semibold text-foreground',
+                                        boardRowTransition,
+                                        'group-hover:text-primary group-focus-visible:text-primary',
+                                    )}
+                                >
                                     {item.tag}
                                 </span>
-                                <MachineValue>{item.posts}</MachineValue>
+                                <MachineValue
+                                    className={cn(
+                                        boardRowTransition,
+                                        'group-hover:text-foreground group-focus-visible:text-foreground',
+                                    )}
+                                >
+                                    {item.posts}
+                                </MachineValue>
                             </Link>
                         </li>
                     ))}

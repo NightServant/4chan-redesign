@@ -8,7 +8,9 @@ use App\Models\Thread;
 use App\Models\User;
 use App\Support\RoutableBoards;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Support\SessionKey;
 
 /**
  * What deleting an account does to the files that account uploaded.
@@ -179,4 +181,32 @@ it('cleans up when the model is deleted outside the controller', function (): vo
 
     Storage::disk('public')->assertMissing($path);
     expect($reply->refresh()->media_path)->toBeNull();
+});
+
+/**
+ * Deleting an account said nothing at all: the page changed, the account menu
+ * went, and that was the entire acknowledgement of an irreversible action.
+ *
+ * The message names the part an anon cannot see for themselves -- that their
+ * uploads went too -- and it is flashed after `invalidate()`, which empties
+ * the session anything flashed before it would have been written into.
+ */
+it('confirms the deletion, and says what went with it', function (): void {
+    $user = User::factory()->create(['password' => Hash::make('correct-horse')]);
+
+    $this->actingAs($user)
+        ->from('/settings')
+        ->delete('/settings/profile', ['password' => 'correct-horse'])
+        ->assertRedirect('/');
+
+    /* Inertia 3 carries flash data on its own channel rather than as a page
+       prop -- `session()->flash(SessionKey::FLASH_DATA, ...)`, which the
+       client picks up through a `flash` router event -- so this asserts the
+       session rather than the props. */
+    expect(session(SessionKey::FLASH_DATA))->toMatchArray([
+        'toast' => [
+            'type' => 'success',
+            'message' => 'Your account is gone, along with anything you uploaded. Posts stay, unsigned.',
+        ],
+    ]);
 });
