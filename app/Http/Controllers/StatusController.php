@@ -50,6 +50,17 @@ class StatusController extends Controller
                 )
                 ->count(),
 
+            /**
+             * Whether the three figures above are the whole database.
+             *
+             * They are counted within this anon's visibility, and the page
+             * introduced them as "the rows it currently holds" regardless --
+             * so a signed-out reader comparing them against a sync run saw two
+             * thirds of the threads under a sentence claiming to describe all
+             * of them. The same defect the feed rail carried.
+             */
+            'complete' => $showsMature,
+
             /** Null before the first sync, which is a real state on a fresh clone. */
             'lastSyncedAt' => $lastSync === null
                 ? null

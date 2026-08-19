@@ -52,16 +52,20 @@ const SORT_DESCRIPTIONS: Record<Sort, string> = {
  * search result, or a link somebody pasted. The line above is for a reader who
  * is already looking at the feed and needs only to know how it is ordered.
  */
+/* "Every board Clover mirrors" was true of the database and not of the feed:
+   the query is scoped to the boards the reader may see, and a crawler -- which
+   is who a meta description is for -- is always signed out. Phrased so it does
+   not claim a scope it cannot deliver. */
 const META_DESCRIPTIONS: Record<Sort, string> = {
-    bumped: 'Threads from every board Clover mirrors, in bump order. No account needed to read.',
-    latest: 'The newest threads across every board Clover mirrors. No account needed to read.',
+    bumped: "Threads from across Clover's boards, in bump order. No account needed to read.",
+    latest: "The newest threads across Clover's boards. No account needed to read.",
     popular:
-        'The most-replied threads across every board Clover mirrors. No account needed to read.',
+        "The most-replied threads across Clover's boards. No account needed to read.",
 };
 
 type FeedProps = {
     sort: Sort;
-    /** What Clover holds, counted server-side for the rail. */
+    /** What this reader can see, counted server-side for the rail. */
     library: FeedLibrary;
     /** Already ordered for `sort`. Rendered in the order given. */
     threads: Thread[];

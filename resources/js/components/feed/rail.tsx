@@ -89,8 +89,26 @@ function LibraryPanel({ library }: { library: FeedLibrary }) {
         { label: 'Posts', value: library.posts },
     ];
 
+    /**
+     * The heading follows the number rather than standing over it.
+     *
+     * These counts are scoped to the boards this reader may see, which is
+     * right -- reporting totals beside a feed drawn from a subset would be a
+     * page contradicting itself, and it would confirm to somebody who opted
+     * out of adult boards that there are boards they are not being shown.
+     *
+     * But the panel said "Clover holds" either way, and signed out that is 53
+     * boards of 77 and a third of the threads. It read as the database being
+     * smaller than it is, and it was reported as a bug by someone who had just
+     * watched a sync store 32,409 threads and then saw 23,018 here.
+     *
+     * `complete` comes from the server, from the same flag that scoped the
+     * query, so the words and the numbers cannot disagree.
+     */
+    const title = library.complete ? 'Clover holds' : 'Visible to you';
+
     return (
-        <Panel title="Clover holds">
+        <Panel title={title}>
             <dl className="flex flex-col gap-2">
                 {rows.map((row) => (
                     <div key={row.label} className="flex items-baseline gap-2">
@@ -161,6 +179,12 @@ type FeedLibrary = {
     threads: string;
     posts: string;
     lastSyncedAt: string | null;
+    /**
+     * Whether these counts are the whole database rather than this reader's
+     * slice of it. False for anyone who has not opted into adult boards,
+     * which includes every signed-out visitor.
+     */
+    complete: boolean;
 };
 
 type RailProps = {

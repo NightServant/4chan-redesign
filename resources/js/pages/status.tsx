@@ -19,6 +19,8 @@ interface StatusProps {
     lastSyncedAt: string | null;
     apiBaseUrl: string;
     rateLimitSeconds: number;
+    /** Whether the figures are the whole database or this reader's slice. */
+    complete: boolean;
 }
 
 function Figure({ label, value }: { label: string; value: string }) {
@@ -39,6 +41,7 @@ export default function Status({
     lastSyncedAt,
     apiBaseUrl,
     rateLimitSeconds,
+    complete,
 }: StatusProps) {
     const format = (value: number): string => value.toLocaleString('en-GB');
 
@@ -56,8 +59,15 @@ export default function Status({
                         Status
                     </h1>
                     <p className="text-[17px] leading-[1.55] text-pretty text-muted-foreground">
-                        Clover mirrors 4chan on a schedule. These are the rows
-                        it currently holds, counted when this page loaded.
+                        {/* "The rows it currently holds" was wrong for most
+                            readers: these are counted within what you can see,
+                            and a signed-out visitor sees the worksafe boards
+                            only. This is the page somebody checks against a
+                            sync run, so it is the last place that should
+                            overstate what is here. */}
+                        {complete
+                            ? 'Clover mirrors 4chan on a schedule. These are the rows it currently holds, counted when this page loaded.'
+                            : 'Clover mirrors 4chan on a schedule. These are the rows you can see, counted when this page loaded.'}
                     </p>
                 </header>
 

@@ -54,7 +54,12 @@ const LIBRARY = {
     threads: '11,301',
     posts: '52,884',
     lastSyncedAt: '2 hr ago',
+    /* The whole database, so the panel may say so. See the filtered case
+       below, which is what a signed-out visitor actually gets. */
+    complete: true,
 };
+
+const FILTERED_LIBRARY = { ...LIBRARY, threads: '8,204', complete: false };
 
 const THREADS = [
     makeThread({ board: '/g/', replies: 12, media: null }),
@@ -138,6 +143,43 @@ describe('Rail', () => {
 
         expect(panel).toHaveTextContent('11,301');
         expect(panel).toHaveTextContent('77');
+    });
+
+    /**
+     * The heading has to describe what the numbers actually measure.
+     *
+     * It said "Clover holds" unconditionally while the counts were scoped to
+     * the boards the reader is allowed to see. Signed out, that is 53 boards
+     * of 77 and 23,018 threads of 32,409 -- so the panel claimed the database
+     * held a third less than it does, and anyone who had watched a sync run
+     * would reasonably read that as a bug. It was reported as one.
+     *
+     * The filtering is right and stays: a panel reporting totals beside a feed
+     * drawn from a subset is a page contradicting itself, and it would confirm
+     * that hidden boards exist to somebody who opted out of seeing them. What
+     * changes is the words, which now follow the number.
+     */
+    it('does not claim to report the whole database when the counts are filtered', () => {
+        render(<Rail library={FILTERED_LIBRARY} threads={THREADS} />);
+
+        expect(
+            screen.queryByRole('region', { name: /clover holds/i }),
+        ).not.toBeInTheDocument();
+
+        const panel = screen.getByRole('region', { name: /visible to you/i });
+
+        expect(panel).toHaveTextContent('8,204');
+    });
+
+    it('says so plainly when the counts are the whole database', () => {
+        render(<Rail library={LIBRARY} threads={THREADS} />);
+
+        expect(
+            screen.getByRole('region', { name: /clover holds/i }),
+        ).toBeInTheDocument();
+        expect(
+            screen.queryByRole('region', { name: /visible to you/i }),
+        ).not.toBeInTheDocument();
     });
 
     /**

@@ -5,7 +5,9 @@ declare(strict_types=1);
 use App\Models\Board;
 use App\Models\Post;
 use App\Models\Thread;
+use App\Models\User;
 use App\Support\PageMetadata;
+use Inertia\Testing\AssertableInertia;
 
 /**
  * The title and description each URL actually serves.
@@ -157,4 +159,29 @@ it('asks crawlers for its own pages and not the mirror', function (): void {
     foreach (['/communities', '/status', '/rules', '/faq', '/terms', '/privacy'] as $allowed) {
         expect($robots)->toContain("Allow: {$allowed}");
     }
+});
+
+/**
+ * The rail's "Clover holds" panel counts within the reader's own visibility,
+ * which is right -- but it said "Clover holds" regardless, so a signed-out
+ * visitor saw 53 boards of 77 under a heading claiming to describe the whole
+ * database. Someone who had just watched a sync store 32,409 threads and then
+ * read 23,018 here reported it as a bug, which is exactly the right reaction
+ * to a label that overclaims.
+ *
+ * The flag travels with the counts, from the same decision that scoped them.
+ */
+it('tells the rail whether its counts are the whole database', function (): void {
+    $board = Board::factory()->create(['worksafe' => true]);
+    Thread::factory()->for($board)->create();
+
+    $this->get('/popular')->assertInertia(
+        fn (AssertableInertia $page) => $page->where('library.complete', false)
+    );
+
+    $this->actingAs(User::factory()->create(['shows_mature_boards' => true]))
+        ->get('/popular')
+        ->assertInertia(
+            fn (AssertableInertia $page) => $page->where('library.complete', true)
+        );
 });

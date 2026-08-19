@@ -72,6 +72,19 @@ class FeedController extends Controller
             'library' => [
                 'boards' => number_format(Board::query()->visible($showsMature)->count()),
                 'threads' => number_format(Thread::query()->onVisibleBoard($showsMature)->count()),
+                /**
+                 * Whether these counts are the whole database or this reader's
+                 * slice of it, decided by the same flag that scoped the
+                 * queries above so the rail's heading cannot disagree with the
+                 * numbers under it.
+                 *
+                 * The panel said "Clover holds" either way, and signed out
+                 * that is 53 boards of 77 and 23,018 threads of 32,409 -- the
+                 * database looking a third smaller than it is, which is how it
+                 * came to be reported as a sync bug.
+                 */
+                'complete' => $showsMature,
+
                 'posts' => number_format(
                     Post::query()
                         ->whereIn(
