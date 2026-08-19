@@ -80,6 +80,9 @@ const LIBRARY = {
     threads: '11,301',
     posts: '52,884',
     lastSyncedAt: '2 hr ago',
+    /* Signed out in these cases, so the counts are this reader's slice and
+       the rail says "Visible to you" rather than "Clover holds". */
+    complete: false,
 };
 
 const THREADS = [

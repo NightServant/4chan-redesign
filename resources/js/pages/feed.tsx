@@ -61,7 +61,7 @@ const META_DESCRIPTIONS: Record<Sort, string> = {
 
 type FeedProps = {
     sort: Sort;
-    /** What Clover holds, counted server-side for the rail. */
+    /** What this reader can see, counted server-side for the rail. */
     library: FeedLibrary;
     /** Already ordered for `sort`. Rendered in the order given. */
     threads: Thread[];
