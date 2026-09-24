@@ -63,6 +63,24 @@ it('finds a thread by the text of its opening post', function (): void {
 });
 
 /**
+ * SQLite's `LIKE` is ASCII case-insensitive by default; Postgres's is not.
+ * A search has to match regardless of the driver behind it, so this covers
+ * both a subject match and a body match with the case flipped from how the
+ * fixture wrote them.
+ */
+it('finds a thread by subject or body regardless of case', function (): void {
+    searchFixture();
+
+    $this->getJson('/search/suggest?q=risc-v')
+        ->assertOk()
+        ->assertJsonPath('threads.0.title', 'RISC-V laptops');
+
+    $this->getJson('/search/suggest?q=llvm')
+        ->assertOk()
+        ->assertJsonPath('threads.0.title', 'RISC-V laptops');
+});
+
+/**
  * The mature gate is on reading, so it has to be on searching too. Without
  * this, a hidden board's threads stay reachable by anyone who guesses a word
  * in one of their subjects.

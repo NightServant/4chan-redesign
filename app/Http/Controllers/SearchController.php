@@ -456,14 +456,21 @@ class SearchController extends Controller
      *
      * `where($column, 'like', $pattern)` emits a bare `LIKE`, and the standard
      * says a `LIKE` with no `ESCAPE` clause has no escape character at all.
-     * SQLite — the driver this runs on — follows that to the letter, so the
-     * backslashes `escapeLike` adds were matched as literal backslashes and a
-     * search for `100%` found nothing rather than everything. It failed closed,
-     * which is why it read as an empty result set and not as a hole.
+     * SQLite — the driver this originally ran on — follows that to the letter,
+     * so the backslashes `escapeLike` adds were matched as literal backslashes
+     * and a search for `100%` found nothing rather than everything. It failed
+     * closed, which is why it read as an empty result set and not as a hole.
      *
      * The escape character is written twice on MySQL, which treats a backslash
      * inside a string literal as an escape in its own right and would otherwise
-     * see an unterminated string. SQLite takes the literal as given.
+     * see an unterminated string. SQLite and Postgres take the literal as given
+     * — Postgres has `standard_conforming_strings` on by default, so a string
+     * literal's backslash is not itself an escape sequence.
+     *
+     * `LIKE` is also case-sensitive on Postgres, unlike SQLite's ASCII
+     * case-insensitive `LIKE`, so a search for "linux" would silently stop
+     * matching "Linux" there. Postgres's `ILIKE` is the case-insensitive
+     * equivalent and takes the same `ESCAPE` clause.
      *
      * Both the column and the result are `literal-string`: every caller passes
      * a constant, the two escape characters are constants, and a concatenation
@@ -477,10 +484,11 @@ class SearchController extends Controller
      */
     private function likeClause(string $column): string
     {
-        $escape = in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)
-            ? '\\\\'
-            : '\\';
+        $driver = DB::connection()->getDriverName();
 
-        return $column." like ? escape '".$escape."'";
+        $escape = in_array($driver, ['mysql', 'mariadb'], true) ? '\\\\' : '\\';
+        $operator = $driver === 'pgsql' ? 'ilike' : 'like';
+
+        return $column." {$operator} ? escape '".$escape."'";
     }
 }
