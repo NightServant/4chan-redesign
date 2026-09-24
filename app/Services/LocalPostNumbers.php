@@ -45,6 +45,10 @@ final class LocalPostNumbers
      * anons replying at once would otherwise read the same maximum and write
      * the same number — and the unique index would reject the second, losing a
      * post that was correctly submitted.
+     *
+     * Locks the single highest row via `ORDER BY ... LIMIT 1` rather than
+     * `max()`, because Postgres refuses `FOR UPDATE` combined with an
+     * aggregate function in the same query.
      */
     public static function next(Board $board): int
     {
@@ -53,8 +57,10 @@ final class LocalPostNumbers
             $highest = Post::query()
                 ->whereIn('thread_id', $board->threads()->select('id'))
                 ->where('no', '>=', self::BASE)
+                ->orderByDesc('no')
+                ->limit(1)
                 ->lockForUpdate()
-                ->max('no');
+                ->value('no');
 
             return $highest === null ? self::BASE : $highest + 1;
         });
