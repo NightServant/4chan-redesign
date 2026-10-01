@@ -189,6 +189,17 @@ return [
     */
 
     'attachments' => [
+        /**
+         * Off on a deployment with no durable storage for what gets uploaded.
+         *
+         * An uploaded reply image is written to local disk, which on Vercel
+         * is one instance's `/tmp` -- gone the moment a different instance
+         * serves the thread, or the same one recycles. Rather than show a
+         * broken image, the demo declines the upload outright: `store()`
+         * rejects `media` and the composer hides the control that offers it.
+         */
+        'enabled' => (bool) env('CLOVER_ATTACHMENTS_ENABLED', true),
+
         'disk' => env('CLOVER_ATTACHMENT_DISK', 'public'),
         'directory' => 'attachments',
         /* Kilobytes, which is what Laravel's `max` rule counts in. */

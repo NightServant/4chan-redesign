@@ -69,6 +69,17 @@ class HandleInertiaRequests extends Middleware
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
 
             /**
+             * Whether the composer may attach an image at all.
+             *
+             * Off on a deployment with no durable place to put an upload
+             * (see `config('clover.attachments')`). Shared rather than
+             * threaded through every page that renders a composer, for the
+             * same reason `showsMatureBoards` is: the control that reads it
+             * has no route of its own to be handed a prop by.
+             */
+            'attachmentsEnabled' => (bool) config('clover.attachments.enabled'),
+
+            /**
              * Adult boards are hidden unless an anon opts in, so a request
              * with no account resolves to false rather than to null. The
              * directory is a public page and must not have to special-case

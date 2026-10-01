@@ -59,6 +59,13 @@ export interface ReplyComposerProps {
      * a dialog that lies.
      */
     accept?: string;
+    /**
+     * Whether an image may be attached at all. Off on a deployment with no
+     * durable place to put an upload, in which case `ReplyController` rejects
+     * `media` outright -- so the control that offers it is hidden rather than
+     * left to invite a request the server will refuse.
+     */
+    attachmentsEnabled?: boolean;
     className?: string;
 }
 
@@ -80,6 +87,7 @@ export function ReplyComposer({
     error,
     onReady,
     accept = DEFAULT_ACCEPT,
+    attachmentsEnabled = true,
     className,
 }: ReplyComposerProps) {
     const [body, setBody] = useState('');
@@ -292,36 +300,46 @@ export function ReplyComposer({
                     </p>
 
                     <div className="flex items-center gap-2">
-                        {/* The input is the mechanism, the button is the
-                            control.
+                        {/* Hidden rather than disabled: a deployment with
+                            nowhere durable to put an upload has no attach
+                            control to offer, not a greyed-out one inviting a
+                            request `ReplyController` will refuse. */}
+                        {attachmentsEnabled ? (
+                            <>
+                                {/* The input is the mechanism, the button is
+                                    the control.
 
-                            A `sr-only` input is focusable but paints no focus
-                            ring, so tabbing to it lands a keyboard user on
-                            something they cannot see. It is taken out of the
-                            tab order and the button beside it does the
-                            opening, which keeps the visible focus ring on the
-                            visible thing. Nothing is lost by hiding it from
-                            assistive tech: the request is built in JavaScript
-                            from `files[0]`, not from a native form post. */}
-                        <input
-                            ref={fileInput}
-                            id={mediaId}
-                            data-testid="reply-media"
-                            type="file"
-                            accept={accept}
-                            onChange={handleFile}
-                            tabIndex={-1}
-                            aria-hidden="true"
-                            className="sr-only"
-                        />
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => fileInput.current?.click()}
-                        >
-                            <ImagePlus aria-hidden="true" />
-                            Attach image
-                        </Button>
+                                    A `sr-only` input is focusable but paints
+                                    no focus ring, so tabbing to it lands a
+                                    keyboard user on something they cannot see.
+                                    It is taken out of the tab order and the
+                                    button beside it does the opening, which
+                                    keeps the visible focus ring on the visible
+                                    thing. Nothing is lost by hiding it from
+                                    assistive tech: the request is built in
+                                    JavaScript from `files[0]`, not from a
+                                    native form post. */}
+                                <input
+                                    ref={fileInput}
+                                    id={mediaId}
+                                    data-testid="reply-media"
+                                    type="file"
+                                    accept={accept}
+                                    onChange={handleFile}
+                                    tabIndex={-1}
+                                    aria-hidden="true"
+                                    className="sr-only"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => fileInput.current?.click()}
+                                >
+                                    <ImagePlus aria-hidden="true" />
+                                    Attach image
+                                </Button>
+                            </>
+                        ) : null}
 
                         <Button type="submit" disabled={!canSubmit}>
                             Post reply

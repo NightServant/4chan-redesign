@@ -1,0 +1,21 @@
+# Secrets. A real DB credential lives in the sibling checkout's
+# .env.production; none of these ever leave this machine.
+.env
+.env.*
+
+# Rebuilt by the runtime: composer installs `vendor`, and the `vercel`
+# composer script (see composer.json) builds `public/build` from source.
+vendor
+public/build
+node_modules
+
+# 75MB of local data with nothing to do on a serverless filesystem.
+database/*.sqlite*
+
+storage/logs
+tests
+.git
+
+# Local package discovery lists dev-only providers (Boost, Pail) that the
+# production install leaves out; the runtime regenerates it.
+bootstrap/cache/*.php

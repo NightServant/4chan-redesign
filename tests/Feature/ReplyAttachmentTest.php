@@ -190,6 +190,33 @@ it('lists a local attachment under the account media tab', function (): void {
         ->assertInertia(fn ($page) => $page->has('media', 1));
 });
 
+/**
+ * Off on a deployment with nowhere durable to keep an upload (see
+ * `config('clover.attachments.enabled')`). A reply that is only words still
+ * has to work: this is a upload switch, not a maintenance mode.
+ */
+it('rejects an attachment when attachments are disabled, but still accepts words', function (): void {
+    config(['clover.attachments.enabled' => false]);
+    [$board, $thread, $user] = replyTarget();
+
+    $this->actingAs($user)
+        ->post("/{$board->slug}/{$thread->no}/replies", [
+            'body' => 'no pictures here',
+            'media' => UploadedFile::fake()->image('x230.png'),
+        ])
+        ->assertSessionHasErrors('media');
+
+    expect(Post::query()->where('is_local', true)->count())->toBe(0);
+
+    $this->actingAs($user)
+        ->post("/{$board->slug}/{$thread->no}/replies", [
+            'body' => 'just words, still works',
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect(Post::query()->where('is_local', true)->count())->toBe(1);
+});
+
 it('needs an account to attach anything', function (): void {
     [$board, $thread] = replyTarget();
 
