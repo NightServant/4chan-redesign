@@ -362,4 +362,23 @@ describe('ReplyComposer', () => {
             'image/jpeg,image/png,image/gif,image/webp',
         );
     });
+
+    /**
+     * On a deployment with nowhere durable to put an upload, the server
+     * rejects `media` outright, so the control that offers it must not be
+     * there to invite a request it will refuse.
+     */
+    it('hides the attach control when attachments are disabled', () => {
+        render(
+            <ReplyComposer threadNo={58210441} attachmentsEnabled={false} />,
+        );
+
+        expect(
+            screen.queryByRole('button', { name: 'Attach image' }),
+        ).not.toBeInTheDocument();
+        expect(screen.queryByTestId('reply-media')).not.toBeInTheDocument();
+        expect(
+            screen.getByRole('button', { name: 'Post reply' }),
+        ).toBeInTheDocument();
+    });
 });

@@ -43,6 +43,9 @@
         }
     },
     "scripts": {
+        "vercel": [
+            "[ -f public/build/manifest.json ] || (npm ci && npm run build && rm -rf node_modules)"
+        ],
         "setup": [
             "composer install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",

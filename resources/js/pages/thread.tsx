@@ -55,7 +55,7 @@ export default function Thread({
     comments,
     maxCommentChars,
 }: ThreadPageProps) {
-    const { auth, errors } = usePage().props;
+    const { auth, errors, attachmentsEnabled } = usePage().props;
     const signedIn = Boolean(auth.user);
     const isMobile = useIsMobile();
 
@@ -318,6 +318,7 @@ export default function Thread({
                     <ReplyComposer
                         threadNo={thread.no}
                         maxCommentChars={maxCommentChars}
+                        attachmentsEnabled={attachmentsEnabled}
                         onReply={handleReply}
                         onReady={registerComposer}
                         /* The server's own message, against the field that

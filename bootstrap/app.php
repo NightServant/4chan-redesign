@@ -17,6 +17,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        /**
+         * Vercel (and any other load balancer) terminates TLS in front of the
+         * app, so every request arrives over plain HTTP with the original
+         * scheme in `X-Forwarded-Proto`. Without this, `url()` and Inertia's
+         * asset links generate `http://`, and a secure cookie never gets set.
+         * The balancer's address is not known ahead of time, so all proxies
+         * are trusted rather than a fixed list.
+         */
+        $middleware->trustProxies(at: '*');
+
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [

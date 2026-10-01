@@ -154,14 +154,21 @@ class ReplyController extends Controller
              * `image` is kept as a guard on the list rather than on the file:
              * it is redundant against these five extensions and stops being
              * redundant the moment somebody widens them.
+             *
+             * `prohibited` when attachments are switched off: a deployment
+             * with nowhere durable to put the file must refuse it outright
+             * rather than accept it and lose it, which is worse than a
+             * validation error the composer already warns about.
              */
-            'media' => [
-                'nullable',
-                'file',
-                'image',
-                'mimes:'.implode(',', (array) config('clover.attachments.mimes')),
-                'max:'.config('clover.attachments.max_kilobytes'),
-            ],
+            'media' => config('clover.attachments.enabled')
+                ? [
+                    'nullable',
+                    'file',
+                    'image',
+                    'mimes:'.implode(',', (array) config('clover.attachments.mimes')),
+                    'max:'.config('clover.attachments.max_kilobytes'),
+                ]
+                : ['prohibited'],
         ]);
 
         $user = $request->user();

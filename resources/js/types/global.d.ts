@@ -22,6 +22,11 @@ declare module '@inertiajs/core' {
              */
             showsMatureBoards: boolean;
             /**
+             * Whether the reply composer may attach an image. Off on a
+             * deployment with no durable place to put an upload.
+             */
+            attachmentsEnabled: boolean;
+            /**
              * This anon's own recent activity. Empty when signed out, which
              * is true rather than a fallback.
              */
