@@ -45,7 +45,7 @@ const GUARANTEES: readonly {
     {
         icon: History,
         title: "Nothing kept you don't ask for",
-        body: 'No feed history, no ad profile, no third-party trackers.',
+        body: 'No feed history, no ad profile, no tracking cookies.',
     },
 ];
 

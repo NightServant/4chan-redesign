@@ -107,15 +107,16 @@ describe('information copy', () => {
         const notDone = sectionMatching('Privacy', /does not do/i);
 
         expect(notDone).toMatch(/no advertising/i);
-        expect(notDone).toMatch(/no third-party analytics/i);
+        expect(notDone).toMatch(/Vercel Web Analytics/);
+        expect(notDone).toMatch(/no cookies/i);
+        expect(notDone).toMatch(/no other analytics/i);
     });
 
     /**
-     * The analytics sentence is a claim about the shipped application. If a
-     * tag manager, a pixel or a product-analytics script is ever added, this
-     * test is the thing that should fail first — so it asserts against the
-     * built stylesheet's neighbour, the page copy, and leaves a marker for
-     * whoever adds one.
+     * The analytics sentence is a claim about the shipped application: it
+     * names Vercel Web Analytics, mounted in `app.tsx`, and nothing else. If a
+     * tag manager, a pixel or another analytics script is ever added, this
+     * is the place that has to change with it.
      */
     it('states the analytics position in one place, so adding one breaks one test', () => {
         const claims = everyParagraph().filter((paragraph) =>

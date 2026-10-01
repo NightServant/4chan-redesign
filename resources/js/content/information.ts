@@ -157,7 +157,7 @@ export const INFORMATION: Record<string, InformationPage> = {
             {
                 heading: 'What Clover does not do',
                 body: [
-                    'There is no advertising, no third-party analytics and no tracking script on any page. Nothing here is sold or shared with anybody.',
+                    'Page views are counted with Vercel Web Analytics. It sets no cookies: a visit is told apart by a hash of the request that is discarded within a day, and Clover sees only anonymous totals. There is no advertising and no other analytics. Nothing here is sold or shared with anybody.',
                     'Clover itself sends nothing about you to 4chan: not your account, not what you read, not what you searched for. What your own browser fetches from 4chan is a separate matter, and it is the next section.',
                 ],
             },

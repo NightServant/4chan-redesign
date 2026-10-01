@@ -84,7 +84,7 @@ const FEATURES: Feature[] = [
     {
         icon: Zap,
         title: 'Fast on purpose',
-        body: 'No infinite feed, no autoplay, no tracking scripts. Threads render in one request.',
+        body: 'No infinite feed, no autoplay, no tracking cookies. Threads render in one request.',
     },
     {
         icon: Share2,
