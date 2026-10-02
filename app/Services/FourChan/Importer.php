@@ -7,6 +7,8 @@ namespace App\Services\FourChan;
 use App\Models\Board;
 use App\Models\Post;
 use App\Models\Thread;
+use App\Services\LocalPostNumbers;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Date;
 
 /**
@@ -14,13 +16,45 @@ use Illuminate\Support\Facades\Date;
  *
  * Kept apart from `Client` so the mapping can be tested against a recorded
  * response without a request, and apart from the command so the command is
- * only orchestration and reporting. Every method here writes; none of them
- * delete. A board or thread that has stopped appearing upstream keeps its rows
- * — the sync has no way to tell "deleted" from "this request failed", and
- * guessing wrong empties the site.
+ * only orchestration and reporting.
+ *
+ * Thread and post writes are bulk. Each is one element of an `upsert` rather
+ * than a select and an insert of its own: against a database that is a network
+ * hop away, the per-row version spent hours on one pass over the boards with
+ * nothing wrong in any single query. `upsert` bypasses Eloquent's casts and
+ * events, so the cast work is done here by hand — `quotes` is encoded, and
+ * dates are bound as the cast would have formatted them — and neither `Thread`
+ * nor `Post` has an observer for the bypass to skip.
+ *
+ * The one method that deletes is `pruneThreads()`, and it is only called with
+ * a catalog that came back `200` for a whole board. A `304`, a failure or a
+ * `404` cannot tell "this thread is gone" from "this request did not answer",
+ * and guessing wrong empties the site; a `200` listing every thread the board
+ * has can, because absence from it is the answer.
  */
 final class Importer
 {
+    /**
+     * Rows per statement. Postgres caps a statement at 65,535 bound parameters
+     * and a post is about two dozen of them, so 500 stays well inside it. A
+     * catalog or a thread page is a single statement in practice.
+     */
+    private const CHUNK = 500;
+
+    /**
+     * What an upsert overwrites on a post that already exists. `thread_id` and
+     * `no` are the key. `user_id`, `is_local` and `media_path` are left out on
+     * purpose: they belong to posts written here, and re-importing an upstream
+     * post must never reach them.
+     *
+     * @var array<int, string>
+     */
+    private const POST_COLUMNS = [
+        'is_op', 'author', 'tripcode', 'capcode', 'body', 'quotes', 'posted_at',
+        'media_filename', 'media_extension', 'media_tim', 'media_width', 'media_height',
+        'media_thumb_width', 'media_thumb_height', 'media_size', 'media_spoiler',
+    ];
+
     public function __construct(private readonly CommentParser $parser) {}
 
     /**
@@ -70,27 +104,19 @@ final class Importer
      * it is re-sorted anyway because relying on that would make the cap depend
      * on upstream's paging staying the way it is today.
      *
+     * Three statements for a board, however many threads it has: the threads,
+     * a read-back for their ids, and the opening posts.
+     *
      * @param  array<array-key, mixed>  $payload
      * @return array<int, Thread> the threads written, most recently bumped first
      */
     public function importThreads(Board $board, array $payload, ?int $limit = null): array
     {
-        $stubs = [];
-
-        foreach ($payload as $page) {
-            if (! is_array($page)) {
-                continue;
-            }
-
-            foreach ($this->rows($page, 'threads') as $stub) {
-                $stubs[] = $stub;
-            }
-        }
+        $stubs = $this->stubs($payload);
 
         usort($stubs, fn (array $a, array $b): int => $this->bumpedAt($b) <=> $this->bumpedAt($a));
 
         $syncedAt = Date::now();
-        $threads = [];
 
         /**
          * A null limit takes the catalog whole, which is the normal case.
@@ -101,6 +127,18 @@ final class Importer
          */
         $selected = $limit === null ? $stubs : array_slice($stubs, 0, max($limit, 0));
 
+        /**
+         * Keyed by post number, because one statement cannot touch a row twice
+         * and the last stub for a number wins, as it did when each was written
+         * in turn.
+         *
+         * @var array<int, array<string, mixed>> $rows
+         */
+        $rows = [];
+
+        /** @var array<int, array<string, mixed>> $opening */
+        $opening = [];
+
         foreach ($selected as $stub) {
             $no = $this->int($stub, 'no');
 
@@ -110,40 +148,114 @@ final class Importer
 
             $subject = $this->decode($this->string($stub, 'sub'));
 
-            $thread = Thread::query()->updateOrCreate(
-                ['board_id' => $board->id, 'no' => $no],
-                [
-                    'subject' => $subject === '' ? null : $subject,
-                    'sticky' => $this->bool($stub, 'sticky'),
-                    'closed' => $this->bool($stub, 'closed'),
-                    'replies_count' => $this->int($stub, 'replies'),
-                    'images_count' => $this->int($stub, 'images'),
-                    'posted_at' => Date::createFromTimestamp($this->int($stub, 'time'), 'UTC'),
-                    'bumped_at' => Date::createFromTimestamp($this->bumpedAt($stub), 'UTC'),
-                    'synced_at' => $syncedAt,
-                ],
-            );
+            $rows[$no] = [
+                'board_id' => $board->id,
+                'no' => $no,
+                'subject' => $subject === '' ? null : $subject,
+                'sticky' => $this->bool($stub, 'sticky'),
+                'closed' => $this->bool($stub, 'closed'),
+                'replies_count' => $this->int($stub, 'replies'),
+                'images_count' => $this->int($stub, 'images'),
+                'posted_at' => Date::createFromTimestamp($this->int($stub, 'time'), 'UTC'),
+                'bumped_at' => Date::createFromTimestamp($this->bumpedAt($stub), 'UTC'),
+                'synced_at' => $syncedAt,
+            ];
 
-            /**
-             * The catalog stub *is* the opening post — it carries `com`,
-             * `sub` and the whole media group, not just thread statistics — so
-             * it is written as one.
-             *
-             * Without this a catalog sync produced threads with no post behind
-             * them: no title beyond the post number, no excerpt, no image.
-             * Only threads that had also had their full page fetched rendered
-             * as anything, which is why nearly every board looked empty.
-             *
-             * `posts_synced_at` stays unset. This is the OP and nothing else;
-             * the replies still need the thread endpoint, and that flag is
-             * what records the difference.
-             */
-            $this->upsertPost($thread, $stub);
-
-            $threads[] = $thread;
+            $opening[$no] = $stub;
         }
 
+        foreach (array_chunk(array_values($rows), self::CHUNK) as $chunk) {
+            Thread::query()->upsert($chunk, ['board_id', 'no'], [
+                'subject', 'sticky', 'closed', 'replies_count', 'images_count',
+                'posted_at', 'bumped_at', 'synced_at',
+            ]);
+        }
+
+        /** @var array<int, Thread> $stored */
+        $stored = [];
+
+        foreach (array_chunk(array_keys($rows), self::CHUNK) as $numbers) {
+            $found = Thread::query()->where('board_id', $board->id)->whereIn('no', $numbers)->get();
+
+            foreach ($found as $thread) {
+                $stored[$thread->no] = $thread;
+            }
+        }
+
+        /**
+         * The catalog stub *is* the opening post — it carries `com`,
+         * `sub` and the whole media group, not just thread statistics — so
+         * it is written as one.
+         *
+         * Without this a catalog sync produced threads with no post behind
+         * them: no title beyond the post number, no excerpt, no image.
+         * Only threads that had also had their full page fetched rendered
+         * as anything, which is why nearly every board looked empty.
+         *
+         * `posts_synced_at` stays unset. This is the OP and nothing else;
+         * the replies still need the thread endpoint, and that flag is
+         * what records the difference.
+         */
+        $posts = [];
+        $threads = [];
+
+        foreach ($opening as $no => $stub) {
+            if (! isset($stored[$no])) {
+                continue;
+            }
+
+            $threads[] = $stored[$no];
+
+            $post = $this->postRow($stored[$no]->id, $stub);
+
+            if ($post !== null) {
+                $posts[] = $post;
+            }
+        }
+
+        $this->upsertPosts($posts);
+
         return $threads;
+    }
+
+    /**
+     * Delete this board's threads that a whole-board catalog no longer lists.
+     *
+     * Only ever called with a `200` catalog that a thread limit did not cut
+     * short: that response lists every thread the board has, so absence from it
+     * is proof, where absence from anything else is just a request that did
+     * not answer. It exists because the database is small, and a dead thread
+     * is a row nobody can reach from the board.
+     *
+     * Two kinds of thread outlive the catalog. One someone bookmarked is
+     * something an anon asked to keep, and one with a post written here
+     * (`posts.user_id` set) holds local Clover activity that exists nowhere
+     * upstream. Everything under a deleted thread — posts, bookmarks, reads —
+     * goes with it through the foreign keys.
+     *
+     * A payload that lists no threads prunes nothing. A live board is never
+     * empty, so that is a response to distrust rather than to act on.
+     *
+     * @param  array<array-key, mixed>  $payload
+     * @return int the number of threads deleted
+     */
+    public function pruneThreads(Board $board, array $payload): int
+    {
+        $listed = array_values(array_filter(array_map(
+            fn (array $stub): int => $this->int($stub, 'no'),
+            $this->stubs($payload),
+        )));
+
+        if ($listed === []) {
+            return 0;
+        }
+
+        return Thread::query()
+            ->where('board_id', $board->id)
+            ->whereNotIn('no', $listed)
+            ->whereDoesntHave('bookmarks')
+            ->whereDoesntHave('posts', fn (Builder $posts) => $posts->whereNotNull('user_id'))
+            ->delete();
     }
 
     /**
@@ -158,53 +270,97 @@ final class Importer
      */
     public function importPosts(Thread $thread, array $payload): int
     {
-        $written = 0;
+        $rows = [];
 
         foreach ($this->rows($payload, 'posts') as $row) {
-            $no = $this->int($row, 'no');
+            $post = $this->postRow($thread->id, $row);
 
-            if ($no === 0) {
-                continue;
+            if ($post !== null) {
+                $rows[$post['no']] = $post;
             }
-
-            $this->upsertPost($thread, $row);
-
-            $written++;
         }
+
+        $this->upsertPosts(array_values($rows));
 
         $thread->forceFill(['posts_synced_at' => Date::now()])->save();
 
-        return $written;
+        return count($rows);
     }
 
     /**
-     * Write one post, from either a thread page or a catalog stub.
+     * Every thread stub in a `catalog.json` payload, in the order it arrived.
+     *
+     * @param  array<array-key, mixed>  $payload
+     * @return array<int, array<string, mixed>>
+     */
+    private function stubs(array $payload): array
+    {
+        $stubs = [];
+
+        foreach ($payload as $page) {
+            if (! is_array($page)) {
+                continue;
+            }
+
+            foreach ($this->rows($page, 'threads') as $stub) {
+                $stubs[] = $stub;
+            }
+        }
+
+        return $stubs;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $rows
+     */
+    private function upsertPosts(array $rows): void
+    {
+        foreach (array_chunk($rows, self::CHUNK) as $chunk) {
+            Post::query()->upsert($chunk, ['thread_id', 'no'], self::POST_COLUMNS);
+        }
+    }
+
+    /**
+     * One post, from either a thread page or a catalog stub, as a row.
      *
      * The two payloads carry the same field names for everything a post is
      * made of — `no`, `com`, `name`, `trip`, `capcode`, `time` and the whole
-     * media group — so the same writer serves both. That is what lets a
+     * media group — so the same mapping serves both. That is what lets a
      * catalog sync produce readable threads without fetching a single thread
      * page.
      *
+     * Null for a row with no post number, and for a number in the range
+     * Clover allocates to its own replies (`LocalPostNumbers`). Upstream's
+     * sequence is nowhere near that range, so the second case does not occur;
+     * it is here so the guarantee does not rest on upstream's numbering: a post
+     * written on Clover is never the target of an upsert.
+     *
      * @param  array<string, mixed>  $row
+     * @return array<string, mixed>|null
      */
-    private function upsertPost(Thread $thread, array $row): void
+    private function postRow(int $threadId, array $row): ?array
     {
+        $no = $this->int($row, 'no');
+
+        if ($no === 0 || LocalPostNumbers::isLocal($no)) {
+            return null;
+        }
+
         $comment = $this->parser->parse($this->nullableString($row, 'com'));
 
-        Post::query()->updateOrCreate(
-            ['thread_id' => $thread->id, 'no' => $this->int($row, 'no')],
-            [
-                'is_op' => $this->int($row, 'resto') === 0,
-                'author' => $this->decode($this->string($row, 'name', 'Anonymous')),
-                'tripcode' => $this->nullableString($row, 'trip'),
-                'capcode' => $this->nullableString($row, 'capcode'),
-                'body' => $comment['body'],
-                'quotes' => $comment['quotes'],
-                'posted_at' => Date::createFromTimestamp($this->int($row, 'time'), 'UTC'),
-                ...$this->media($row),
-            ],
-        );
+        return [
+            'thread_id' => $threadId,
+            'no' => $no,
+            'is_op' => $this->int($row, 'resto') === 0,
+            'author' => $this->decode($this->string($row, 'name', 'Anonymous')),
+            'tripcode' => $this->nullableString($row, 'trip'),
+            'capcode' => $this->nullableString($row, 'capcode'),
+            'body' => $comment['body'],
+            /** What the `array` cast would have encoded; `upsert` does not cast. */
+            'quotes' => json_encode($comment['quotes'], JSON_THROW_ON_ERROR),
+            'posted_at' => Date::createFromTimestamp($this->int($row, 'time'), 'UTC'),
+            ...$this->media($row),
+        ];
     }
 
     /**

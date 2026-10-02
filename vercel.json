@@ -28,6 +28,7 @@
         "QUEUE_CONNECTION": "sync",
         "MAIL_MAILER": "log",
         "CLOVER_ATTACHMENTS_ENABLED": "false",
+        "CLOVER_LIVE_FETCH": "true",
         "VIEW_COMPILED_PATH": "/tmp/views",
         "APP_CONFIG_CACHE": "/tmp/config.php",
         "APP_EVENTS_CACHE": "/tmp/events.php",

@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\BoardResource;
 use App\Http\Resources\ThreadResource;
+use App\Services\FourChan\LiveFetch;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,15 +20,22 @@ use Inertia\Response;
  * *this* board is decided here, by `visibleBoard()`, which 404s rather than
  * 403s so the board's existence is not confirmed to someone who has asked not
  * to see boards like it.
+ *
+ * Opening a board refetches its catalog from 4chan when the stored one is
+ * more than a minute old (`LiveFetch`), before the threads are read, so the
+ * page shows what 4chan shows rather than what the last sweep saw. That is
+ * best effort: a failed or slow fetch renders the stored copy.
  */
 class BoardController extends Controller
 {
     /** One board page's worth. The page paginates below this. */
     private const THREADS = 40;
 
-    public function __invoke(Request $request, string $board): Response
+    public function __invoke(Request $request, string $board, LiveFetch $live): Response
     {
         $model = $this->visibleBoard($request, $board);
+
+        $live->board($model);
 
         $threads = $model->threads()
             ->with(['board', 'originalPost', 'bookmarks'])

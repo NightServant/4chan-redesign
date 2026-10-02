@@ -47,23 +47,33 @@ final class Client
         return $this->get('/boards.json');
     }
 
-    public function catalog(string $slug): ApiResult
+    /**
+     * @param  int|null  $timeout  seconds; null takes the configured one. A request an
+     *                             anon is waiting on passes a short one.
+     */
+    public function catalog(string $slug, ?int $timeout = null): ApiResult
     {
-        return $this->get("/{$slug}/catalog.json");
+        return $this->get("/{$slug}/catalog.json", $timeout);
     }
 
-    public function thread(string $slug, int $no): ApiResult
+    /**
+     * @param  int|null  $timeout  seconds; null takes the configured one
+     */
+    public function thread(string $slug, int $no, ?int $timeout = null): ApiResult
     {
-        return $this->get("/{$slug}/thread/{$no}.json");
+        return $this->get("/{$slug}/thread/{$no}.json", $timeout);
     }
 
-    private function get(string $path): ApiResult
+    private function get(string $path, ?int $timeout = null): ApiResult
     {
         $this->throttle();
 
+        $timeout ??= $this->timeout();
+
         try {
             $response = Http::baseUrl($this->baseUrl())
-                ->timeout($this->timeout())
+                ->timeout($timeout)
+                ->connectTimeout($timeout)
                 ->withHeaders($this->conditionalHeaders($path))
                 ->get($path);
         } catch (ConnectionException $e) {

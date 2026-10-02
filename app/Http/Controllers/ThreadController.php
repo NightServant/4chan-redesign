@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Http\Resources\CommentTree;
 use App\Http\Resources\ThreadResource;
 use App\Models\Thread;
+use App\Services\FourChan\LiveFetch;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -24,10 +25,17 @@ use Inertia\Response;
  *
  * A board this anon may not see is a different matter and does 404, before any
  * of this runs.
+ *
+ * Opening a thread refetches its posts from 4chan when they were last synced
+ * more than half a minute ago, or never (`LiveFetch`). That happens before the
+ * posts are read, and it is best effort: a failed or slow fetch, or a thread
+ * that has gone 404 upstream, renders the stored copy. A thread that is not
+ * stored at all is not fetched into existence; the board page's catalog fetch
+ * is what brings new threads in.
  */
 class ThreadController extends Controller
 {
-    public function __invoke(Request $request, string $board, string $thread): Response
+    public function __invoke(Request $request, string $board, string $thread, LiveFetch $live): Response
     {
         $model = $this->visibleBoard($request, $board);
 
@@ -36,8 +44,13 @@ class ThreadController extends Controller
         $found = Thread::query()
             ->where('board_id', $model->id)
             ->where('no', $no)
-            ->with(['board', 'originalPost', 'posts'])
             ->first();
+
+        if ($found !== null) {
+            $live->thread($model, $found);
+
+            $found->load(['board', 'originalPost', 'posts']);
+        }
 
         return Inertia::render('thread', [
             'slug' => $model->displaySlug(),
