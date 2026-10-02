@@ -26,9 +26,17 @@ use Illuminate\Database\Eloquent\Collection;
  * dies on the fortieth of seventy-seven boards would otherwise leave the site
  * with a board list that is half a list.
  *
- * Nothing is ever deleted. A board or thread missing from a response might be
- * gone upstream or might be a request that failed in a way we misread, and
- * only one of those is worth acting on.
+ * The only thing this command deletes is a thread absent from a board's
+ * catalog, and only when that catalog came back `200` and was taken whole. A
+ * `200` lists every thread the board has, so absence from it is proof the
+ * thread is gone; a `304`, a failure or a `404` proves nothing, because it
+ * cannot tell "gone" from "this request did not answer", and a `--limit` or
+ * `threads_per_board` cap makes the response a partial list on purpose. In all
+ * of those cases nothing is deleted. A thread someone bookmarked, or one with
+ * a post written on Clover, is never deleted either way — see
+ * `Importer::pruneThreads()`. Pruning is what keeps the database inside a small
+ * plan: a catalog is a few hundred live threads, and everything older is a row
+ * nobody can reach from the board.
  */
 #[Signature('clover:sync
     {--board=* : Board slugs to sync, e.g. --board=g --board=3. Defaults to config, then to every board.}
@@ -140,7 +148,7 @@ class SyncCloverData extends Command
         }
 
         if ($catalog->isMissing()) {
-            /** Retired upstream. Its threads stay: they were real when we read them. */
+            /** Retired upstream. Its threads stay: a 404 is not a listing, so it proves no thread absent. */
             $this->components->twoColumnDetail($board->displaySlug(), '<fg=yellow>gone upstream (404), rows kept</>');
 
             return true;
@@ -152,9 +160,16 @@ class SyncCloverData extends Command
             return $this->syncPosts($client, $importer, $board);
         }
 
-        $threads = $importer->importThreads($board, $catalog->data, $this->threadLimit());
+        $limit = $this->threadLimit();
+        $threads = $importer->importThreads($board, $catalog->data, $limit);
+        $detail = count($threads).' threads';
 
-        $this->components->twoColumnDetail($board->displaySlug(), count($threads).' threads');
+        if ($limit === null) {
+            $pruned = $importer->pruneThreads($board, $catalog->data);
+            $detail .= $pruned > 0 ? ", {$pruned} pruned" : '';
+        }
+
+        $this->components->twoColumnDetail($board->displaySlug(), $detail);
 
         return $this->syncPosts($client, $importer, $board);
     }

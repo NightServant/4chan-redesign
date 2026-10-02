@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 use App\Models\Board;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
+use Tests\Feature\Sync\Fixture;
 
 /**
  * The two sync limits, which look alike and cost nothing alike.
@@ -22,6 +25,14 @@ use App\Models\Board;
  * also passed `--post-limit`, which is exactly the combination that hides it.
  */
 it('runs --with-posts without being given a post limit', function (): void {
+    /* Recorded responses, so the test neither needs the network nor spends a second per request. */
+    Sleep::fake();
+    Http::fake([
+        'a.4cdn.org/boards.json' => Http::response(Fixture::raw('boards.json')),
+        'a.4cdn.org/g/catalog.json' => Http::response(Fixture::raw('g-catalog.json')),
+        'a.4cdn.org/g/thread/*' => Http::response(Fixture::raw('g-thread-109514275.json')),
+    ]);
+
     Board::factory()->slug('g')->create();
 
     $this->artisan('clover:sync', ['--board' => ['g'], '--with-posts' => true])

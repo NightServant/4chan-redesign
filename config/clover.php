@@ -137,6 +137,25 @@ return [
 
     /*
     |---------------------------------------------------------------------------
+    | Fetch on open
+    |---------------------------------------------------------------------------
+    |
+    | Whether opening a board or a thread refetches it from 4chan when the
+    | stored copy is stale: a board's catalog after a minute, a thread's posts
+    | after half a minute. The home page, the feed and search are not covered;
+    | they read the stored copy, which the scheduled sweep keeps current.
+    |
+    | Off by default so local development and the test suite never reach the
+    | network by accident. The deployment turns it on in `vercel.json`. Every
+    | request it makes is still paced by the client, so it shares the one
+    | request a second with the sweep rather than adding to it.
+    |
+    */
+
+    'live_fetch' => (bool) env('CLOVER_LIVE_FETCH', false),
+
+    /*
+    |---------------------------------------------------------------------------
     | Routing fallback
     |---------------------------------------------------------------------------
     |
