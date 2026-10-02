@@ -110,11 +110,23 @@ final class Client
 
         $lastModified = $response->header('Last-Modified');
 
-        if ($lastModified !== '') {
-            $this->rememberLastModified($path, $lastModified);
-        }
+        return ApiResult::fetched($data, $lastModified === '' ? null : $lastModified, $path);
+    }
 
-        return ApiResult::fetched($data, $lastModified === '' ? null : $lastModified);
+    /**
+     * Remember a fetched result's `Last-Modified`, once its data is stored.
+     *
+     * Not done on arrival. Remembering first meant an import that threw after
+     * a `200` left the next request saying `If-Modified-Since` a version that
+     * never landed, and upstream answered `304` until the page changed again,
+     * for up to thirty days on a quiet board. Called by whoever imports, after
+     * the import; a caller that forgets only costs a full refetch, never data.
+     */
+    public function confirm(ApiResult $result): void
+    {
+        if ($result->isFetched() && $result->path !== null && $result->lastModified !== null) {
+            $this->rememberLastModified($result->path, $result->lastModified);
+        }
     }
 
     /**

@@ -282,7 +282,28 @@ final class Importer
 
         $this->upsertPosts(array_values($rows));
 
-        $thread->forceFill(['posts_synced_at' => Date::now()])->save();
+        /**
+         * The thread's counts, from the same page as its posts.
+         *
+         * They used to arrive only with the catalog, so a thread opened between
+         * sweeps showed every reply it had just fetched under a header still
+         * quoting the catalog's older count. The opening post of a thread page
+         * carries `replies` and `images` exactly as the catalog stub does.
+         */
+        $counts = [];
+
+        foreach ($this->rows($payload, 'posts') as $row) {
+            if ($this->int($row, 'resto') === 0 && array_key_exists('replies', $row)) {
+                $counts = [
+                    'replies_count' => $this->int($row, 'replies'),
+                    'images_count' => $this->int($row, 'images'),
+                ];
+
+                break;
+            }
+        }
+
+        $thread->forceFill([...$counts, 'posts_synced_at' => Date::now()])->save();
 
         return count($rows);
     }

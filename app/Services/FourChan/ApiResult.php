@@ -22,14 +22,15 @@ final class ApiResult
         public readonly ApiStatus $status,
         public readonly array $data = [],
         public readonly ?string $lastModified = null,
+        public readonly ?string $path = null,
     ) {}
 
     /**
      * @param  array<array-key, mixed>  $data
      */
-    public static function fetched(array $data, ?string $lastModified = null): self
+    public static function fetched(array $data, ?string $lastModified = null, ?string $path = null): self
     {
-        return new self(ApiStatus::Fetched, $data, $lastModified);
+        return new self(ApiStatus::Fetched, $data, $lastModified, $path);
     }
 
     public static function unchanged(): self

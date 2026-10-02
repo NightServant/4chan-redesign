@@ -115,6 +115,7 @@ class SyncCloverData extends Command
         }
 
         $slugs = $importer->importBoards($result->data);
+        $client->confirm($result);
 
         $this->components->twoColumnDetail('boards.json', count($slugs).' boards');
 
@@ -169,6 +170,8 @@ class SyncCloverData extends Command
             $detail .= $pruned > 0 ? ", {$pruned} pruned" : '';
         }
 
+        $client->confirm($catalog);
+
         $this->components->twoColumnDetail($board->displaySlug(), $detail);
 
         return $this->syncPosts($client, $importer, $board);
@@ -210,6 +213,7 @@ class SyncCloverData extends Command
                 $failures++;
             } elseif ($result->isFetched()) {
                 $posts += $importer->importPosts($thread, $result->data);
+                $client->confirm($result);
             }
 
             $bar->advance();

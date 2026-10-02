@@ -62,6 +62,8 @@ it('sends If-Modified-Since built from the previous response and treats 304 as u
         ->and($first->lastModified)->toBe($lastModified)
         ->and($first->data['boards'])->toBeArray();
 
+    $client->confirm($first);
+
     $second = $client->boards();
 
     expect($second->isUnchanged())->toBeTrue()
@@ -70,6 +72,25 @@ it('sends If-Modified-Since built from the previous response and treats 304 as u
         ->and($second->data)->toBe([]);
 
     Http::assertSent(fn (Request $request): bool => $request->hasHeader('If-Modified-Since', $lastModified));
+});
+
+/**
+ * A `200` whose import then failed must not be remembered: the next request
+ * would say `If-Modified-Since` a version that never landed, and upstream would
+ * answer `304` until the page changed again.
+ */
+it('does not remember Last-Modified until the result is confirmed', function (): void {
+    Http::fake(fn (Request $request) => $request->hasHeader('If-Modified-Since')
+        ? Http::response('', 304)
+        : Http::response(Fixture::raw('boards.json'), 200, ['Last-Modified' => 'Thu, 19 Mar 2026 16:38:15 GMT']));
+
+    $client = app(Client::class);
+
+    $client->boards();
+
+    expect($client->boards()->isFetched())->toBeTrue();
+
+    Http::assertNotSent(fn (Request $request): bool => $request->hasHeader('If-Modified-Since'));
 });
 
 it('remembers Last-Modified per endpoint', function (): void {

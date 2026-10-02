@@ -161,3 +161,17 @@ it('prunes nothing from a payload that lists no threads', function (): void {
         ->and(app(Importer::class)->pruneThreads($board, [['page' => 1, 'threads' => []]]))->toBe(0)
         ->and($board->threads()->count())->toBe(1);
 });
+
+/**
+ * A thread opened between sweeps shows every reply its page just brought in,
+ * so its header has to quote the same page's count, not the catalog's older one.
+ */
+it('takes the thread counts from the page it imports', function (): void {
+    $thread = Thread::factory()->create(['replies_count' => 1, 'images_count' => 1]);
+
+    app(Importer::class)->importPosts($thread, Fixture::json('g-thread-109514275.json'));
+
+    expect($thread->fresh())
+        ->replies_count->toBe(292)
+        ->images_count->toBe(44);
+});

@@ -78,6 +78,8 @@ final class LiveFetch
             if ($limit === null) {
                 $this->importer->pruneThreads($board, $result->data);
             }
+
+            $this->client->confirm($result);
         });
     }
 
@@ -98,6 +100,7 @@ final class LiveFetch
 
             if ($result->isFetched()) {
                 $this->importer->importPosts($thread, $result->data);
+                $this->client->confirm($result);
             }
         });
     }
