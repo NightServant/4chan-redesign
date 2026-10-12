@@ -14,6 +14,83 @@ use Illuminate\Support\Facades\DB;
 use Tests\Feature\Sync\Fixture;
 
 /**
+ * The board metadata, as `updateOrCreate` stored it. `upsert` casts nothing and
+ * stamps nothing it is not told to, so the booleans, the decoded description,
+ * the category and the dates are pinned against the recorded `boards.json`.
+ */
+it('stores boards exactly as the per-row writes did', function (): void {
+    $this->freezeTime();
+
+    $payload = Fixture::json('boards.json');
+    $payload['boards'][] = ['board' => 'zz', 'title' => 'Unmapped', 'ws_board' => 1];
+
+    $slugs = app(Importer::class)->importBoards($payload);
+
+    expect($slugs)->toBe(['3', 'a', 'b', 'biz', 'g', 'pol', 'r9k', 's4s', 'wg', 'x', 'zz'])
+        ->and(Board::query()->count())->toBe(11);
+
+    $three = Board::query()->where('slug', '3')->firstOrFail();
+    expect($three->title)->toBe('3DCG')
+        ->and($three->description)->toBe('"/3/ - 3DCG" is 4chan\'s board for 3D modeling and imagery.')
+        ->and($three->category)->toBe('Creative')
+        ->and($three->worksafe)->toBeTrue()
+        ->and($three->max_comment_chars)->toBe(2000)
+        ->and($three->bump_limit)->toBe(310)
+        ->and($three->image_limit)->toBe(150)
+        ->and($three->per_page)->toBe(15)
+        ->and($three->pages)->toBe(10)
+        ->and($three->is_archived)->toBeTrue()
+        ->and($three->synced_at?->getTimestamp())->toBe(now()->getTimestamp())
+        ->and($three->created_at?->getTimestamp())->toBe(now()->getTimestamp())
+        ->and($three->updated_at?->getTimestamp())->toBe(now()->getTimestamp());
+
+    $b = Board::query()->where('slug', 'b')->firstOrFail();
+    expect($b->worksafe)->toBeFalse()
+        ->and($b->is_archived)->toBeFalse()
+        ->and($b->category)->toBe('Misc');
+
+    $unmapped = Board::query()->where('slug', 'zz')->firstOrFail();
+    expect($unmapped->category)->toBe('Other')
+        ->and($unmapped->description)->toBe('')
+        ->and($unmapped->max_comment_chars)->toBe(0);
+});
+
+it('updates a stored board in place when boards.json changes', function (): void {
+    $this->freezeTime();
+    $importer = app(Importer::class);
+    $importer->importBoards(Fixture::json('boards.json'));
+
+    $before = Board::query()->where('slug', 'g')->firstOrFail();
+    $unlisted = Board::factory()->slug('gone')->create();
+
+    $this->travel(5)->minutes();
+
+    $payload = Fixture::json('boards.json');
+    $payload['boards'] = array_map(
+        fn (array $row): array => $row['board'] === 'g' ? [...$row, 'title' => 'Renamed', 'bump_limit' => 111] : $row,
+        $payload['boards'],
+    );
+    $importer->importBoards($payload);
+
+    $after = Board::query()->where('slug', 'g')->firstOrFail();
+
+    expect(Board::query()->count())->toBe(11)
+        ->and($after->id)->toBe($before->id)
+        ->and($after->title)->toBe('Renamed')
+        ->and($after->bump_limit)->toBe(111)
+        ->and($after->created_at?->getTimestamp())->toBe($before->created_at?->getTimestamp())
+        ->and($after->synced_at?->getTimestamp())->toBe(now()->getTimestamp())
+        ->and($after->updated_at?->getTimestamp())->toBe(now()->getTimestamp())
+        ->and($unlisted->fresh()?->synced_at?->getTimestamp())->toBe($unlisted->synced_at?->getTimestamp());
+});
+
+it('writes no board for a payload with no boards in it', function (): void {
+    expect(app(Importer::class)->importBoards([]))->toBe([])
+        ->and(app(Importer::class)->importBoards(['boards' => [['title' => 'no slug']]]))->toBe([])
+        ->and(Board::query()->count())->toBe(0);
+});
+
+/**
  * Bulk writes bypass Eloquent's casts, so the values that reach the table are
  * now the importer's own work. This pins them against the recorded thread: the
  * quote list the `array` cast used to encode, the dates the datetime cast used
@@ -143,6 +220,26 @@ it('keeps a thread with a post written here', function (): void {
 
     expect(app(Importer::class)->pruneThreads($board, catalogListing(200)))->toBe(0)
         ->and(Thread::query()->whereKey($replied->id)->exists())->toBeTrue();
+});
+
+it('keeps a thread whose only reply here came from an account since deleted', function (): void {
+    $board = Board::factory()->slug('g')->create();
+    $replied = Thread::factory()->for($board)->create(['no' => 100]);
+    $author = User::factory()->create();
+    $reply = Post::factory()->create([
+        'thread_id' => $replied->id,
+        'no' => LocalPostNumbers::BASE,
+        'user_id' => $author->id,
+        'is_local' => true,
+    ]);
+
+    $author->delete();
+
+    expect($reply->fresh()?->user_id)->toBeNull()
+        ->and($reply->fresh()?->is_local)->toBeTrue()
+        ->and(app(Importer::class)->pruneThreads($board, catalogListing(200)))->toBe(0)
+        ->and(Thread::query()->whereKey($replied->id)->exists())->toBeTrue()
+        ->and(Post::query()->whereKey($reply->id)->exists())->toBeTrue();
 });
 
 it('prunes only the board it was given', function (): void {

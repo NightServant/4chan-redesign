@@ -101,6 +101,22 @@ it('counts the replies posted here in one statement, however many threads have t
         ->and($board->threads()->whereNotIn('id', $withReplies->modelKeys())->pluck('replies_count')->unique()->all())->toBe([$upstream]);
 });
 
+it('imports every board in one statement, however many there are', function (): void {
+    $importer = app(Importer::class);
+
+    $recorded = Fixture::json('boards.json');
+
+    /** Grown from the recorded rows, like the catalog above: ten boards would hide a per-board cost. */
+    $everyBoard = ['boards' => array_map(
+        fn (int $i): array => [...$recorded['boards'][$i % count($recorded['boards'])], 'board' => "b{$i}"],
+        range(1, 77),
+    )];
+
+    expect(queriesDuring(fn () => $importer->importBoards($everyBoard)))->toBe(1)
+        ->and(Board::query()->count())->toBe(77)
+        ->and(queriesDuring(fn () => $importer->importBoards($everyBoard)))->toBe(1);
+});
+
 it('imports a thread page in a handful of statements', function (): void {
     $thread = Thread::factory()->create();
 

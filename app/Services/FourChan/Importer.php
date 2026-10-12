@@ -18,13 +18,13 @@ use Illuminate\Support\Facades\Date;
  * response without a request, and apart from the command so the command is
  * only orchestration and reporting.
  *
- * Thread and post writes are bulk. Each is one element of an `upsert` rather
+ * Board, thread and post writes are bulk. Each is one element of an `upsert` rather
  * than a select and an insert of its own: against a database that is a network
  * hop away, the per-row version spent hours on one pass over the boards with
  * nothing wrong in any single query. `upsert` bypasses Eloquent's casts and
  * events, so the cast work is done here by hand — `quotes` is encoded, and
- * dates are bound as the cast would have formatted them — and neither `Thread`
- * nor `Post` has an observer for the bypass to skip.
+ * dates are bound as the cast would have formatted them — and none of `Board`,
+ * `Thread` or `Post` has an observer for the bypass to skip.
  *
  * The one method that deletes is `pruneThreads()`, and it is only called with
  * a catalog that came back `200` for a whole board. A `304`, a failure or a
@@ -60,6 +60,12 @@ final class Importer
     /**
      * Upsert every board in a `boards.json` payload.
      *
+     * One statement for the lot. It used to be a select and an insert or update
+     * for each board, 154 round trips for the 77 there are, on every pass.
+     * `upsert` does not cast, so the booleans go in as booleans and `synced_at`
+     * as the date the cast would have formatted; it does stamp `created_at` and
+     * `updated_at`, and leaves the first alone on a board that already exists.
+     *
      * @param  array<array-key, mixed>  $payload
      * @return array<int, string> the slugs written, in payload order
      */
@@ -67,7 +73,14 @@ final class Importer
     {
         $categories = $this->categoryLookup();
         $syncedAt = Date::now();
-        $slugs = [];
+
+        /**
+         * Keyed by slug, because one statement cannot touch a row twice and the
+         * last row for a slug wins, as it did when each was written in turn.
+         *
+         * @var array<string, array<string, mixed>> $boards
+         */
+        $boards = [];
 
         foreach ($this->rows($payload, 'boards') as $row) {
             $slug = $this->string($row, 'board');
@@ -76,7 +89,8 @@ final class Importer
                 continue;
             }
 
-            Board::query()->updateOrCreate(['slug' => $slug], [
+            $boards[$slug] = [
+                'slug' => $slug,
                 'title' => $this->string($row, 'title', $slug),
                 /** `meta_description` arrives HTML-escaped: `4chan&#039;s board for …`. */
                 'description' => $this->decode($this->string($row, 'meta_description')),
@@ -89,12 +103,20 @@ final class Importer
                 'pages' => $this->int($row, 'pages'),
                 'is_archived' => $this->bool($row, 'is_archived'),
                 'synced_at' => $syncedAt,
-            ]);
-
-            $slugs[] = $slug;
+            ];
         }
 
-        return $slugs;
+        if ($boards === []) {
+            return [];
+        }
+
+        Board::query()->upsert(array_values($boards), ['slug'], [
+            'title', 'description', 'category', 'worksafe', 'max_comment_chars', 'bump_limit',
+            'image_limit', 'per_page', 'pages', 'is_archived', 'synced_at',
+        ]);
+
+        /** A numeric slug (`3`) comes back from `array_keys` as an integer. */
+        return array_map(strval(...), array_keys($boards));
     }
 
     /**
@@ -240,9 +262,12 @@ final class Importer
      *
      * Two kinds of thread outlive the catalog. One someone bookmarked is
      * something an anon asked to keep, and one with a post written here
-     * (`posts.user_id` set) holds local Clover activity that exists nowhere
-     * upstream. Everything under a deleted thread — posts, bookmarks, reads —
-     * goes with it through the foreign keys.
+     * (`posts.is_local`) holds local Clover activity that exists nowhere
+     * upstream. It is `is_local` and not `user_id` because deleting an account
+     * nulls the second and leaves the reply where it was posted: keyed on the
+     * author, the next sweep would have pruned the thread and the reply with it.
+     * Everything under a deleted thread — posts, bookmarks, reads — goes with it
+     * through the foreign keys.
      *
      * A payload that lists no threads prunes nothing. A live board is never
      * empty, so that is a response to distrust rather than to act on.
@@ -265,7 +290,7 @@ final class Importer
             ->where('board_id', $board->id)
             ->whereNotIn('no', $listed)
             ->whereDoesntHave('bookmarks')
-            ->whereDoesntHave('posts', fn (Builder $posts) => $posts->whereNotNull('user_id'))
+            ->whereDoesntHave('posts', fn (Builder $posts) => $posts->where('is_local', true))
             ->delete();
     }
 
