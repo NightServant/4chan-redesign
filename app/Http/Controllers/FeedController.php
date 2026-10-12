@@ -10,6 +10,7 @@ use App\Models\Board;
 use App\Models\Post;
 use App\Models\Thread;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,6 +28,9 @@ class FeedController extends Controller
 {
     /** A screenful and a bit. The page paginates below this. */
     private const THREADS = 30;
+
+    /** How long the rail's counts are reused before they are counted again. */
+    private const LIBRARY_CACHE_SECONDS = 60;
 
     public function __invoke(Request $request, string $sort): Response
     {
@@ -70,8 +74,8 @@ class FeedController extends Controller
              * shows rather fewer is a page disagreeing with itself.
              */
             'library' => [
-                'boards' => number_format(Board::query()->visible($showsMature)->count()),
-                'threads' => number_format(Thread::query()->onVisibleBoard($showsMature)->count()),
+                ...self::libraryCounts($showsMature),
+
                 /**
                  * Whether these counts are the whole database or this reader's
                  * slice of it, decided by the same flag that scoped the
@@ -85,6 +89,42 @@ class FeedController extends Controller
                  */
                 'complete' => $showsMature,
 
+                'lastSyncedAt' => ($lastSync = self::lastSyncedAt()) === null
+                    ? null
+                    : RelativeTime::since($lastSync),
+            ],
+        ]);
+    }
+
+    /**
+     * The three figures the rail prints, counted at most a minute ago.
+     *
+     * Three table counts on every feed request, for numbers that move when a
+     * sync lands, so they are reused for `LIBRARY_CACHE_SECONDS`. Each figure
+     * is a true count of what the database held up to a minute earlier, and
+     * the rail says "Boards", "Threads" and "Posts" -- counts, not a clock --
+     * so it does not claim to be more current than that. A sync does not
+     * invalidate it; the next minute's request sees the sync.
+     *
+     * Keyed by visibility and by nothing else, because visibility is all the
+     * three queries depend on. Adult boards in or out gives two entries
+     * (signed out and opted out share one), so an anon who hides adult boards
+     * is never handed a count that includes them, and one who shows them is
+     * never handed the smaller figure under a heading claiming the whole.
+     *
+     * `lastSyncedAt` is not here: it is a statement about *when*, and a cached
+     * "3 minutes ago" would still say 3 a minute later.
+     *
+     * @return array{boards: string, threads: string, posts: string}
+     */
+    private static function libraryCounts(bool $showsMature): array
+    {
+        return Cache::remember(
+            'clover.library.'.(int) $showsMature,
+            self::LIBRARY_CACHE_SECONDS,
+            fn (): array => [
+                'boards' => number_format(Board::query()->visible($showsMature)->count()),
+                'threads' => number_format(Thread::query()->onVisibleBoard($showsMature)->count()),
                 'posts' => number_format(
                     Post::query()
                         ->whereIn(
@@ -93,11 +133,8 @@ class FeedController extends Controller
                         )
                         ->count(),
                 ),
-                'lastSyncedAt' => ($lastSync = self::lastSyncedAt()) === null
-                    ? null
-                    : RelativeTime::since($lastSync),
             ],
-        ]);
+        );
     }
 
     /**

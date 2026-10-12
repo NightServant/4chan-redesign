@@ -7,6 +7,7 @@ import { initializeTheme } from '@/hooks/use-appearance';
 import AppLayout from '@/layouts/app-layout';
 import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
+import { resolvePage } from '@/lib/resolve-page';
 
 /**
  * Vercel Web Analytics counts page views with no cookies (see the privacy
@@ -52,6 +53,7 @@ createInertiaApp({
      * want the name in the tab say it themselves.
      */
     title: (title) => title || appName,
+    resolve: resolvePage,
     layout: (name) => {
         switch (true) {
             case name === 'welcome':

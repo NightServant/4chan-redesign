@@ -24,7 +24,10 @@ export interface Board {
     slug: BoardSlug;
     name: string;
     /**
-     * Live thread count on the board. Pre-formatted, e.g. `18,402`.
+     * Thread count on the board. Pre-formatted, e.g. `18,402`.
+     *
+     * Counted from the database, and up to a minute old in the sidebar's
+     * `sidebarBoards` and `sidebarTrending`, which are cached for 60 seconds.
      *
      * This was an "anons online" figure while the screens ran on fixtures.
      * 4chan's JSON API publishes no online count — not per board and not

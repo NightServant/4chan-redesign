@@ -68,7 +68,24 @@
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
-        @fonts
+        {{--
+            The body font, asked for before the stylesheet is parsed.
+
+            Without this the browser learns it needs Inter only after it has
+            downloaded and read the CSS that names it, so the first paint is in
+            the fallback face and the swap is a visible reflow. `crossorigin` is
+            required even for same-origin fonts: fonts are fetched in CORS mode,
+            and a preload without it is discarded and downloaded a second time.
+
+            `Vite::asset` resolves to the same hashed file the stylesheet's
+            `@font-face` does (`PerceivedSpeedTest` compares the two), so the
+            preload is the download rather than a second one.
+
+            Only the regular face. The italic is used rarely and the display
+            face is for headings; preloading either competes with the render
+            for bandwidth in order to win a swap few visitors will see.
+        --}}
+        <link rel="preload" as="font" type="font/woff2" href="{{ Vite::asset('resources/fonts/Inter-Variable.woff2') }}" crossorigin>
 
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
