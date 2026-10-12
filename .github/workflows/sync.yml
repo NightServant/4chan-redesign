@@ -1,20 +1,24 @@
 name: sync
 
-# Keeps the cross-board pages (home, feed, search) current: they read the
-# stored copy, and this is what refreshes it. Board and thread pages catch up
-# on their own when opened (`CLOVER_LIVE_FETCH`), so this only has to cover
-# everything nobody is looking at.
+# The backstop. An outside cron (cron-job.org) calls `POST /internal/sweep`
+# every 30 minutes and runs the sweep on Vercel, beside the database. This
+# runs it hourly from here in case that cron stops, because GitHub drops most
+# scheduled slots (31 runs in a week where `*/30` asked for 336) and cannot be
+# the only trigger. The odd minute is dropped less often than the top of the
+# hour.
 #
-# Every 30 minutes because that is what the database allows. Neon's free plan
-# gives 100 compute-hours a month, and Vercel's Hobby cron runs once a day at
-# most. A sweep is one request for `boards.json` plus one per board, paced to
-# the one a second 4chan asks for through the same cache table the site uses,
-# so a sweep and a visitor opening a page share that rate and do not add to it.
+# The sweep keeps the cross-board pages (home, feed, search) current: they read
+# the stored copy, and this is what refreshes it. Board and thread pages catch
+# up on their own when opened (`CLOVER_LIVE_FETCH`).
+#
+# A sweep is one request for `boards.json` plus one per board, paced to the one
+# a second 4chan asks for through the same cache table the site uses, so a
+# sweep and a visitor opening a page share that rate and do not add to it.
 #
 # Needs one repository secret, `DB_URL`: the Neon connection string.
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '7 * * * *'
   workflow_dispatch:
 
 permissions:

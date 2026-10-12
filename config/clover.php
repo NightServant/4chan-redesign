@@ -137,6 +137,28 @@ return [
 
     /*
     |---------------------------------------------------------------------------
+    | Sweep endpoint
+    |---------------------------------------------------------------------------
+    |
+    | The bearer token the sweep routes accept. An outside cron calls
+    | `POST /internal/sweep` to run `clover:sync`, because GitHub's scheduler
+    | drops most of the half-hourly slots it is given. The secret is Clover's
+    | own and opens those routes only. Unset, or shorter than 32 characters,
+    | every call is refused.
+    |
+    | `origin` is where that route sends its second request, token included. It
+    | is pinned here rather than read from the request, whose host, scheme and
+    | port are whatever the sender says. Unset, a sweep cannot be started.
+    |
+    */
+
+    'sweep' => [
+        'token' => env('CLOVER_SWEEP_TOKEN'),
+        'origin' => env('CLOVER_SWEEP_ORIGIN'),
+    ],
+
+    /*
+    |---------------------------------------------------------------------------
     | Fetch on open
     |---------------------------------------------------------------------------
     |
