@@ -107,6 +107,28 @@ describe('Rail', () => {
         expect(within(rulesRegion).getAllByRole('listitem')).toHaveLength(3);
     });
 
+    /**
+     * The third rule's note said such posts "all go on sight". No code removes
+     * a post or an account, and the Rules page says there is no report button,
+     * so the note states the rule and says nothing enforces it by itself.
+     */
+    it('states the third rule without claiming it is enforced', () => {
+        render(<Rail library={LIBRARY} threads={THREADS} />);
+
+        const rulesRegion = screen.getByRole('region', {
+            name: 'Community rules',
+        });
+
+        expect(rulesRegion.textContent).not.toMatch(
+            /on sight|goes with it|\ball go\b|removed/i,
+        );
+        expect(
+            within(rulesRegion).getByText(
+                'Personal information, organised brigading and anything unlawful do not belong here. Nothing on Clover removes them automatically.',
+            ),
+        ).toBeInTheDocument();
+    });
+
     it('is hidden below lg and only appears as a flex column at lg and up', () => {
         render(<Rail library={LIBRARY} threads={THREADS} />);
 

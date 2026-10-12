@@ -42,7 +42,7 @@ const COMMUNITY_RULES = [
  */
 const COMMUNITY_RULE_NOTES: readonly string[] = [
     'A thread that would fit any board belongs on none of them.',
-    'Personal information, organised brigading and anything unlawful all go on sight.',
+    'Personal information, organised brigading and anything unlawful do not belong here. Nothing on Clover removes them automatically.',
     'Clover covers attachments on boards 4chan marks not worksafe, and honours the spoiler flag. Neither replaces judgement.',
 ];
 

@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { INFORMATION } from '@/content/information';
+import { CONTACT_EMAIL, INFORMATION } from '@/content/information';
 import Information from '@/pages/information';
 
 vi.mock('@inertiajs/react', () => ({
@@ -77,8 +77,17 @@ describe('Information', () => {
                 }),
             ).toBeInTheDocument();
 
+            /* By whole-paragraph text rather than `getByText`, which only
+               sees a paragraph's own text nodes and so misses one that holds a
+               link. */
             for (const paragraph of section.body) {
-                expect(screen.getByText(paragraph)).toBeInTheDocument();
+                expect(
+                    screen.getByText(
+                        (_, element) =>
+                            element?.tagName === 'P' &&
+                            element.textContent === paragraph,
+                    ),
+                ).toBeInTheDocument();
             }
         }
     });
@@ -153,6 +162,54 @@ describe('Information', () => {
                 /no post carries a reference back to the account that wrote it/,
             ),
         ).toBeInTheDocument();
+    });
+
+    /**
+     * The address is a link to a mail client, not a route: it has to be a
+     * plain anchor, because Inertia's `Link` would try to visit it over XHR.
+     */
+    it('renders the contact address on the privacy page as a mailto link', () => {
+        render(<Information title="Privacy" />);
+
+        const link = screen.getByRole('link', { name: CONTACT_EMAIL });
+
+        expect(link).toHaveAttribute('href', `mailto:${CONTACT_EMAIL}`);
+        expect(link.closest('p')?.textContent).toMatch(
+            /for privacy or data requests/i,
+        );
+    });
+
+    it('renders the contact address on the rules page as the same mailto link', () => {
+        render(<Information title="Rules" />);
+
+        const link = screen.getByRole('link', { name: CONTACT_EMAIL });
+
+        expect(link).toHaveAttribute('href', `mailto:${CONTACT_EMAIL}`);
+        expect(link.closest('p')?.textContent).toMatch(
+            /to ask for a post to be taken down/i,
+        );
+    });
+
+    it('no longer says there is nobody to report to', () => {
+        render(<Information title="Rules" />);
+
+        expect(
+            screen.queryByText(/nobody to report to/i),
+        ).not.toBeInTheDocument();
+    });
+
+    it('offers the address nowhere but the privacy and rules pages', () => {
+        for (const title of WRITTEN.filter(
+            (name) => name !== 'Privacy' && name !== 'Rules',
+        )) {
+            const { unmount } = render(<Information title={title} />);
+
+            expect(
+                screen.queryByRole('link', { name: CONTACT_EMAIL }),
+            ).not.toBeInTheDocument();
+
+            unmount();
+        }
     });
 
     it('renders no cards, matching the rest of the site', () => {

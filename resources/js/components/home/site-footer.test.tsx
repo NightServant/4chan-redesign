@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { SiteFooter } from '@/components/home/site-footer';
+import { CONTACT_EMAIL } from '@/content/information';
 
 /** Label to route, and the whole map: nothing else may appear down there. */
 const DESTINATIONS: Record<string, string> = {
@@ -14,8 +15,9 @@ const DESTINATIONS: Record<string, string> = {
 /**
  * The six that were removed rather than written. Each described something
  * Clover does not have: there is no janitor queue, no report flow, no
- * contribution process, no status page, no DMCA process for files it never
- * stores, and no contact address.
+ * contribution process, no status page, and no DMCA process for files it never
+ * stores. "Contact" was a seventh, a label with nothing behind it. The inbox
+ * now exists, so the footer offers the address itself rather than that label.
  */
 const REMOVED = [
     'Search',
@@ -97,11 +99,28 @@ describe('SiteFooter', () => {
 
         const links = screen.getAllByRole('link');
 
-        expect(links).toHaveLength(Object.keys(DESTINATIONS).length);
+        /* The five pages and the one address. */
+        expect(links).toHaveLength(Object.keys(DESTINATIONS).length + 1);
 
         for (const link of links) {
-            expect(link.getAttribute('href')).toMatch(/^\//);
+            expect(link.getAttribute('href')).toMatch(
+                new RegExp(`^(/|mailto:${CONTACT_EMAIL}$)`),
+            );
         }
+    });
+
+    /**
+     * The address is shown as the link text, so the footer says nothing about
+     * the inbox beyond where it is. What happens to a message is on the
+     * privacy page, in one paragraph that a test pins.
+     */
+    it('links the contact address as a mailto, under Legal', () => {
+        render(<SiteFooter />);
+
+        const legal = screen.getByRole('navigation', { name: 'Legal' });
+        const link = within(legal).getByRole('link', { name: CONTACT_EMAIL });
+
+        expect(link).toHaveAttribute('href', `mailto:${CONTACT_EMAIL}`);
     });
 
     it('groups the entries under their own headings', () => {
