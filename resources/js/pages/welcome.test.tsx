@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
+import { CONTACT_EMAIL } from '@/content/information';
 import { makeBoard, makeThread, makeTrendingTag } from '@/fixtures/factories';
 import { HOME_SECTION_IDS } from '@/lib/home-sections';
 import Welcome from '@/pages/welcome';
@@ -131,8 +132,9 @@ describe('Welcome', () => {
             expect(href, `${link.textContent} links to a fragment`).not.toBe(
                 '#',
             );
+            /* The footer's one address is the only link that leaves the app. */
             expect(
-                href?.startsWith('/'),
+                href?.startsWith('/') || href === `mailto:${CONTACT_EMAIL}`,
                 `${link.textContent} links to ${href}`,
             ).toBe(true);
         }

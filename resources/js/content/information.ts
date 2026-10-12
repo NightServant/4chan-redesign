@@ -15,6 +15,14 @@
  * with it. That is the cost of writing a real page instead of a placeholder,
  * and it is the right cost.
  */
+/**
+ * The inbox for privacy and data requests. A workflow files each message and
+ * sends back an automatic acknowledgement carrying a reference number; a
+ * person reads the rest. The Privacy page says exactly that and nothing more,
+ * and the footer links the same address, so it lives here once.
+ */
+export const CONTACT_EMAIL = 'cloverrequests@gmail.com';
+
 export type InformationSection = {
     heading: string;
     body: readonly string[];
@@ -40,7 +48,7 @@ export const INFORMATION: Record<string, InformationPage> = {
             {
                 heading: 'No doxxing, no raids, no illegal content',
                 body: [
-                    'Personal information about a real person, organised brigading of another site, and anything unlawful are all removed on sight, and the account that posted them goes with it.',
+                    'Personal information about a real person, organised brigading of another site, and anything unlawful do not belong here. Nothing on Clover enforces that by itself; the last section of this page says how to ask for a post to be taken down.',
                 ],
             },
             {
@@ -50,9 +58,11 @@ export const INFORMATION: Record<string, InformationPage> = {
                 ],
             },
             {
-                heading: 'There is nobody to report to yet',
+                heading: 'There is no report button',
                 body: [
-                    'Clover has no report button, no moderator account and nothing that removes a post on its own. The rules above describe what belongs here; enforcing them is not built. This page said a janitor read every report and kept a public log, which was three claims about machinery that has never existed.',
+                    'Clover has no report button, no moderator account and nothing that enforces these rules on its own. The rules above describe what belongs here; enforcing them is not built. This page said a janitor read every report and kept a public log, which was three claims about machinery that has never existed.',
+                    `To ask for a post to be taken down, email ${CONTACT_EMAIL}. Each request gets an automatic acknowledgement with a reference number, such as CR-12, and a person reads it. No response time is promised, and neither is the removal of any post. The Privacy page says what happens to your email.`,
+                    'Clover cannot remove anything from 4chan. It deletes a mirrored thread when it next finds that 4chan no longer lists it, unless someone has saved the thread or written a reply in it here.',
                 ],
             },
         ],
@@ -157,7 +167,7 @@ export const INFORMATION: Record<string, InformationPage> = {
             {
                 heading: 'What Clover does not do',
                 body: [
-                    'Page views are counted with Vercel Web Analytics. It sets no cookies: a visit is told apart by a hash of the request that is discarded within a day, and Clover sees only anonymous totals. There is no advertising and no other analytics. Nothing here is sold or shared with anybody.',
+                    'Page views are counted with Vercel Web Analytics. It sets no cookies: a visit is told apart by a hash of the request that is discarded within a day, and Clover sees only anonymous totals. There is no advertising and no other analytics. Nothing here is sold or shared with anybody, apart from the request emails covered under Asking about your data.',
                     'Clover itself sends nothing about you to 4chan: not your account, not what you read, not what you searched for. What your own browser fetches from 4chan is a separate matter, and it is the next section.',
                 ],
             },
@@ -173,6 +183,13 @@ export const INFORMATION: Record<string, InformationPage> = {
                 body: [
                     'Deleting your account removes it and everything private attached to it. Posts stay, because they were anonymous the whole time and carry nothing that points back to you.',
                     'Any image you attached goes with the account, and the post it was on stays as the text you wrote. That is enforced in the code rather than promised here: an account cannot be deleted without its files going too.',
+                ],
+            },
+            {
+                heading: 'Asking about your data',
+                body: [
+                    `For privacy or data requests, email ${CONTACT_EMAIL}. Each request gets an automatic acknowledgement with a reference number, such as CR-12. A person reads every request. No response time is promised.`,
+                    'Your email and message are kept in Clover’s Gmail inbox and filed as an issue in a private GitHub repository so a person can handle them, and for a data request the issue is deleted once the request is handled.',
                 ],
             },
         ],
