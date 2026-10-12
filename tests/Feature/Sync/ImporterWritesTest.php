@@ -9,6 +9,8 @@ use App\Models\Thread;
 use App\Models\User;
 use App\Services\FourChan\Importer;
 use App\Services\LocalPostNumbers;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Support\Facades\DB;
 use Tests\Feature\Sync\Fixture;
 
 /**
@@ -174,4 +176,183 @@ it('takes the thread counts from the page it imports', function (): void {
     expect($thread->fresh())
         ->replies_count->toBe(292)
         ->images_count->toBe(44);
+});
+
+/**
+ * A reply posted on Clover adds one to its thread's count, and upstream's
+ * figure knows nothing of it, so each import would erase it again.
+ */
+it('keeps Clover replies in the count when 4chan reports its own', function (): void {
+    $board = Board::factory()->create(['slug' => 'g']);
+    $catalog = Fixture::json('g-catalog.json');
+    app(Importer::class)->importThreads($board, $catalog);
+
+    $stub = $catalog[0]['threads'][0];
+    $thread = Thread::query()->where('no', $stub['no'])->firstOrFail();
+    Post::factory()->for($thread)->create([
+        'user_id' => User::factory(),
+        'is_local' => true,
+        'is_op' => false,
+        'no' => LocalPostNumbers::next($board),
+    ]);
+
+    app(Importer::class)->importThreads($board, $catalog);
+
+    expect($thread->fresh()->replies_count)->toBe($stub['replies'] + 1);
+});
+
+it('keeps a Clover reply in the count after its author deletes their account', function (): void {
+    $board = Board::factory()->create(['slug' => 'g']);
+    $catalog = Fixture::json('g-catalog.json');
+    app(Importer::class)->importThreads($board, $catalog);
+
+    $stub = $catalog[0]['threads'][0];
+    $thread = Thread::query()->where('no', $stub['no'])->firstOrFail();
+    Post::factory()->for($thread)->create([
+        'user_id' => null,
+        'is_local' => true,
+        'is_op' => false,
+        'no' => LocalPostNumbers::next($board),
+    ]);
+
+    app(Importer::class)->importThreads($board, $catalog);
+
+    expect($thread->fresh()->replies_count)->toBe($stub['replies'] + 1);
+});
+
+/**
+ * A reply posted on Clover, as `ReplyController` writes it.
+ */
+function localReplyOn(Thread $thread): Post
+{
+    return Post::factory()->for($thread)->create([
+        'user_id' => null,
+        'is_local' => true,
+        'is_op' => false,
+        'no' => LocalPostNumbers::next($thread->board),
+    ]);
+}
+
+it('adds every Clover reply to the count, however many a thread has', function (): void {
+    $board = Board::factory()->create(['slug' => 'g']);
+    $catalog = Fixture::json('g-catalog.json');
+    app(Importer::class)->importThreads($board, $catalog);
+
+    $first = $catalog[0]['threads'][0];
+    $second = $catalog[0]['threads'][1];
+    $threadOne = Thread::query()->where('no', $first['no'])->firstOrFail();
+    $threadTwo = Thread::query()->where('no', $second['no'])->firstOrFail();
+    localReplyOn($threadOne);
+    localReplyOn($threadOne);
+    localReplyOn($threadTwo);
+
+    app(Importer::class)->importThreads($board, $catalog);
+
+    expect($threadOne->fresh()->replies_count)->toBe($first['replies'] + 2)
+        ->and($threadTwo->fresh()->replies_count)->toBe($second['replies'] + 1);
+});
+
+it('leaves a thread the catalog does not list alone', function (): void {
+    $board = Board::factory()->create(['slug' => 'g']);
+    $catalog = Fixture::json('g-catalog.json');
+    $unlisted = Thread::factory()->for($board)->create(['replies_count' => 7]);
+    localReplyOn($unlisted);
+
+    app(Importer::class)->importThreads($board, $catalog);
+
+    expect($unlisted->fresh()->replies_count)->toBe(7);
+});
+
+it('does not take a reply from another board\'s thread of the same number', function (): void {
+    $board = Board::factory()->create(['slug' => 'g']);
+    $other = Board::factory()->create(['slug' => 'a']);
+    $catalog = Fixture::json('g-catalog.json');
+    $stub = $catalog[0]['threads'][0];
+
+    $elsewhere = Thread::factory()->for($other)->create(['no' => $stub['no'], 'replies_count' => 3]);
+    localReplyOn($elsewhere);
+
+    app(Importer::class)->importThreads($board, $catalog);
+
+    expect(Thread::query()->where('board_id', $board->id)->where('no', $stub['no'])->value('replies_count'))->toBe($stub['replies'])
+        ->and($elsewhere->fresh()->replies_count)->toBe(3);
+});
+
+it('counts Clover replies once however often the same catalog is imported', function (): void {
+    $board = Board::factory()->create(['slug' => 'g']);
+    $catalog = Fixture::json('g-catalog.json');
+    app(Importer::class)->importThreads($board, $catalog);
+
+    $stub = $catalog[0]['threads'][0];
+    $thread = Thread::query()->where('no', $stub['no'])->firstOrFail();
+    localReplyOn($thread);
+    localReplyOn($thread);
+
+    app(Importer::class)->importThreads($board, $catalog);
+    app(Importer::class)->importThreads($board, $catalog);
+
+    expect($thread->fresh()->replies_count)->toBe($stub['replies'] + 2);
+});
+
+/**
+ * `clover:sync` holds no lock against a visitor's live fetch, so two imports of
+ * the same board can interleave. The second one here runs the moment the first
+ * has written its threads, which is the worst point to arrive at.
+ */
+it('counts Clover replies once when two imports overlap', function (): void {
+    $board = Board::factory()->create(['slug' => 'g']);
+    $catalog = Fixture::json('g-catalog.json');
+    app(Importer::class)->importThreads($board, $catalog);
+
+    $stub = $catalog[0]['threads'][0];
+    $thread = Thread::query()->where('no', $stub['no'])->firstOrFail();
+    localReplyOn($thread);
+    localReplyOn($thread);
+
+    $overlapped = false;
+
+    DB::listen(function (QueryExecuted $query) use (&$overlapped, $board, $catalog): void {
+        if ($overlapped || ! str_contains($query->sql, 'into "threads"')) {
+            return;
+        }
+
+        $overlapped = true;
+        app(Importer::class)->importThreads($board, $catalog);
+    });
+
+    app(Importer::class)->importThreads($board, $catalog);
+
+    expect($overlapped)->toBeTrue()
+        ->and($thread->fresh()->replies_count)->toBe($stub['replies'] + 2);
+});
+
+it('keeps Clover replies in the count when a thread page reports 4chan\'s', function (): void {
+    $thread = Thread::factory()->create();
+    foreach ([0, 1] as $offset) {
+        Post::factory()->for($thread)->create([
+            'user_id' => User::factory(),
+            'is_local' => true,
+            'is_op' => false,
+            'no' => LocalPostNumbers::BASE + $offset,
+        ]);
+    }
+
+    app(Importer::class)->importPosts($thread, Fixture::json('g-thread-109514275.json'));
+
+    expect($thread->fresh()->replies_count)->toBe(292 + 2)
+        ->and($thread->replies_count)->toBe(292 + 2);
+});
+
+it('does not count a Clover reply twice when the page carries no count', function (): void {
+    $thread = Thread::factory()->create(['replies_count' => 5]);
+    Post::factory()->for($thread)->create([
+        'user_id' => User::factory(),
+        'is_local' => true,
+        'is_op' => false,
+        'no' => LocalPostNumbers::next($thread->board),
+    ]);
+
+    app(Importer::class)->importPosts($thread, ['posts' => [['no' => 1, 'resto' => 0, 'time' => 1]]]);
+
+    expect($thread->fresh()->replies_count)->toBe(5);
 });

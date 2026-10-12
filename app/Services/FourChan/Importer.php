@@ -104,8 +104,9 @@ final class Importer
      * it is re-sorted anyway because relying on that would make the cap depend
      * on upstream's paging staying the way it is today.
      *
-     * Three statements for a board, however many threads it has: the threads,
-     * a read-back for their ids, and the opening posts.
+     * Four statements for a board, however many threads it has and however
+     * many of them hold replies posted here: those replies counted, the
+     * threads, a read-back for their ids, and the opening posts.
      *
      * @param  array<array-key, mixed>  $payload
      * @return array<int, Thread> the threads written, most recently bumped first
@@ -162,6 +163,16 @@ final class Importer
             ];
 
             $opening[$no] = $stub;
+        }
+
+        /**
+         * Upstream's count plus the replies posted here, written as one
+         * absolute figure. A separate increment after the upsert was a second
+         * write to race the first: two imports overlapping counted the local
+         * replies twice, and a read between the two saw them missing.
+         */
+        foreach ($this->localReplyCounts($board->id, array_keys($rows)) as $no => $local) {
+            $rows[$no]['replies_count'] += $local;
         }
 
         foreach (array_chunk(array_values($rows), self::CHUNK) as $chunk) {
@@ -299,6 +310,8 @@ final class Importer
                     'images_count' => $this->int($row, 'images'),
                 ];
 
+                $counts['replies_count'] += $this->localReplyCounts($thread->board_id, [$thread->no])[$thread->no] ?? 0;
+
                 break;
             }
         }
@@ -306,6 +319,44 @@ final class Importer
         $thread->forceFill([...$counts, 'posts_synced_at' => Date::now()])->save();
 
         return count($rows);
+    }
+
+    /**
+     * How many replies each of these threads has that were posted on Clover.
+     *
+     * Upstream's `replies` knows nothing of them, so an import that wrote it
+     * as-is would erase the one `ReplyController` added. One grouped query per
+     * `CHUNK` thread numbers, and it returns nothing for almost every catalog.
+     * Keyed by thread number and asked of the posts table rather than the
+     * threads just written, so the answer is in hand before the upsert and
+     * the count can go in with it. `is_local` rather than `user_id`, because
+     * deleting an account nulls the second and leaves the reply where it was
+     * posted.
+     *
+     * @param  array<int, int>  $numbers  thread numbers on the board
+     * @return array<int, int> thread number to replies, for threads that have any
+     */
+    private function localReplyCounts(int $boardId, array $numbers): array
+    {
+        $counts = [];
+
+        foreach (array_chunk($numbers, self::CHUNK) as $chunk) {
+            Post::query()
+                ->join('threads', 'threads.id', '=', 'posts.thread_id')
+                ->where('threads.board_id', $boardId)
+                ->whereIn('threads.no', $chunk)
+                ->where('posts.is_local', true)
+                ->where('posts.is_op', false)
+                ->groupBy('threads.no')
+                ->selectRaw('threads.no as thread_no, count(*) as local_replies')
+                ->toBase()
+                ->get()
+                ->each(function (object $row) use (&$counts): void {
+                    $counts[(int) $row->thread_no] = (int) $row->local_replies;
+                });
+        }
+
+        return $counts;
     }
 
     /**
