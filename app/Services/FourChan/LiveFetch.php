@@ -84,14 +84,29 @@ final class LiveFetch
     }
 
     /**
+     * Whether this thread's stored posts are due a refresh: live fetch is on
+     * and they are stale.
+     *
+     * Deliberately not whether this request will be the one to do it. The
+     * window and the lock belong to `thread()`, which no-ops under them, and
+     * a page asking before they were taken would send a different shape from
+     * the follow-up asking after: the page's own deferred request holds both
+     * for the length of its fetch, and anything else that reaches the thread
+     * meanwhile -- the redirect that follows recording a read, say -- must
+     * still be answered the same way, with the stored copy and a fresh count.
+     */
+    public function needsRefresh(Thread $thread): bool
+    {
+        return $this->isEnabled() && $this->isStale($thread);
+    }
+
+    /**
      * Bring a thread's posts up to date, if they were last synced more than
      * half a minute ago or never.
      */
     public function thread(Board $board, Thread $thread): void
     {
-        $syncedAt = $thread->posts_synced_at;
-
-        if ($syncedAt !== null && $syncedAt->gt(now()->subSeconds(self::THREAD_SECONDS))) {
+        if (! $this->isStale($thread)) {
             return;
         }
 
@@ -103,6 +118,25 @@ final class LiveFetch
                 $this->client->confirm($result);
             }
         });
+    }
+
+    /** Posts last synced more than half a minute ago, or never. */
+    private function isStale(Thread $thread): bool
+    {
+        $syncedAt = $thread->posts_synced_at;
+
+        return $syncedAt === null || ! $syncedAt->gt(now()->subSeconds(self::THREAD_SECONDS));
+    }
+
+    private function isEnabled(): bool
+    {
+        return (bool) config('clover.live_fetch');
+    }
+
+    /** Live fetch is on and nobody has attempted this refresh inside its window. */
+    private function isOpen(string $name): bool
+    {
+        return $this->isEnabled() && ! Cache::has(self::KEY.$name);
     }
 
     /**
@@ -119,15 +153,11 @@ final class LiveFetch
      */
     private function refresh(string $name, int $windowSeconds, Closure $fetch): void
     {
-        if (! config('clover.live_fetch')) {
+        if (! $this->isOpen($name)) {
             return;
         }
 
         $attempted = self::KEY.$name;
-
-        if (Cache::has($attempted)) {
-            return;
-        }
 
         $lock = Cache::lock(self::KEY.'lock.'.$name, self::LOCK_SECONDS);
 

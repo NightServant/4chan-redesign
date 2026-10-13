@@ -101,6 +101,12 @@ function ThreadCard({
         <h3 className="font-display text-[17px] leading-snug font-semibold text-balance text-foreground">
             <Link
                 href={titleHref}
+                /* Hover, Inertia's default for a bare `prefetch`. Safe to
+                   spend on every row because opening a thread no longer waits
+                   on 4chan: a stale thread's replies are a deferred follow-up
+                   a prefetch never asks for, so hovering costs upstream
+                   nothing. */
+                prefetch
                 /* `group-hover`, not `hover`. The row's tint answers a
                    pointer anywhere on it, so a title that only marked itself
                    when the cursor crossed the words left the two halves of

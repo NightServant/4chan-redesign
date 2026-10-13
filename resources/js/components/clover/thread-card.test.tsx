@@ -16,15 +16,20 @@ vi.mock('@inertiajs/react', () => ({
     Link: ({
         href,
         children,
+        prefetch,
         ...props
     }: {
         href: string | { url: string };
         children: ReactNode;
+        prefetch?: boolean | string | string[];
     } & Record<string, unknown>) => {
         const url = typeof href === 'string' ? href : href.url;
 
+        /* Reported as an attribute rather than spread: `prefetch` is not an
+           anchor attribute, and what a test needs is the value Inertia would
+           have been given. */
         return (
-            <a href={url} {...props}>
+            <a href={url} data-prefetch={String(prefetch)} {...props}>
                 {children}
             </a>
         );
@@ -138,6 +143,16 @@ describe('ThreadCard', () => {
 
         expect(links).toHaveLength(1);
         expect(links[0]).toHaveAccessibleName(baseThread.title);
+    });
+
+    it('prefetches the thread on hover, the default, and not on mount or press', () => {
+        render(<ThreadCard thread={baseThread} />);
+
+        /* A bare `prefetch` is Inertia's hover strategy. Anything else would
+           fetch for every row in a feed as it drew, or on every press. */
+        expect(
+            screen.getByRole('link', { name: baseThread.title }),
+        ).toHaveAttribute('data-prefetch', 'true');
     });
 
     it('points the title link at the board and post number', () => {

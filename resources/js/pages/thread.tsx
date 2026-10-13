@@ -1,4 +1,4 @@
-import { Link, router, usePage } from '@inertiajs/react';
+import { Deferred, Link, router, usePage } from '@inertiajs/react';
 import { Archive } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AuthGate } from '@/components/clover/auth-gate';
@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/clover/empty-state';
 import { MachineValue } from '@/components/clover/machine-value';
 import { PageMeta } from '@/components/clover/page-meta';
 import { SectionLabel } from '@/components/clover/section-label';
+import { ThreadSkeleton } from '@/components/clover/thread-skeleton';
 import { OriginalPost } from '@/components/thread/original-post';
 import { ReplyComposer } from '@/components/thread/reply-composer';
 import { Button } from '@/components/ui/button';
@@ -37,8 +38,18 @@ type ThreadPageProps = {
     no: number;
     /** Null when the post number matches nothing, which is the ordinary case. */
     thread: ThreadType | null;
-    /** Nested server-side from the flat post list 4chan returns. */
-    comments: Comment[];
+    /**
+     * Nested server-side from the flat post list 4chan returns.
+     *
+     * Absent while the live refresh is deferred: a thread whose stored posts
+     * are stale goes out without them, and they arrive with `liveThread`.
+     */
+    comments?: Comment[];
+    /**
+     * The thread again, after the refresh, so its counts agree with the
+     * replies beside them. Null when nothing was deferred; absent while it is.
+     */
+    liveThread?: ThreadType | null;
     /** This board's own `max_comment_chars`, not a global constant. */
     maxCommentChars: number;
 };
@@ -53,6 +64,7 @@ export default function Thread({
     no,
     thread,
     comments,
+    liveThread,
     maxCommentChars,
 }: ThreadPageProps) {
     const { auth, errors, attachmentsEnabled } = usePage().props;
@@ -219,12 +231,19 @@ export default function Thread({
         );
     }
 
+    /* The counts the replies below were counted from. `thread` is what was
+       stored when the page went out; once the refresh lands, `liveThread` is
+       what the replies in hand add up to, and a header quoting the older one
+       would claim replies the list does not show. Only counts are read from
+       it: what is per-anon, the bookmark, stays with `thread`. */
+    const shown = liveThread ?? thread;
+
     return (
         <>
             <PageMeta
                 type="article"
                 title={thread.title}
-                description={`${plural(thread.replies, 'reply', 'replies')} on ${thread.board}. Read it on Clover without an account.`}
+                description={`${plural(shown.replies, 'reply', 'replies')} on ${thread.board}. Read it on Clover without an account.`}
             />
 
             <div className="mx-auto flex max-w-(--measure-column) flex-col gap-6 px-6 py-8">
@@ -234,7 +253,7 @@ export default function Thread({
                     both -- a feed row opening the same viewer has no comments
                     in hand, and its drawer is simply absent. */}
                 <OriginalPost
-                    thread={thread}
+                    thread={shown}
                     /* Passed, not defaulted. `OriginalPost` falls back to
                        false, so omitting this drew an empty bookmark on a
                        thread the server had already marked saved -- and the
@@ -252,11 +271,12 @@ export default function Thread({
                        the gate stays where it is, at the foot of the page. */
                     viewerCtaHref={signedIn ? composerHref : undefined}
                     viewerDrawerLabel={plural(
-                        comments.length,
+                        comments?.length ?? shown.replies,
                         'reply',
                         'replies',
                     )}
                     viewerDrawer={
+                        comments === undefined ||
                         comments.length === 0 ? undefined : (
                             <div className="flex flex-col gap-4">
                                 <CommentTree
@@ -289,7 +309,7 @@ export default function Thread({
 
                 <SectionLabel>
                     <MachineValue className="text-label font-semibold tracking-[1.2px] text-faint uppercase">
-                        {thread.replies}
+                        {shown.replies}
                     </MachineValue>{' '}
                     replies
                 </SectionLabel>
@@ -343,16 +363,44 @@ export default function Thread({
                     </div>
                 )}
 
-                <CommentTree
-                    comments={comments}
-                    /* Reply quotes into the composer, which only exists at
-                       `md` and up -- below that the composer is a page of its
-                       own and there is no field on this screen to quote into.
-                       Passing nothing there means the control is not drawn at
-                       all, rather than drawn and inert. */
-                    onReply={isMobile ? undefined : quoteIntoComposer}
-                    onQuoteClick={jumpToPost}
-                />
+                {/* Waits on both props together, so the replies and the count
+                    above them appear in the same paint. When nothing was
+                    deferred the server sends `comments` inline and
+                    `liveThread` as null, both defined, and this renders its
+                    children at once with no skeleton. The composer above is
+                    outside it: writing a reply does not need the others. */}
+                <Deferred
+                    data={['comments', 'liveThread']}
+                    /* The server rescues the two when it cannot resolve them,
+                       which leaves them undefined for good. Without this the
+                       skeleton would stay up and say nothing. */
+                    rescue={
+                        <p
+                            role="alert"
+                            className="py-6 text-body-sm text-muted-foreground"
+                        >
+                            Couldn't load the replies. Reload to try again.
+                        </p>
+                    }
+                    fallback={
+                        <div role="status" aria-label="Loading replies">
+                            <ThreadSkeleton />
+                            <ThreadSkeleton />
+                            <ThreadSkeleton />
+                        </div>
+                    }
+                >
+                    <CommentTree
+                        comments={comments ?? []}
+                        /* Reply quotes into the composer, which only exists
+                           at `md` and up -- below that the composer is a page
+                           of its own and there is no field on this screen to
+                           quote into. Passing nothing there means the control
+                           is not drawn at all, rather than drawn and inert. */
+                        onReply={isMobile ? undefined : quoteIntoComposer}
+                        onQuoteClick={jumpToPost}
+                    />
+                </Deferred>
             </div>
 
             <AuthGate
