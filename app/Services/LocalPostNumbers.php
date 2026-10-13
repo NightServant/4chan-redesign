@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\Board;
 use App\Models\Post;
+use App\Support\AdvisoryLock;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -46,13 +47,23 @@ final class LocalPostNumbers
      * the same number — and the unique index would reject the second, losing a
      * post that was correctly submitted.
      *
-     * Locks the single highest row via `ORDER BY ... LIMIT 1` rather than
-     * `max()`, because Postgres refuses `FOR UPDATE` combined with an
-     * aggregate function in the same query.
+     * Serialised per board by an advisory lock, held to the end of the
+     * caller's transaction. A row lock cannot do it: Postgres locks the
+     * highest row, but a transaction that started later does not see a row
+     * another one has inserted and not committed, so both read the same
+     * maximum and one fails on the unique index -- or, across two threads of
+     * one board, both succeed with the same number. The lock makes the second
+     * wait for the first to commit, and then it sees the row.
+     *
+     * The highest row is still read via `ORDER BY ... LIMIT 1` rather than
+     * `max()`, which `FOR UPDATE` cannot be combined with on Postgres. SQLite
+     * has one writer at a time and needs neither.
      */
     public static function next(Board $board): int
     {
         return DB::transaction(function () use ($board): int {
+            AdvisoryLock::take(AdvisoryLock::POST_NUMBERS, $board->id);
+
             /** @var int|null $highest */
             $highest = Post::query()
                 ->whereIn('thread_id', $board->threads()->select('id'))

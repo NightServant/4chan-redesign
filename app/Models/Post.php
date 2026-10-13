@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * The OP or a reply on a thread.
@@ -29,7 +28,7 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $media_filename
  * @property string|null $media_extension
  * @property int|null $media_tim
- * @property string|null $media_path
+ * @property string|null $media_path the uuid of this post's `attachments` row, for a local upload
  * @property int|null $media_width
  * @property int|null $media_height
  * @property int|null $media_thumb_width
@@ -97,8 +96,10 @@ class Post extends Model
      * at.
      *
      * Ingested posts carry `media_tim`, 4chan's id for a file on 4chan's CDN.
-     * A reply written here carries `media_path`, because 4chan has never seen
-     * that image and has no id for it. Nothing carries both.
+     * A reply written here carries `media_path`, the uuid of its `attachments`
+     * row, because 4chan has never seen that image and has no id for it. The
+     * column predates the table and kept its name so the deploy needs no
+     * rename. Nothing carries both.
      */
     public function hasLocalMedia(): bool
     {
@@ -106,7 +107,8 @@ class Post extends Model
     }
 
     /**
-     * The full-size attachment, on 4chan's CDN.
+     * The full-size attachment: on 4chan's CDN, or served by this application
+     * when the reply was written here.
      *
      * Addressed by `tim`, 4chan's own id for the file, never by the filename
      * an anon uploaded. Needs the board slug, which lives a relation away —
@@ -118,9 +120,16 @@ class Post extends Model
             return null;
         }
 
+        /* Root-relative, so it inherits the page's scheme and host and cannot
+           disagree with `APP_URL`. An image from a board the viewer may not
+           see is addressed by the route that asks who is looking: the other
+           one answers a shared cache, which cannot. */
         if ($this->hasLocalMedia()) {
-            return Storage::disk(config('clover.attachments.disk'))
-                ->url((string) $this->media_path);
+            return route(
+                $this->thread->board->worksafe ? 'attachments.show' : 'attachments.mature',
+                ['uuid' => $this->media_path],
+                absolute: false,
+            );
         }
 
         return sprintf(

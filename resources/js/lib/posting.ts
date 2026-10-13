@@ -32,3 +32,25 @@
  * its board must pass that board's own limit instead of relying on this.
  */
 export const POST_MAX_LENGTH = 2000;
+
+/**
+ * Mirrors `clover.attachments.max_kilobytes`: the biggest image a reply may
+ * carry.
+ *
+ * Checked in the browser as well as on the server because the server never
+ * sees an oversized upload. Vercel refuses a request body over about 4.5 MB
+ * before PHP starts, with a bare 413 the page cannot turn into a message, so
+ * the only place an anon can be told is here, before the request is made.
+ */
+export const ATTACHMENT_MAX_BYTES = 4096 * 1024;
+
+/** Why this file cannot be attached, or null when its size is fine. */
+export function attachmentTooLarge(file: File): string | null {
+    if (file.size <= ATTACHMENT_MAX_BYTES) {
+        return null;
+    }
+
+    const megabytes = (file.size / (1024 * 1024)).toFixed(1);
+
+    return `That image is ${megabytes} MB, and the limit is ${ATTACHMENT_MAX_BYTES / (1024 * 1024)} MB.`;
+}

@@ -141,6 +141,23 @@ describe('information copy', () => {
     });
 
     /**
+     * Deleting an account deletes its image rows at once, but the image route
+     * is cached for a day by browsers and by the CDN in front of Clover
+     * (`AttachmentController`). A page that says "deleted" and stops there
+     * describes less than the system does, so both places that say it also
+     * say how long a cached copy can last.
+     */
+    it('says a cached copy of a deleted image can outlive the account by up to a day', () => {
+        const browser = sectionMatching('Privacy', /images and your browser/i);
+        const deleting = sectionMatching('Privacy', /deleting what you leave/i);
+
+        expect(browser).toMatch(/deleted with the account/);
+        expect(browser).toMatch(/can take up to a day to expire/);
+        expect(deleting).toMatch(/images going too/);
+        expect(deleting).toMatch(/can take up to a day to expire/);
+    });
+
+    /**
      * What Clover's own server sends upstream is still nothing, and the page
      * is allowed to say so — scoped to Clover, not to the anon's browser.
      */

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\Attachment;
 use App\Models\Board;
 use App\Models\Post;
 use App\Models\Thread;
@@ -9,23 +10,21 @@ use App\Models\User;
 use App\Support\RoutableBoards;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Support\SessionKey;
 
 /**
- * What deleting an account does to the files that account uploaded.
+ * What deleting an account does to the images that account uploaded.
  *
  * The privacy page promises an image attached to a reply is deleted with the
- * account that posted it. Nothing enforced that: `posts.user_id` is
- * `nullOnDelete`, so the row survived the account as an anonymous post and
- * kept pointing at a file on the `public` disk that nobody could ever reach
- * again — and nothing removed the file either.
+ * account that posted it. `posts.user_id` is `nullOnDelete`, so the post
+ * survives the account as an anonymous row -- which is deliberate -- and the
+ * image, a row in `attachments`, would have stayed with it, addressable by
+ * anyone holding its uuid.
  *
- * The post surviving is deliberate and stays. The file does not.
+ * The post surviving is deliberate and stays. The image does not.
  */
 beforeEach(function (): void {
     RoutableBoards::forget();
-    Storage::fake('public');
 });
 
 /**
@@ -41,7 +40,7 @@ function deletionTarget(): array
     return [$board, $thread, $user];
 }
 
-it('deletes the files an account uploaded and leaves the post behind without them', function (): void {
+it('deletes the images an account uploaded and leaves the post behind without them', function (): void {
     [$board, $thread, $user] = deletionTarget();
 
     $this->actingAs($user)->post("/{$board->slug}/{$thread->no}/replies", [
@@ -50,21 +49,18 @@ it('deletes the files an account uploaded and leaves the post behind without the
     ])->assertSessionHasNoErrors();
 
     $reply = Post::query()->where('is_local', true)->latest('id')->firstOrFail();
-    $path = (string) $reply->media_path;
-
-    Storage::disk('public')->assertExists($path);
+    expect(Attachment::query()->where('uuid', $reply->media_path)->exists())->toBeTrue();
 
     $this->actingAs($user)
         ->delete(route('profile.destroy'), ['password' => 'password'])
         ->assertSessionHasNoErrors();
 
     expect(User::query()->find($user->id))->toBeNull();
-
-    Storage::disk('public')->assertMissing($path);
+    expect(Attachment::query()->count())->toBe(0);
 
     /* The post is a deliberate survivor: it was anonymous the whole time and
        nothing on it pointed back at the account. What it must not survive as
-       is a row addressing a file that is gone. */
+       is a row addressing an image that is gone. */
     $reply->refresh();
 
     expect($reply->exists)->toBeTrue();
@@ -107,8 +103,8 @@ it('still renders the orphaned post on its thread, without an image', function (
 
 /**
  * Several posts, only some with attachments. A cleanup that assumed every post
- * carried a file would either skip the ones that did or fall over on the ones
- * that did not.
+ * carried an image would either skip the ones that did or fall over on the
+ * ones that did not.
  */
 it('clears every attachment the account made and leaves its text-only posts alone', function (): void {
     [$board, $thread, $user] = deletionTarget();
@@ -120,46 +116,17 @@ it('clears every attachment the account made and leaves its text-only posts alon
         ]))->assertSessionHasNoErrors();
     }
 
-    $paths = Post::query()->where('user_id', $user->id)
-        ->whereNotNull('media_path')->pluck('media_path')->all();
-
-    expect($paths)->toHaveCount(2);
+    expect(Attachment::query()->count())->toBe(2);
 
     $this->actingAs($user)
         ->delete(route('profile.destroy'), ['password' => 'password'])
         ->assertSessionHasNoErrors();
 
-    foreach ($paths as $path) {
-        Storage::disk('public')->assertMissing((string) $path);
-    }
+    expect(Attachment::query()->count())->toBe(0);
 
     expect(Post::query()->where('is_local', true)->count())->toBe(3);
     expect(Post::query()->where('is_local', true)->whereNotNull('media_path')->count())->toBe(0);
     expect(Post::query()->where('is_local', true)->whereNotNull('user_id')->count())->toBe(0);
-});
-
-/**
- * Deleting a file that is already gone is not an error. Disks get pruned and
- * restored from backups that miss things; an account that cannot be deleted
- * because one of its files is already missing is worse than the orphan.
- */
-it('survives an attachment whose file has already left the disk', function (): void {
-    [$board, $thread, $user] = deletionTarget();
-
-    $this->actingAs($user)->post("/{$board->slug}/{$thread->no}/replies", [
-        'body' => 'gone already',
-        'media' => UploadedFile::fake()->image('x230.png'),
-    ])->assertSessionHasNoErrors();
-
-    $reply = Post::query()->where('is_local', true)->latest('id')->firstOrFail();
-    Storage::disk('public')->delete((string) $reply->media_path);
-
-    $this->actingAs($user)
-        ->delete(route('profile.destroy'), ['password' => 'password'])
-        ->assertSessionHasNoErrors();
-
-    expect(User::query()->find($user->id))->toBeNull();
-    expect($reply->refresh()->media_path)->toBeNull();
 });
 
 /**
@@ -175,11 +142,10 @@ it('cleans up when the model is deleted outside the controller', function (): vo
     ])->assertSessionHasNoErrors();
 
     $reply = Post::query()->where('is_local', true)->latest('id')->firstOrFail();
-    $path = (string) $reply->media_path;
 
     $user->delete();
 
-    Storage::disk('public')->assertMissing($path);
+    expect(Attachment::query()->count())->toBe(0);
     expect($reply->refresh()->media_path)->toBeNull();
 });
 
@@ -209,4 +175,21 @@ it('confirms the deletion, and says what went with it', function (): void {
             'message' => 'Your account is gone, along with anything you uploaded. Posts stay, unsigned.',
         ],
     ]);
+});
+
+it('leaves another account\'s images alone', function (): void {
+    [$board, $thread, $user] = deletionTarget();
+    $other = User::factory()->create();
+
+    foreach ([$user, $other] as $author) {
+        $this->actingAs($author)->post("/{$board->slug}/{$thread->no}/replies", [
+            'body' => 'mine',
+            'media' => UploadedFile::fake()->image('x230.png'),
+        ])->assertSessionHasNoErrors();
+    }
+
+    $user->delete();
+
+    expect(Attachment::query()->count())->toBe(1);
+    expect(Post::query()->where('user_id', $other->id)->whereNotNull('media_path')->count())->toBe(1);
 });

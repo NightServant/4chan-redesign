@@ -381,4 +381,34 @@ describe('ReplyComposer', () => {
             screen.getByRole('button', { name: 'Post reply' }),
         ).toBeInTheDocument();
     });
+
+    /**
+     * Vercel answers a body over about 4.5 MB with a bare 413 before PHP runs,
+     * so the server cannot explain it. The composer has to.
+     */
+    it('refuses an image over the size limit with a message, and attaches nothing', async () => {
+        const user = userEvent.setup();
+        render(<ReplyComposer threadNo={58210441} />);
+
+        const huge = new File([new Uint8Array(5 * 1024 * 1024)], 'huge.png', {
+            type: 'image/png',
+        });
+        await user.upload(screen.getByTestId('reply-media'), huge);
+
+        expect(
+            screen.getByText('That image is 5.0 MB, and the limit is 4 MB.'),
+        ).toBeInTheDocument();
+        expect(screen.queryByRole('img')).not.toBeInTheDocument();
+        expect(
+            screen.getByRole('button', { name: 'Post reply' }),
+        ).toBeDisabled();
+
+        const fine = new File(['bytes'], 'x230.png', { type: 'image/png' });
+        await user.upload(screen.getByTestId('reply-media'), fine);
+
+        expect(screen.queryByText(/the limit is 4 MB/)).not.toBeInTheDocument();
+        expect(
+            screen.getByRole('button', { name: 'Post reply' }),
+        ).toBeEnabled();
+    });
 });

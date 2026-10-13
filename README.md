@@ -39,7 +39,7 @@ Boards, threads and posts are ingested from 4chan's read-only JSON API into Eloq
 - **Figures that say what they measure** &mdash; counts scoped to what a reader may see are labelled as such, and the heading is derived from the same flag that scoped the query, so the words and the numbers cannot drift apart
 - **Hardened by default** &mdash; rate limits on search, registration, password reset and posting; `nosniff`, `X-Frame-Options` and a referrer policy on every response; a session cookie whose `Secure` flag follows `APP_URL`
 - **Attachments that render** &mdash; images served straight from 4chan's CDN, addressed by the id it stores them under; spoilered files and everything on a not-worksafe board sit behind a cover that fetches nothing until asked. A feed row crops its image to a fixed box, a thread page shows the file whole, and a viewer opens it full screen with the replies a drawer away
-- **Attachments an anon can post** &mdash; a reply carries an image of up to 4 MB, stored on this application's own disk and never sent anywhere; the account screen's media tab lists what that account has uploaded
+- **Attachments an anon can post** &mdash; a reply carries an image of up to 4 MB, stored as a row in this application's own database and never sent anywhere; the account screen's media tab lists what that account has uploaded
 - **Composers that persist** &mdash; a reply form inline where replying belongs, and its own page below `md` where a phone keyboard leaves no room for a form under a thread; both refuse empty input, both enforce the board's own `max_comment_chars` rather than one global guess, and both keep what was typed when the server refuses it and say why, rather than clearing the field on the attempt
 - **An account layer of its own** &mdash; saved threads, reading history and followed boards, each private to the anon and none of it attached to anything they post. Settings sit behind one drawer (appearance, adult boards, two-factor, sign out) and Edit profile is a sheet on a phone. There is no voting: blessings and curses were retired, because 4chan has no votes to import and almost nothing cast here ever carried any
 - **Marketing homepage** &mdash; a hero over live threads, boards as a carousel, a trending ticker, features that become an accordion on a phone, and a footer whose every destination resolves to a real page
@@ -119,7 +119,7 @@ git clone https://github.com/NightServant/4chan-redesign.git
 cd 4chan-redesign
 
 # 2. Install both dependency trees, copy .env, generate a key, migrate,
-#    link storage for reply attachments, build
+#    link storage, build
 composer setup
 
 # 3. Pull every board and its threads from 4chan (77 requests, about a minute)
@@ -179,7 +179,7 @@ Board, thread and post content is **real, and comes from 4chan**, via its [read-
 
 Post bodies are parsed to plain text on the way in. The API returns `com` as HTML written by anonymous strangers — `<br>`, `<wbr>` injected mid-URL, greentext spans, three shapes of quotelink and HTML entities — so it is converted once during ingest rather than trusted into the DOM at render time. No post body reaches React as markup, and the renderer uses no `dangerouslySetInnerHTML`. (One component does: the two-factor setup modal, for the QR code SVG Fortify generates server-side. That is the app's own output, not an anon's.)
 
-**Attachments are real images, served by 4chan.** Files are addressed by `tim`, 4chan's own id for them, and the `<img>` points straight at `i.4cdn.org` — the documented arrangement, and what any client does. Nothing from 4chan is downloaded or stored here: for an upstream post, the application holds the id of a file rather than the file. An image attached to a reply written on Clover is the other way round — it is this application's own file, on its own disk, and it is never sent anywhere. A browser fetching one therefore contacts 4chan directly, and `referrerPolicy="no-referrer"` keeps which page an anon was reading out of it.
+**Attachments are real images, served by 4chan.** Files are addressed by `tim`, 4chan's own id for them, and the `<img>` points straight at `i.4cdn.org` — the documented arrangement, and what any client does. Nothing from 4chan is downloaded or stored here: for an upstream post, the application holds the id of a file rather than the file. An image attached to a reply written on Clover is the other way round — it is a row in this application's own database, and it is never sent anywhere. A browser fetching one therefore contacts 4chan directly, and `referrerPolicy="no-referrer"` keeps which page an anon was reading out of it.
 
 **A covered attachment is never fetched.** Images 4chan marks `spoiler`, and every image on a board marked not worksafe, render as a labelled cover with no `src` at all until an anon asks for one. Blurring a file the browser has already downloaded conceals nothing — the bytes arrived and the request happened. The homepage carries no attachments in its payload whatsoever, so the first screen a visitor sees cannot make a request to the CDN.
 
@@ -189,7 +189,7 @@ Several figures the design carried were removed rather than estimated, because n
 
 **Everything an account does is its own, and private.** Saved threads, reading history and followed boards are visible to nobody else, and a post carries no identity at all: a reply written here is `Anonymous` whoever wrote it, and the only thing that can appear beside it is a tripcode an anon opted into. Nothing is ever sent upstream — the API accepts `GET`, `HEAD` and `OPTIONS` only — so a reply written on Clover stays on Clover.
 
-**Deleting an account deletes the files it uploaded.** The posts stay, as the anonymous rows they always were, but every image goes with the account and the row stops pointing at a file that is no longer there. The privacy page promised this long before anything enforced it; a `deleting` observer is what made the sentence true, and the guard fails if the observer is ever detached.
+**Deleting an account deletes the images it uploaded.** The posts stay, as the anonymous rows they always were, but every image goes with the account and the row stops pointing at an image that is no longer there. The privacy page promised this long before anything enforced it; a `deleting` observer is what made the sentence true, and the guard fails if the observer is ever detached.
 
 **Search engines are asked for Clover's own pages and not the mirror.** `robots.txt` allows the homepage, the directory and the four standing pages, and disallows board and thread paths. The content is not Clover's to publish, the adult-board opt-in cannot travel with a search result, and a thread pruned upstream becomes a result leading nowhere.
 
