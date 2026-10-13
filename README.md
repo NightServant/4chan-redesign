@@ -199,6 +199,6 @@ Fonts are Inter and Space Grotesk, both under the SIL Open Font License, vendore
 
 ## Licence
 
-No licence has been chosen yet, so default copyright applies and the code is not yet free to reuse. A licence file will land before the project is considered finished.
+Clover's code is MIT licensed; see [LICENSE](LICENSE). The licence covers the code only: the threads, posts and images Clover mirrors belong to the people who posted them on 4chan.
 
 Clover is an independent redesign exercise and is not affiliated with 4chan.
