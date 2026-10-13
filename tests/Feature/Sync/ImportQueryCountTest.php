@@ -7,6 +7,7 @@ use App\Models\Post;
 use App\Models\Thread;
 use App\Services\FourChan\Importer;
 use App\Services\LocalPostNumbers;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\Sync\Fixture;
 
@@ -130,4 +131,21 @@ it('imports a thread page in a handful of statements', function (): void {
      */
     expect($queries)->toBe(3);
     expect($thread->posts()->count())->toBe(6);
+});
+
+it('writes a thread page\'s posts and its counts in one transaction, so a reader never pairs one with the other\'s old', function (): void {
+    $thread = Thread::factory()->create();
+    $outside = DB::transactionLevel();
+    $levels = [];
+
+    DB::listen(function (QueryExecuted $query) use (&$levels): void {
+        if (preg_match('/^\s*(insert|update)\b/i', $query->sql) === 1) {
+            $levels[] = DB::transactionLevel();
+        }
+    });
+
+    app(Importer::class)->importPosts($thread, Fixture::json('g-thread-109514275.json'));
+
+    expect($levels)->toHaveCount(2)
+        ->and(min($levels))->toBeGreaterThan($outside);
 });

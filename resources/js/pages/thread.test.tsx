@@ -22,6 +22,34 @@ const { usePage } = vi.hoisted(() => ({
 
 vi.mock('@inertiajs/react', () => ({
     usePage,
+    /* The rule the real component applies, nothing looser: children once
+       every named prop is defined on the page, the fallback until then. A
+       double that always rendered its children would pass whether or not the
+       page waited for anything. */
+    Deferred: ({
+        data,
+        fallback,
+        rescue,
+        children,
+    }: {
+        data: string | string[];
+        fallback: ReactNode;
+        rescue?: ReactNode;
+        children: ReactNode;
+    }) => {
+        const page = usePage() as {
+            props: Record<string, unknown>;
+            rescuedProps?: string[];
+        };
+        const keys = Array.isArray(data) ? data : [data];
+        const rescued = keys.some((key) => page.rescuedProps?.includes(key));
+
+        if (keys.every((key) => page.props[key] !== undefined) && !rescued) {
+            return children;
+        }
+
+        return rescued && rescue ? rescue : fallback;
+    },
     router: { post: vi.fn(), delete: vi.fn(), visit: vi.fn() },
     Head: () => null,
     Link: ({
@@ -148,10 +176,28 @@ function setViewport(isMobile: boolean): void {
 function mockPage({
     signedIn = false,
     errors = {},
-}: { signedIn?: boolean; errors?: Record<string, string> } = {}) {
+    deferred = {},
+    rescued = [],
+}: {
+    signedIn?: boolean;
+    errors?: Record<string, string>;
+    /** What the server has sent of the deferred group: nothing yet, or both. */
+    deferred?: { comments?: unknown; liveThread?: unknown };
+    /** Deferred props the server could not resolve, as Inertia reports them. */
+    rescued?: string[];
+} = {}) {
     usePage.mockReturnValue({
         url: `/g/${KNOWN_THREAD.no}`,
-        props: { auth: { user: signedIn ? SIGNED_IN_USER : null }, errors },
+        rescuedProps: rescued,
+        props: {
+            auth: { user: signedIn ? SIGNED_IN_USER : null },
+            errors,
+            /* Inline by default, as the server sends a thread that needs no
+               refresh: replies in hand and `liveThread` null. */
+            comments: COMMENTS,
+            liveThread: null,
+            ...deferred,
+        },
     });
 }
 
@@ -605,5 +651,130 @@ describe('Thread', () => {
         );
 
         expect(screen.queryByRole('main')).not.toBeInTheDocument();
+    });
+
+    describe('while the live refresh is deferred', () => {
+        const LIVE = makeThread({
+            ...KNOWN_THREAD,
+            replies: 320,
+            images: '47',
+        });
+
+        it('shows the opening post and the stored count with a skeleton where the replies will be', () => {
+            mockPage({
+                signedIn: true,
+                deferred: { comments: undefined, liveThread: undefined },
+            });
+
+            render(
+                <Thread
+                    slug="/g/"
+                    no={KNOWN_THREAD.no}
+                    thread={KNOWN_THREAD}
+                    maxCommentChars={2000}
+                />,
+            );
+
+            expect(
+                document.querySelector('[data-slot="thread-skeleton"]'),
+            ).toBeInTheDocument();
+            expect(
+                screen.queryByRole('list', { name: 'Replies' }),
+            ).not.toBeInTheDocument();
+            expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+                KNOWN_THREAD.title,
+            );
+            expect(
+                document.querySelector('[data-slot="section-label"]'),
+            ).toHaveTextContent(`${KNOWN_THREAD.replies} replies`);
+            /* Replying does not wait on the replies arriving. */
+            expect(
+                screen.getByTestId('reply-composer-stub'),
+            ).toBeInTheDocument();
+        });
+
+        it('swaps the skeleton for the replies, and the header takes the live counts, once they arrive', () => {
+            mockPage({
+                deferred: { comments: COMMENTS, liveThread: LIVE },
+            });
+
+            render(
+                <Thread
+                    slug="/g/"
+                    no={KNOWN_THREAD.no}
+                    thread={KNOWN_THREAD}
+                    comments={COMMENTS}
+                    liveThread={LIVE}
+                    maxCommentChars={2000}
+                />,
+            );
+
+            expect(
+                document.querySelector('[data-slot="thread-skeleton"]'),
+            ).not.toBeInTheDocument();
+            expect(
+                screen.getByRole('list', { name: 'Replies' }),
+            ).toBeInTheDocument();
+            expect(screen.getByText(COMMENTS[0].body)).toBeInTheDocument();
+
+            const sectionLabels = Array.from(
+                document.querySelectorAll('[data-slot="section-label"]'),
+            );
+            expect(
+                sectionLabels.some((node) =>
+                    node.textContent?.includes('320 replies'),
+                ),
+            ).toBe(true);
+            expect(
+                screen.queryByText(String(KNOWN_THREAD.replies)),
+            ).not.toBeInTheDocument();
+            expect(screen.getByLabelText('47 images')).toBeInTheDocument();
+        });
+
+        it('says the replies could not load, rather than showing a skeleton for ever, when the server could not resolve them', () => {
+            mockPage({
+                deferred: { comments: undefined, liveThread: undefined },
+                rescued: ['comments', 'liveThread'],
+            });
+
+            render(
+                <Thread
+                    slug="/g/"
+                    no={KNOWN_THREAD.no}
+                    thread={KNOWN_THREAD}
+                    maxCommentChars={2000}
+                />,
+            );
+
+            expect(screen.getByRole('alert')).toHaveTextContent(
+                "Couldn't load the replies. Reload to try again.",
+            );
+            expect(
+                document.querySelector('[data-slot="thread-skeleton"]'),
+            ).not.toBeInTheDocument();
+        });
+
+        it('keeps waiting while only one of the two deferred props has arrived', () => {
+            mockPage({
+                deferred: { comments: COMMENTS, liveThread: undefined },
+            });
+
+            render(
+                <Thread
+                    slug="/g/"
+                    no={KNOWN_THREAD.no}
+                    thread={KNOWN_THREAD}
+                    comments={COMMENTS}
+                    maxCommentChars={2000}
+                />,
+            );
+
+            expect(
+                document.querySelector('[data-slot="thread-skeleton"]'),
+            ).toBeInTheDocument();
+            expect(
+                screen.queryByRole('list', { name: 'Replies' }),
+            ).not.toBeInTheDocument();
+        });
     });
 });

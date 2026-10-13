@@ -10,6 +10,7 @@ use App\Models\Thread;
 use App\Services\LocalPostNumbers;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Turns a decoded upstream payload into rows.
@@ -316,8 +317,28 @@ final class Importer
             }
         }
 
-        $this->upsertPosts(array_values($rows));
+        /**
+         * One transaction, so a reader between the two writes never pairs the
+         * posts of this page with the counts of the last: the thread page
+         * reads both for one render and prints the number above the list.
+         */
+        DB::transaction(function () use ($thread, $rows, $payload): void {
+            $this->upsertPosts(array_values($rows));
 
+            $this->stampThread($thread, $payload);
+        });
+
+        return count($rows);
+    }
+
+    /**
+     * Stamp a thread as fully synced, with the counts from the same page as
+     * its posts.
+     *
+     * @param  array<array-key, mixed>  $payload
+     */
+    private function stampThread(Thread $thread, array $payload): void
+    {
         /**
          * The thread's counts, from the same page as its posts.
          *
@@ -342,8 +363,6 @@ final class Importer
         }
 
         $thread->forceFill([...$counts, 'posts_synced_at' => Date::now()])->save();
-
-        return count($rows);
     }
 
     /**
