@@ -29,6 +29,13 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
+        /**
+         * The sweep routes are called by a cron, and by one another, with no
+         * session and so no token to present. Their bearer secret does the
+         * work a CSRF token does.
+         */
+        $middleware->validateCsrfTokens(except: ['internal/sweep', 'internal/sweep/run']);
+
         $middleware->web(append: [
             /**
              * In the group rather than on the routes, because the routes it

@@ -13,6 +13,7 @@ use App\Http\Controllers\NotificationsController;
 use App\Http\Controllers\ReplyController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StatusController;
+use App\Http\Controllers\SweepController;
 use App\Http\Controllers\ThreadController;
 use App\Http\Controllers\ThreadReadController;
 use App\Support\RoutableBoards;
@@ -42,6 +43,15 @@ Route::get('communities', CommunityController::class)->name('communities');
  * worth an account should be able to see when it last heard from 4chan.
  */
 Route::get('status', StatusController::class)->name('status');
+
+/**
+ * The sweep, called by an outside cron with a bearer token: `sweep` starts it
+ * and answers at once, `sweep.run` does the work (see `SweepController`). Not
+ * pages, so both are exempt from CSRF in `bootstrap/app.php` and refuse
+ * everything without the token.
+ */
+Route::post('internal/sweep', [SweepController::class, 'start'])->name('sweep');
+Route::post('internal/sweep/run', [SweepController::class, 'run'])->name('sweep.run');
 
 /**
  * Search, over this application's own database rather than 4chan: there is no
