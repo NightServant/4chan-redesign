@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Support\RoutableBoards;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Testing\TestResponse;
 use Laravel\Fortify\Features;
 
 /**
@@ -44,6 +45,38 @@ it('throttles the search page', function (): void {
     $attempts = hitUntilThrottled(fn () => $this->get('/search?q=risc'));
 
     expect($attempts)->toBeGreaterThan(0);
+});
+
+/**
+ * Scrolling a search is not searching again.
+ *
+ * Each tab's next pages are requests to the same route, sent by the browser as
+ * the reader scrolls. Counted against the limit for new searches they ran a
+ * reader into a 429 mid-scroll, which Inertia shows as a full-screen modal over
+ * the results. They have a ceiling of their own, and spending it takes nothing
+ * from the one for typing a new query.
+ */
+function scrollSearch(): TestResponse
+{
+    return test()->withHeaders(['X-Inertia-Infinite-Scroll-Merge-Intent' => 'append'])
+        ->get('/search?q=risc&type=posts&page=2');
+}
+
+it('lets a reader scroll a search while they keep searching', function (): void {
+    for ($turn = 1; $turn <= 25; $turn++) {
+        test()->get('/search?q=risc')->assertOk();
+        scrollSearch()->assertOk();
+    }
+});
+
+it('keeps scrolling a search after the limit for new searches is spent', function (): void {
+    expect(hitUntilThrottled(fn () => $this->get('/search?q=risc')))->toBeGreaterThan(0);
+
+    scrollSearch()->assertOk();
+});
+
+it('still throttles scrolling, at a ceiling of its own', function (): void {
+    expect(hitUntilThrottled(fn () => scrollSearch(), 300))->toBeGreaterThan(0);
 });
 
 it('throttles the suggestions endpoint', function (): void {

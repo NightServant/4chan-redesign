@@ -148,6 +148,25 @@ describe('useBookmark', () => {
     });
 
     /**
+     * Not a scrolling list, so the answer is the full visit it always was: an
+     * unsave on the account's Saved tab is meant to drop the row, and the
+     * server's fresh list is what drops it. Only a `keepsPages` screen asks
+     * for less (`use-bookmark-paged.test.tsx`).
+     */
+    it('asks for the whole page back unless told the list is paged', async () => {
+        const user = userEvent.setup();
+        render(<Harness bookmarked />);
+
+        await user.click(screen.getByRole('button', { name: 'Toggle' }));
+
+        const options = router.visit.mock.calls.at(-1)?.[1] as {
+            only?: string[];
+        };
+
+        expect(options.only).toBeUndefined();
+    });
+
+    /**
      * The press happens mid-list and the reply is a redirect back. Without
      * this the page returns to the top and the row an anon just saved is
      * somewhere above them, which reads as nothing having happened.

@@ -7,6 +7,7 @@ import type {
     Comment,
     CommentResult,
     HistoryEntry,
+    Paged,
     Profile,
     ProfileComment,
     ProfileStat,
@@ -52,6 +53,11 @@ export function makeBoard(overrides: Partial<Board> = {}): Board {
         subscribed: false,
         ...overrides,
     };
+}
+
+/** Rows as the server sends a paged list: wrapped, in the order given. */
+export function makePaged<T>(data: T[]): Paged<T> {
+    return { data };
 }
 
 export function makeThread(overrides: Partial<Thread> = {}): Thread {

@@ -3,13 +3,17 @@
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Inertia\ExceptionResponse;
 use Inertia\Inertia;
+use Inertia\Support\Header;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,6 +32,28 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureErrorPages();
+        $this->configureRateLimits();
+    }
+
+    /**
+     * The search page's limits: one for searching, one for scrolling.
+     *
+     * The page route used to take `throttle:30,1` for everything, which was
+     * sized for a person typing queries and also counted the requests
+     * `<InfiniteScroll>` sends for each next page of a tab. A reader scrolling
+     * a long result list ran into it, and Inertia shows a 429 as a full-screen
+     * modal over the results. A follow-up carries the merge-intent header, so
+     * it is counted in a bucket of its own: still bounded, because each page
+     * is the same `LIKE` scan, but at a pace a scroll can keep without
+     * touching the thirty a minute that bound new searches.
+     *
+     * By address, as before: the route has no account to key on.
+     */
+    protected function configureRateLimits(): void
+    {
+        RateLimiter::for('search', fn (Request $request): Limit => $request->hasHeader(Header::INFINITE_SCROLL_MERGE_INTENT)
+            ? Limit::perMinute(120)->by('scroll|'.$request->ip())
+            : Limit::perMinute(30)->by('search|'.$request->ip()));
     }
 
     /**

@@ -162,6 +162,6 @@ it('still sends attachments to the board page', function (): void {
     $this->get("/{$post->thread->board->slug}")->assertInertia(
         fn ($page) => $page
             ->component('board')
-            ->where('threads.0.media.thumbnailUrl', $post->mediaThumbnailUrl()),
+            ->where('threads.data.0.media.thumbnailUrl', $post->mediaThumbnailUrl()),
     );
 });

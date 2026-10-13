@@ -26,7 +26,7 @@ use Inertia\Response;
  */
 class FeedController extends Controller
 {
-    /** A screenful and a bit. The page paginates below this. */
+    /** A screenful and a bit. Each page after the first is another of these. */
     private const THREADS = 30;
 
     /** How long the rail's counts are reused before they are counted again. */
@@ -60,12 +60,28 @@ class FeedController extends Controller
             ->when($sort === 'popular', fn ($query) => $query->orderByDesc('replies_count'))
 
             ->when($sort === 'latest', fn ($query) => $query->orderByDesc('posted_at'))
-            ->limit(self::THREADS)
-            ->get();
+
+            /**
+             * The id breaks ties, so a cursor always names exactly one place
+             * in the list.
+             *
+             * `bumped_at` and `posted_at` only move forward or not at all, so
+             * a thread that is bumped while somebody reads jumps above their
+             * cursor. `replies_count` is not guaranteed to: the importer writes
+             * it absolutely from each sync, so it can fall as well as rise. A
+             * thread whose key moves can therefore be missed until a refresh,
+             * or land below the cursor and be reached a second time; the
+             * client matches appended rows on `id` (`matchOn`) and drops that
+             * repeat, so nothing is drawn twice either way.
+             */
+            ->orderByDesc('id')
+            ->cursorPaginate(self::THREADS);
 
         return Inertia::render('feed', [
             'sort' => $sort,
-            'threads' => ThreadResource::collection($threads),
+
+            /** Matched on `id` as well, so the client drops a repeat even if one slips through. */
+            'threads' => Inertia::scroll(ThreadResource::collection($threads))->matchOn('data.id'),
 
             /**
              * What the rail reports. Counted within this anon's own

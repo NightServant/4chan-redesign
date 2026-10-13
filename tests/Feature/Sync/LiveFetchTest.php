@@ -65,7 +65,7 @@ describe('a board', function (): void {
 
         $this->get('/g')
             ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page->component('board')->has('threads', 6));
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('board')->has('threads.data', 6));
 
         expect(sentTo('/g/catalog.json'))->toBe(1)
             ->and($board->threads()->count())->toBe(6);
@@ -105,7 +105,7 @@ describe('a board', function (): void {
         $this->get('/g')->assertOk();
         $this->travel(61)->seconds();
         $this->get('/g')->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page->has('threads', 6));
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('threads.data', 6));
 
         Http::assertSent(fn (Request $request): bool => $request->hasHeader('If-Modified-Since'));
         expect($board->threads()->count())->toBe(6);
@@ -131,7 +131,7 @@ describe('a board', function (): void {
 
         $this->get('/g')
             ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page->has('threads', 1));
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('threads.data', 1));
 
         expect(Thread::query()->whereKey($stored->id)->exists())->toBeTrue();
     })->with([
@@ -161,7 +161,7 @@ describe('a board', function (): void {
 
         $this->get('/g')
             ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page->has('threads', 1));
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('threads.data', 1));
 
         Http::assertNothingSent();
     });

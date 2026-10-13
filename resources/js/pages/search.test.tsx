@@ -10,7 +10,12 @@ import {
     it,
     vi,
 } from 'vitest';
-import { makeBoard, makeCommentResult, makeThread } from '@/fixtures/factories';
+import {
+    makeBoard,
+    makeCommentResult,
+    makePaged,
+    makeThread,
+} from '@/fixtures/factories';
 import { readSearchHistory, rememberSearch } from '@/lib/search-history';
 import Search from '@/pages/search';
 
@@ -24,6 +29,9 @@ const { router, mockPage } = vi.hoisted(() => ({
     mockPage: {
         props: { auth: { user: null as { id: number } | null } },
         url: '/search',
+        /* Inertia's paginator metadata, which the result count reads to know
+           whether a next page is waiting. Empty unless a test sets it. */
+        scrollProps: {} as Record<string, { nextPage: number | null }>,
     },
 }));
 
@@ -43,6 +51,10 @@ vi.mock('@inertiajs/react', () => ({
             {children}
         </a>
     ),
+}));
+
+vi.mock('@/components/clover/paged-list', async () => ({
+    PagedList: (await import('@/test/paged-list-stub')).PagedListStub,
 }));
 
 function mockFetch(payload: unknown = { boards: [], threads: [] }) {
@@ -78,6 +90,7 @@ function searchProps(overrides: Partial<Parameters<typeof Search>[0]> = {}) {
         boards: [],
         threads: [],
         comments: [],
+        truncated: false,
         busiestBoards: BUSIEST_BOARDS,
         busiestThreads: BUSIEST_THREADS,
         ...overrides,
@@ -97,6 +110,7 @@ beforeEach(() => {
     localStorage.clear();
     router.visit.mockClear();
     mockPage.props.auth.user = null;
+    mockPage.scrollProps = {};
 });
 
 afterEach(() => {
@@ -626,5 +640,150 @@ describe('Search — clearing the field', () => {
         /* Back to the suggestions this screen opens with. */
         expect(screen.getByText('Video Games')).toBeInTheDocument();
         expect(field).toHaveFocus();
+    });
+});
+
+describe('Search — paging a tab', () => {
+    const TWO = [
+        makeThread({ title: 'First risc thread' }),
+        makeThread({ title: 'Second risc thread' }),
+    ];
+
+    it('pages the prop of the tab it is on, from the wrapped rows the server sends', () => {
+        mockFetch();
+        render(
+            <Search
+                {...searchProps({
+                    query: 'risc',
+                    type: 'posts',
+                    threads: makePaged(TWO),
+                })}
+            />,
+        );
+
+        expect(screen.getByTestId('paged-list')).toHaveAttribute(
+            'data-prop',
+            'threads',
+        );
+        expect(screen.getByText('First risc thread')).toBeInTheDocument();
+        expect(screen.getByText('Second risc thread')).toBeInTheDocument();
+    });
+
+    it('pages the communities and comments tabs by their own props', () => {
+        mockFetch();
+        const { unmount } = render(
+            <Search
+                {...searchProps({
+                    query: 'risc',
+                    type: 'communities',
+                    boards: makePaged([makeBoard({ name: 'Technology' })]),
+                })}
+            />,
+        );
+
+        expect(screen.getByTestId('paged-list')).toHaveAttribute(
+            'data-prop',
+            'boards',
+        );
+        unmount();
+
+        render(
+            <Search
+                {...searchProps({
+                    query: 'risc',
+                    type: 'comments',
+                    comments: makePaged([makeCommentResult()]),
+                })}
+            />,
+        );
+
+        expect(screen.getByTestId('paged-list')).toHaveAttribute(
+            'data-prop',
+            'comments',
+        );
+    });
+
+    /* All shows three-row slices and a link to the tab that holds the rest:
+       there is no cursor behind it, so a list that tried to page would ask
+       the server for a prop it never sent. */
+    it('does not page the All tab', () => {
+        mockFetch();
+        render(
+            <Search
+                {...searchProps({
+                    query: 'risc',
+                    type: 'all',
+                    threads: TWO,
+                })}
+            />,
+        );
+
+        expect(screen.queryByTestId('paged-list')).not.toBeInTheDocument();
+        expect(screen.getByText('First risc thread')).toBeInTheDocument();
+    });
+
+    /* The count is what has loaded. While a next page waits it must not read
+       as the number of results there are. */
+    it('says "2+ results" while a next page is waiting, and "2 results" on the last', () => {
+        mockFetch();
+        mockPage.scrollProps = { threads: { nextPage: 2 } };
+
+        const { unmount } = render(
+            <Search
+                {...searchProps({
+                    query: 'risc',
+                    type: 'posts',
+                    threads: makePaged(TWO),
+                })}
+            />,
+        );
+
+        expect(screen.getByText('2+ results')).toBeInTheDocument();
+        unmount();
+
+        mockPage.scrollProps = { threads: { nextPage: null } };
+        render(
+            <Search
+                {...searchProps({
+                    query: 'risc',
+                    type: 'posts',
+                    threads: makePaged(TWO),
+                })}
+            />,
+        );
+
+        expect(screen.getByText('2 results')).toBeInTheDocument();
+    });
+
+    /* All shows three rows a section. With matches left out, its count is
+       what is on screen and not how many there are. */
+    it('says "2+ results" on All when a section was cut off, and "2 results" when none was', () => {
+        mockFetch();
+
+        const { unmount } = render(
+            <Search
+                {...searchProps({
+                    query: 'risc',
+                    type: 'all',
+                    threads: TWO,
+                    truncated: true,
+                })}
+            />,
+        );
+
+        expect(screen.getByText('2+ results')).toBeInTheDocument();
+        unmount();
+
+        render(
+            <Search
+                {...searchProps({
+                    query: 'risc',
+                    type: 'all',
+                    threads: TWO,
+                })}
+            />,
+        );
+
+        expect(screen.getByText('2 results')).toBeInTheDocument();
     });
 });

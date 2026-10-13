@@ -12,6 +12,7 @@ import { CommentResultRow } from '@/components/clover/comment-result-row';
 import { EmptyState } from '@/components/clover/empty-state';
 import { MachineValue } from '@/components/clover/machine-value';
 import { PageMeta } from '@/components/clover/page-meta';
+import { PagedList } from '@/components/clover/paged-list';
 import { PatternField } from '@/components/clover/pattern-field';
 import { SearchFilterMenu } from '@/components/clover/search-filter-menu';
 import { SearchResultsList } from '@/components/clover/search-results-list';
@@ -20,6 +21,7 @@ import { SectionLabel } from '@/components/clover/section-label';
 import { ThreadCard } from '@/components/clover/thread-card';
 import { useBookmark } from '@/hooks/use-bookmark';
 import { useSearchSuggestions } from '@/hooks/use-search-suggestions';
+import { rowsOf } from '@/lib/paged';
 import { runSearch } from '@/lib/run-search';
 import {
     forgetSearch,
@@ -38,7 +40,7 @@ import {
 } from '@/lib/search-params';
 import type { SearchSort, SearchTime, SearchType } from '@/lib/search-params';
 import { board as boardRoute } from '@/routes';
-import type { Board, CommentResult, Thread } from '@/types/clover';
+import type { Board, CommentResult, Paged, Thread } from '@/types/clover';
 
 /**
  * Search results, for pressing Enter in the header field.
@@ -81,10 +83,20 @@ interface SearchProps {
     type: SearchType;
     sort: SearchSort;
     time: SearchTime;
-    boards: Board[];
-    threads: Thread[];
+    /**
+     * Each of the three lists is a bare array on All, where it is a
+     * three-row slice, and a `{ data }` wrapper on a tab of its own, where
+     * the server pages it. Only the tab's own list is ever paged.
+     */
+    boards: Board[] | Paged<Board>;
+    threads: Thread[] | Paged<Thread>;
     /** Replies. Never opening posts — those are the Posts tab's rows. */
-    comments: CommentResult[];
+    comments: CommentResult[] | Paged<CommentResult>;
+    /**
+     * Whether the All tab left matches out of a section. Only that tab sets
+     * it: a tab of its own pages instead, and says so through `scrollProps`.
+     */
+    truncated: boolean;
     /**
      * The same busiest-boards query `SearchController::suggest` runs for an
      * empty query, sent once as a prop rather than fetched again on
@@ -99,19 +111,73 @@ interface SearchProps {
     busiestThreads: Thread[];
 }
 
+/**
+ * Which prop each tab pages. All pages none of them: its sections are
+ * three-row slices, with a link through to the tab that holds the rest.
+ */
+const PAGED_PROP: Partial<Record<SearchType, string>> = {
+    posts: 'threads',
+    communities: 'boards',
+    comments: 'comments',
+};
+
+/**
+ * A section's rows: paged on a tab of its own, a plain element on All, where
+ * the server sent a slice and there is no next page to ask for.
+ */
+function Rows({
+    data,
+    paged,
+    as: Element = 'div',
+    className = 'flex flex-col',
+    children,
+}: {
+    data: string;
+    paged: boolean;
+    as?: 'div' | 'ul';
+    className?: string;
+    children: ReactNode;
+}) {
+    return paged ? (
+        <PagedList data={data} as={Element} className={className}>
+            {children}
+        </PagedList>
+    ) : (
+        <Element className={className}>{children}</Element>
+    );
+}
+
 export default function Search({
     query,
     type,
     sort,
     time,
-    boards,
-    threads,
-    comments,
+    boards: boardList,
+    threads: threadList,
+    comments: commentList,
+    truncated,
     busiestBoards,
     busiestThreads,
 }: SearchProps) {
-    const { auth } = usePage().props;
-    const { toggleBookmark, authGate } = useBookmark();
+    const { props, scrollProps } = usePage();
+    const { auth } = props;
+    const { toggleBookmark, authGate } = useBookmark({ keepsPages: true });
+
+    const boards = rowsOf(boardList);
+    const threads = rowsOf(threadList);
+    const comments = rowsOf(commentList);
+
+    /**
+     * Whether this tab's list has pages the reader has not scrolled to yet.
+     * Read off the paginator, the same cursor `<InfiniteScroll>` acts on, so
+     * the count below cannot claim to be a total while there is more.
+     */
+    const pagedProp = PAGED_PROP[type];
+    const hasMore =
+        type === 'all'
+            ? truncated
+            : pagedProp !== undefined &&
+              Boolean(scrollProps?.[pagedProp]?.nextPage);
 
     const total = boards.length + threads.length + comments.length;
 
@@ -352,7 +418,12 @@ export default function Search({
                     </h1>
                     {query !== '' ? (
                         <MachineValue>
-                            {total} {total === 1 ? 'result' : 'results'}
+                            {/* "40+" while a next page is waiting: the count is
+                                what has loaded, and only a last page gets to
+                                call itself the number of results. */}
+                            {total}
+                            {hasMore ? '+' : ''}{' '}
+                            {total === 1 && !hasMore ? 'result' : 'results'}
                         </MachineValue>
                     ) : null}
                 </div>
@@ -431,7 +502,7 @@ export default function Search({
                 {threads.length > 0 ? (
                     <section className="flex flex-col gap-3">
                         {sectionHeading('posts')}
-                        <div className="flex flex-col">
+                        <Rows data="threads" paged={type !== 'all'}>
                             {threads.map((thread) => (
                                 <ThreadCard
                                     key={thread.id}
@@ -440,14 +511,19 @@ export default function Search({
                                     onBookmark={() => toggleBookmark(thread)}
                                 />
                             ))}
-                        </div>
+                        </Rows>
                     </section>
                 ) : null}
 
                 {boards.length > 0 ? (
                     <section className="flex flex-col gap-3">
                         {sectionHeading('communities')}
-                        <ul className="flex flex-col divide-y divide-border border-y border-border">
+                        <Rows
+                            data="boards"
+                            paged={type !== 'all'}
+                            as="ul"
+                            className="flex flex-col divide-y divide-border border-y border-border"
+                        >
                             {boards.map((board) => (
                                 <li key={board.slug}>
                                     <Link
@@ -471,21 +547,21 @@ export default function Search({
                                     </Link>
                                 </li>
                             ))}
-                        </ul>
+                        </Rows>
                     </section>
                 ) : null}
 
                 {comments.length > 0 ? (
                     <section className="flex flex-col gap-3">
                         {sectionHeading('comments')}
-                        <div className="flex flex-col">
+                        <Rows data="comments" paged={type !== 'all'}>
                             {comments.map((comment) => (
                                 <CommentResultRow
                                     key={comment.id}
                                     comment={comment}
                                 />
                             ))}
-                        </div>
+                        </Rows>
                     </section>
                 ) : null}
             </div>

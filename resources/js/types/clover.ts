@@ -89,6 +89,15 @@ export interface Attachment {
     concealed: 'spoiler' | 'mature' | null;
 }
 
+/**
+ * A list the server pages with `Inertia::scroll()`. The rows are under `data`;
+ * the paginator's own `links` and `meta` also ride along but nothing reads
+ * them -- the cursor the client acts on is in the page's `scrollProps`.
+ */
+export interface Paged<T> {
+    data: T[];
+}
+
 export interface Thread {
     /**
      * This application's own id, which the write routes take.
