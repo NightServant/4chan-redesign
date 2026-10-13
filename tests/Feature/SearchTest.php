@@ -277,11 +277,11 @@ it('searches replies on the comments tab and never the opening post', function (
     $response = $this->get('/search?q=RISC&type=comments')->assertOk();
 
     $response->assertInertia(fn ($page) => $page
-        ->has('comments', 2)
+        ->has('comments.data', 2)
         ->has('threads', 0)
         ->has('boards', 0));
 
-    expect(collect($response->viewData('page')['props']['comments'])->pluck('body'))
+    expect(collect($response->viewData('page')['props']['comments']['data'])->pluck('body'))
         ->each->toContain('reply');
 });
 
@@ -291,13 +291,13 @@ it('sends a reply with the thread and board it sits in', function (): void {
     $this->get('/search?q=today&type=comments')
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->has('comments', 1)
-            ->where('comments.0.board', '/g/')
-            ->where('comments.0.boardName', 'Technology')
-            ->has('comments.0.threadNo')
-            ->has('comments.0.threadTitle')
-            ->has('comments.0.time')
-            ->has('comments.0.no'));
+            ->has('comments.data', 1)
+            ->where('comments.data.0.board', '/g/')
+            ->where('comments.data.0.boardName', 'Technology')
+            ->has('comments.data.0.threadNo')
+            ->has('comments.data.0.threadTitle')
+            ->has('comments.data.0.time')
+            ->has('comments.data.0.no'));
 });
 
 /** The mature gate is on reading, so it is on searching replies too. */
@@ -309,14 +309,14 @@ it('hides replies on a mature board from a signed-out anon', function (): void {
 
     $this->get('/search?q=RISC&type=comments')
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->has('comments', 0));
+        ->assertInertia(fn ($page) => $page->has('comments.data', 0));
 
     $user = User::factory()->create(['shows_mature_boards' => true]);
 
     $this->actingAs($user)
         ->get('/search?q=RISC&type=comments')
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->has('comments', 1));
+        ->assertInertia(fn ($page) => $page->has('comments.data', 1));
 });
 
 it('returns threads alone on the posts tab', function (): void {
@@ -325,7 +325,7 @@ it('returns threads alone on the posts tab', function (): void {
     $this->get('/search?q=RISC&type=posts')
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->has('threads', 2)
+            ->has('threads.data', 2)
             ->has('boards', 0)
             ->has('comments', 0));
 });
@@ -336,7 +336,7 @@ it('returns boards alone on the communities tab', function (): void {
     $this->get('/search?q=Technology&type=communities')
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->has('boards', 1)
+            ->has('boards.data', 1)
             ->has('threads', 0)
             ->has('comments', 0));
 });
@@ -358,7 +358,7 @@ it('bounds each section on the all tab rather than returning a whole page of one
 
     $this->get('/search?q=RISC&type=posts')
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->has('threads', 8));
+        ->assertInertia(fn ($page) => $page->has('threads.data', 8));
 });
 
 it('falls back rather than erroring on an unknown tab, sort or time', function (): void {
@@ -399,7 +399,7 @@ it('orders threads by the latest bump, by reply count, and by relevance', functi
     $titles = fn (string $sort): array => collect(
         $this->get("/search?q=RISC&type=posts&sort={$sort}")
             ->assertOk()
-            ->viewData('page')['props']['threads']
+            ->viewData('page')['props']['threads']['data']
     )->pluck('title')->all();
 
     /* Bumped an hour ago, against two months. */
@@ -419,7 +419,7 @@ it('orders replies by recency on latest', function (): void {
     $bodies = collect(
         $this->get('/search?q=RISC&type=comments&sort=latest')
             ->assertOk()
-            ->viewData('page')['props']['comments']
+            ->viewData('page')['props']['comments']['data']
     )->pluck('body');
 
     expect($bodies->first())->toContain('today');
@@ -434,7 +434,7 @@ it('orders boards by their most recent activity on latest', function (): void {
 
     $response = $this->get('/search?q=matter&type=communities&sort=latest')->assertOk();
 
-    expect(collect($response->viewData('page')['props']['boards'])->pluck('slug')->first())
+    expect(collect($response->viewData('page')['props']['boards']['data'])->pluck('slug')->first())
         ->toBe('/wg/');
 });
 
@@ -443,15 +443,15 @@ it('filters threads and replies by time', function (): void {
 
     $this->get('/search?q=RISC&type=posts&time=today')
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->has('threads', 1));
+        ->assertInertia(fn ($page) => $page->has('threads.data', 1));
 
     $this->get('/search?q=RISC&type=comments&time=week')
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->has('comments', 1));
+        ->assertInertia(fn ($page) => $page->has('comments.data', 1));
 
     $this->get('/search?q=RISC&type=posts&time=all')
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->has('threads', 2));
+        ->assertInertia(fn ($page) => $page->has('threads.data', 2));
 });
 
 /**
@@ -466,7 +466,7 @@ it('does not apply the time filter to communities', function (): void {
 
     $this->get('/search?q=Technology&type=communities&time=today')
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->has('boards', 1));
+        ->assertInertia(fn ($page) => $page->has('boards.data', 1));
 });
 
 /**

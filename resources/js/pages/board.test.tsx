@@ -2,7 +2,12 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { makeBoard, makeThread, makeActivity } from '@/fixtures/factories';
+import {
+    makeActivity,
+    makeBoard,
+    makePaged,
+    makeThread,
+} from '@/fixtures/factories';
 import Board from '@/pages/board';
 import type { User } from '@/types/auth';
 import type { ActivityEntry, Board as BoardType } from '@/types/clover';
@@ -82,6 +87,10 @@ vi.mock('@inertiajs/react', () => ({
     },
 }));
 
+vi.mock('@/components/clover/paged-list', async () => ({
+    PagedList: (await import('@/test/paged-list-stub')).PagedListStub,
+}));
+
 /* The server sends this page one board and that board's threads, already
    filtered and in bump order. There is no longer a client-side filter to
    test, so the props are simply what the controller would have produced. */
@@ -122,7 +131,8 @@ describe('Board', () => {
         render(
             <Board
                 board={TECHNOLOGY}
-                threads={G_THREADS}
+                sort="bumped"
+                threads={makePaged(G_THREADS)}
                 maxCommentChars={2000}
             />,
         );
@@ -145,7 +155,8 @@ describe('Board', () => {
         render(
             <Board
                 board={TECHNOLOGY}
-                threads={G_THREADS}
+                sort="bumped"
+                threads={makePaged(G_THREADS)}
                 maxCommentChars={2000}
             />,
         );
@@ -162,7 +173,14 @@ describe('Board', () => {
     });
 
     it('renders the empty state and no thread cards for a board with no threads', () => {
-        render(<Board board={COMICS} threads={[]} maxCommentChars={2000} />);
+        render(
+            <Board
+                board={COMICS}
+                sort="bumped"
+                threads={makePaged([])}
+                maxCommentChars={2000}
+            />,
+        );
 
         expect(
             screen.getByRole('heading', { name: 'No threads on /co/ yet' }),
@@ -181,7 +199,14 @@ describe('Board', () => {
     });
 
     it("links the empty state's action to popular()", () => {
-        render(<Board board={COMICS} threads={[]} maxCommentChars={2000} />);
+        render(
+            <Board
+                board={COMICS}
+                sort="bumped"
+                threads={makePaged([])}
+                maxCommentChars={2000}
+            />,
+        );
 
         const action = screen.getByRole('link', {
             name: 'Browse popular threads',
@@ -194,7 +219,8 @@ describe('Board', () => {
         const { unmount } = render(
             <Board
                 board={TECHNOLOGY}
-                threads={G_THREADS}
+                sort="bumped"
+                threads={makePaged(G_THREADS)}
                 maxCommentChars={2000}
             />,
         );
@@ -208,7 +234,8 @@ describe('Board', () => {
         render(
             <Board
                 board={{ ...TECHNOLOGY, subscribed: true }}
-                threads={G_THREADS}
+                sort="bumped"
+                threads={makePaged(G_THREADS)}
                 maxCommentChars={2000}
             />,
         );
@@ -229,7 +256,8 @@ describe('Board', () => {
         render(
             <Board
                 board={TECHNOLOGY}
-                threads={G_THREADS}
+                sort="bumped"
+                threads={makePaged(G_THREADS)}
                 maxCommentChars={2000}
             />,
         );
@@ -253,7 +281,8 @@ describe('Board', () => {
         render(
             <Board
                 board={TECHNOLOGY}
-                threads={G_THREADS}
+                sort="bumped"
+                threads={makePaged(G_THREADS)}
                 maxCommentChars={2000}
             />,
         );
@@ -270,7 +299,8 @@ describe('Board', () => {
         render(
             <Board
                 board={TECHNOLOGY}
-                threads={G_THREADS}
+                sort="bumped"
+                threads={makePaged(G_THREADS)}
                 maxCommentChars={2000}
             />,
         );
@@ -279,7 +309,14 @@ describe('Board', () => {
     });
 
     it('has exactly one first-level heading on an empty board too', () => {
-        render(<Board board={COMICS} threads={[]} maxCommentChars={2000} />);
+        render(
+            <Board
+                board={COMICS}
+                sort="bumped"
+                threads={makePaged([])}
+                maxCommentChars={2000}
+            />,
+        );
 
         expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     });
@@ -288,7 +325,8 @@ describe('Board', () => {
         render(
             <Board
                 board={TECHNOLOGY}
-                threads={G_THREADS}
+                sort="bumped"
+                threads={makePaged(G_THREADS)}
                 maxCommentChars={2000}
             />,
         );
@@ -319,7 +357,8 @@ describe('Board', () => {
         render(
             <Board
                 board={TECHNOLOGY}
-                threads={G_THREADS}
+                sort="bumped"
+                threads={makePaged(G_THREADS)}
                 maxCommentChars={2000}
             />,
         );
@@ -346,7 +385,8 @@ describe('Board', () => {
         const { container } = render(
             <Board
                 board={TECHNOLOGY}
-                threads={G_THREADS}
+                sort="bumped"
+                threads={makePaged(G_THREADS)}
                 maxCommentChars={2000}
             />,
         );
@@ -354,5 +394,84 @@ describe('Board', () => {
         expect(container.textContent).not.toMatch(
             /visitor|contribution|wiki|top 50|top members|moderator|highlight|flair/i,
         );
+    });
+});
+
+describe('Board — paging and sorting', () => {
+    it('pages the threads prop, appending each page in the order the server sent it', () => {
+        const first = makeThread({ title: 'Page one thread', replies: 900 });
+        const second = makeThread({ title: 'Page two thread', replies: 3 });
+
+        const { rerender } = render(
+            <Board
+                board={TECHNOLOGY}
+                sort="replies"
+                threads={makePaged([first])}
+                maxCommentChars={2000}
+            />,
+        );
+
+        expect(screen.getByTestId('paged-list')).toHaveAttribute(
+            'data-prop',
+            'threads',
+        );
+
+        /* What Inertia hands the page once the second page has merged in. */
+        rerender(
+            <Board
+                board={TECHNOLOGY}
+                sort="replies"
+                threads={makePaged([first, second])}
+                maxCommentChars={2000}
+            />,
+        );
+
+        /* Not re-sorted: the board's order is the database's, and a page
+           that loaded later belongs below the ones before it. */
+        expect(
+            screen
+                .getAllByRole('heading', { level: 3 })
+                .map((heading) => heading.textContent),
+        ).toEqual(['Page one thread', 'Page two thread']);
+    });
+
+    it('marks the tab for the sort the server resolved', () => {
+        render(
+            <Board
+                board={TECHNOLOGY}
+                sort="replies"
+                threads={makePaged([makeThread()])}
+                maxCommentChars={2000}
+            />,
+        );
+
+        expect(
+            screen.getByRole('tab', { name: 'Most replies' }),
+        ).toHaveAttribute('aria-selected', 'true');
+        expect(
+            screen.getByRole('tab', { name: 'Recently bumped' }),
+        ).toHaveAttribute('aria-selected', 'false');
+    });
+
+    /* A tab is a visit, so the database orders the whole board and the
+       scroll list starts over; bump order is the plain URL. */
+    it('visits the board with the chosen sort rather than re-sorting what is loaded', async () => {
+        const user = userEvent.setup();
+        router.visit.mockClear();
+
+        render(
+            <Board
+                board={TECHNOLOGY}
+                sort="bumped"
+                threads={makePaged([makeThread()])}
+                maxCommentChars={2000}
+            />,
+        );
+
+        await user.click(screen.getByRole('tab', { name: 'Most replies' }));
+        expect(router.visit).toHaveBeenLastCalledWith('/g?sort=replies');
+
+        await user.click(screen.getByRole('tab', { name: 'New' }));
+        expect(router.visit).toHaveBeenLastCalledWith('/g?sort=new');
     });
 });

@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { makeThread } from '@/fixtures/factories';
+import { makePaged, makeThread } from '@/fixtures/factories';
 import Feed from '@/pages/feed';
 import type { User } from '@/types/auth';
 
@@ -45,7 +45,15 @@ vi.mock('@inertiajs/react', () => ({
 }));
 
 vi.mock('@/components/feed/rail', () => ({
-    Rail: () => <div data-testid="rail-stub" />,
+    /* Echoes how many threads it was handed, so a test can check the rail is
+       given every page that has loaded and not just the first. */
+    Rail: ({ threads }: { threads: unknown[] }) => (
+        <div data-testid="rail-stub" data-threads={threads.length} />
+    ),
+}));
+
+vi.mock('@/components/clover/paged-list', async () => ({
+    PagedList: (await import('@/test/paged-list-stub')).PagedListStub,
 }));
 
 const SIGNED_IN_USER: User = {
@@ -105,7 +113,11 @@ describe('Feed', () => {
      */
     it('caps the column at the same measure as the media it holds', () => {
         const { container } = render(
-            <Feed sort="bumped" threads={THREADS} library={LIBRARY} />,
+            <Feed
+                sort="bumped"
+                threads={makePaged(THREADS)}
+                library={LIBRARY}
+            />,
         );
 
         expect(
@@ -143,7 +155,13 @@ describe('Feed', () => {
             }),
         ];
 
-        render(<Feed sort="bumped" threads={collided} library={LIBRARY} />);
+        render(
+            <Feed
+                sort="bumped"
+                threads={makePaged(collided)}
+                library={LIBRARY}
+            />,
+        );
 
         const warnings = error.mock.calls
             .flat()
@@ -156,7 +174,13 @@ describe('Feed', () => {
     });
 
     it('renders "Home" for the bumped sort', () => {
-        render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
+        render(
+            <Feed
+                sort="bumped"
+                threads={makePaged(THREADS)}
+                library={LIBRARY}
+            />,
+        );
 
         expect(
             screen.getByRole('heading', { level: 1, name: 'Home' }),
@@ -164,7 +188,13 @@ describe('Feed', () => {
     });
 
     it('renders "Popular" for the popular sort', () => {
-        render(<Feed sort="popular" threads={THREADS} library={LIBRARY} />);
+        render(
+            <Feed
+                sort="popular"
+                threads={makePaged(THREADS)}
+                library={LIBRARY}
+            />,
+        );
 
         expect(
             screen.getByRole('heading', { level: 1, name: 'Popular' }),
@@ -172,7 +202,13 @@ describe('Feed', () => {
     });
 
     it('renders "Latest" for the latest sort', () => {
-        render(<Feed sort="latest" threads={THREADS} library={LIBRARY} />);
+        render(
+            <Feed
+                sort="latest"
+                threads={makePaged(THREADS)}
+                library={LIBRARY}
+            />,
+        );
 
         expect(
             screen.getByRole('heading', { level: 1, name: 'Latest' }),
@@ -180,7 +216,13 @@ describe('Feed', () => {
     });
 
     it("does not render a second <main>: that is AppLayout's job", () => {
-        render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
+        render(
+            <Feed
+                sort="bumped"
+                threads={makePaged(THREADS)}
+                library={LIBRARY}
+            />,
+        );
 
         expect(screen.queryByRole('main')).not.toBeInTheDocument();
     });
@@ -188,7 +230,13 @@ describe('Feed', () => {
     it('shows the anon banner when signed out', () => {
         mockPage({ signedIn: false });
 
-        render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
+        render(
+            <Feed
+                sort="bumped"
+                threads={makePaged(THREADS)}
+                library={LIBRARY}
+            />,
+        );
 
         expect(screen.getByText(/reading anonymously/i)).toBeInTheDocument();
     });
@@ -196,7 +244,13 @@ describe('Feed', () => {
     it('hides the anon banner when signed in', () => {
         mockPage({ signedIn: true });
 
-        render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
+        render(
+            <Feed
+                sort="bumped"
+                threads={makePaged(THREADS)}
+                library={LIBRARY}
+            />,
+        );
 
         expect(
             screen.queryByText(/reading anonymously/i),
@@ -204,7 +258,13 @@ describe('Feed', () => {
     });
 
     it('renders every fixture thread', () => {
-        render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
+        render(
+            <Feed
+                sort="bumped"
+                threads={makePaged(THREADS)}
+                library={LIBRARY}
+            />,
+        );
 
         for (const thread of THREADS) {
             expect(
@@ -214,7 +274,13 @@ describe('Feed', () => {
     });
 
     it('does not override the thread link: it resolves to the board and post number', () => {
-        render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
+        render(
+            <Feed
+                sort="bumped"
+                threads={makePaged(THREADS)}
+                library={LIBRARY}
+            />,
+        );
 
         const first = THREADS[0];
         expect(screen.getByRole('link', { name: first.title })).toHaveAttribute(
@@ -237,7 +303,13 @@ describe('Feed', () => {
         mockPage({ signedIn: false });
         const thread = THREADS[0];
 
-        render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
+        render(
+            <Feed
+                sort="bumped"
+                threads={makePaged(THREADS)}
+                library={LIBRARY}
+            />,
+        );
 
         const card = screen
             .getByRole('heading', { level: 3, name: thread.title })
@@ -256,22 +328,49 @@ describe('Feed', () => {
     });
 
     /**
-     * The feed's "Load more" and its pagination landmark are both gone.
+     * The feed pages itself as the reader scrolls, and says so with no button.
      *
-     * Neither did anything. "Load more" showed two skeletons, waited, and put
-     * itself back — there was no second page to fetch, because every thread
-     * the page had was already in the fixture it imported. The pagination
-     * landmark navigated between pages that did not exist.
-     *
-     * With a real server the feed is one query with a limit, and paging it is
-     * a server concern: it needs a cursor on the prop, not a control that
-     * animates. Rather than keep two affordances that lie about what pressing
-     * them does, they are removed until the thing they describe exists. This
-     * comment is here so the next person knows it was deliberate.
+     * "Load more" went because it did nothing: it showed two skeletons and put
+     * itself back, with no second page behind it. The list is now a
+     * `<PagedList>` over the `threads` prop, so reaching the end of it asks the
+     * server for the next cursor. What a real `<InfiniteScroll>` then does with
+     * the response is `paged-list.test.tsx`'s concern; this pins that the feed
+     * hands it the right prop, draws every page that has loaded, and has not
+     * grown a control to press.
      */
-    it('offers no paging control it cannot honour', () => {
-        render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
+    it('pages the threads prop and draws every page that has loaded', () => {
+        const firstPage = [makeThread({ title: 'Page one thread' })];
+        const secondPage = [makeThread({ title: 'Page two thread' })];
 
+        const { rerender } = render(
+            <Feed
+                sort="bumped"
+                threads={makePaged(firstPage)}
+                library={LIBRARY}
+            />,
+        );
+
+        expect(screen.getByTestId('paged-list')).toHaveAttribute(
+            'data-prop',
+            'threads',
+        );
+        expect(screen.queryByText('Page two thread')).not.toBeInTheDocument();
+
+        /* What Inertia hands the page once the second page has merged in. */
+        rerender(
+            <Feed
+                sort="bumped"
+                threads={makePaged([...firstPage, ...secondPage])}
+                library={LIBRARY}
+            />,
+        );
+
+        expect(screen.getByText('Page one thread')).toBeInTheDocument();
+        expect(screen.getByText('Page two thread')).toBeInTheDocument();
+        expect(screen.getAllByTestId('rail-stub')[0]).toHaveAttribute(
+            'data-threads',
+            '2',
+        );
         expect(
             screen.queryByRole('button', { name: 'Load more threads' }),
         ).not.toBeInTheDocument();
@@ -282,7 +381,11 @@ describe('Feed', () => {
 
     it('hides the rail below lg and never squeezes the centre column', () => {
         const { container } = render(
-            <Feed sort="bumped" threads={THREADS} library={LIBRARY} />,
+            <Feed
+                sort="bumped"
+                threads={makePaged(THREADS)}
+                library={LIBRARY}
+            />,
         );
 
         const railWrapper = screen.getByTestId('rail-stub').parentElement;
@@ -299,7 +402,13 @@ describe('Feed', () => {
      * second control for navigation the chrome already provides.
      */
     it('does not repeat the sidebar destinations as a tab row', () => {
-        render(<Feed sort="bumped" threads={THREADS} library={LIBRARY} />);
+        render(
+            <Feed
+                sort="bumped"
+                threads={makePaged(THREADS)}
+                library={LIBRARY}
+            />,
+        );
 
         expect(
             screen.queryByRole('navigation', { name: /sort threads/i }),

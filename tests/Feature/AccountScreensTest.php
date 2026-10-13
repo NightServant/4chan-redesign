@@ -244,8 +244,8 @@ it('sends no vote fields on a thread card', function (): void {
 
     $this->actingAs($user)->get("/{$board->slug}")->assertInertia(
         fn ($page) => $page
-            ->missing('threads.0.blessings')
-            ->missing('threads.0.voteState'),
+            ->missing('threads.data.0.blessings')
+            ->missing('threads.data.0.voteState'),
     );
 });
 
@@ -255,7 +255,7 @@ it('reports a saved thread as bookmarked on its card', function (): void {
     Bookmark::factory()->create(['user_id' => $user->id, 'thread_id' => $thread->id]);
 
     $this->actingAs($user)->get("/{$board->slug}")->assertInertia(
-        fn ($page) => $page->where('threads.0.bookmarked', true),
+        fn ($page) => $page->where('threads.data.0.bookmarked', true),
     );
 });
 

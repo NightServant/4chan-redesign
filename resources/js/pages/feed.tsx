@@ -3,6 +3,7 @@ import { CompassIcon } from 'lucide-react';
 import { EmptyState } from '@/components/clover/empty-state';
 import { PageHeader } from '@/components/clover/page-header';
 import { PageMeta } from '@/components/clover/page-meta';
+import { PagedList } from '@/components/clover/paged-list';
 import { ThreadCard } from '@/components/clover/thread-card';
 import { AnonBanner } from '@/components/feed/anon-banner';
 import { Rail } from '@/components/feed/rail';
@@ -10,7 +11,7 @@ import type { FeedLibrary } from '@/components/feed/rail';
 import { Button } from '@/components/ui/button';
 import { useBookmark } from '@/hooks/use-bookmark';
 import { communities } from '@/routes';
-import type { Thread } from '@/types/clover';
+import type { Paged, Thread } from '@/types/clover';
 
 /**
  * The feed, in three sorts. The server decides which by the route it renders
@@ -67,12 +68,17 @@ type FeedProps = {
     sort: Sort;
     /** What this reader can see, counted server-side for the rail. */
     library: FeedLibrary;
-    /** Already ordered for `sort`. Rendered in the order given. */
-    threads: Thread[];
+    /**
+     * Already ordered for `sort`. Rendered in the order given, and appended to
+     * as the reader scrolls: every page that has loaded is in here, which is
+     * what the rail's "On this page" counts.
+     */
+    threads: Paged<Thread>;
 };
 
-export default function Feed({ sort, threads, library }: FeedProps) {
-    const { toggleBookmark, authGate } = useBookmark();
+export default function Feed({ sort, threads: paged, library }: FeedProps) {
+    const threads = paged.data;
+    const { toggleBookmark, authGate } = useBookmark({ keepsPages: true });
     const { auth } = usePage().props;
     const signedIn = Boolean(auth.user);
 
@@ -120,7 +126,7 @@ export default function Feed({ sort, threads, library }: FeedProps) {
                         />
                     ) : null}
 
-                    <div className="flex flex-col gap-4">
+                    <PagedList data="threads" className="flex flex-col gap-4">
                         {threads.map((thread) => (
                             <ThreadCard
                                 key={thread.id}
@@ -128,7 +134,7 @@ export default function Feed({ sort, threads, library }: FeedProps) {
                                 onBookmark={() => toggleBookmark(thread)}
                             />
                         ))}
-                    </div>
+                    </PagedList>
                 </div>
 
                 <div className="hidden w-(--measure-rail) shrink-0 lg:block">

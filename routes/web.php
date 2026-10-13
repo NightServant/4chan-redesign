@@ -73,8 +73,10 @@ Route::post('internal/sweep/run', [SweepController::class, 'run'])->name('sweep.
  * machine typing, not a person: real typing produces a handful of requests per
  * term, during the pauses, and then a stop to read the results. Sixty is around
  * seven full searches a minute, which no typist reaches and a script clears in
- * a second. Half that on the page route, which is a navigation: an anon cannot
- * meaningfully load thirty result pages in a minute.
+ * a second. Half that on the page route for a new search, which is a
+ * navigation. The next pages of a tab the reader is scrolling arrive at the
+ * same route, and are counted apart from new searches at a higher ceiling:
+ * see `AppServiceProvider::configureRateLimits()`.
  *
  * Keyed by address rather than by account, because neither route has one.
  */
@@ -83,7 +85,7 @@ Route::get('search/suggest', [SearchController::class, 'suggest'])
     ->name('search.suggest');
 
 Route::get('search', SearchController::class)
-    ->middleware('throttle:30,1')
+    ->middleware('throttle:search')
     ->name('search');
 
 Route::middleware('auth')->group(function () {

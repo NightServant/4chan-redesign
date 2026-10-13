@@ -112,8 +112,8 @@ it('keeps threads from hidden boards out of the feed', function (): void {
     $this->get('/popular')->assertInertia(
         fn ($page) => $page
             ->component('feed')
-            ->has('threads', 1)
-            ->where('threads.0.board', '/g/'),
+            ->has('threads.data', 1)
+            ->where('threads.data.0.board', '/g/'),
     );
 });
 
@@ -152,7 +152,7 @@ it('marks a not-worksafe board and its threads on the wire', function (): void {
     $this->actingAs($user)->get('/x')->assertInertia(
         fn ($page) => $page
             ->where('board.nsfw', true)
-            ->where('threads.0.nsfw', true),
+            ->where('threads.data.0.nsfw', true),
     );
 });
 
@@ -163,6 +163,6 @@ it('does not mark a worksafe board', function (): void {
     $this->get('/g')->assertInertia(
         fn ($page) => $page
             ->where('board.nsfw', false)
-            ->where('threads.0.nsfw', false),
+            ->where('threads.data.0.nsfw', false),
     );
 });

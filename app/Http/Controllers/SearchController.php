@@ -12,12 +12,16 @@ use App\Models\Post;
 use App\Models\Thread;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Inertia\ScrollProp;
 
 /**
  * Finding a board or a thread.
@@ -58,7 +62,7 @@ class SearchController extends Controller
 
     private const SUGGEST_THREADS = 6;
 
-    /** One tab's worth. Every section of the All tab is a slice, not a page. */
+    /** One page of a tab. Every section of the All tab is a slice, not a page. */
     private const PAGE_RESULTS = 40;
 
     private const ALL_TAB_RESULTS = 3;
@@ -92,11 +96,22 @@ class SearchController extends Controller
         $sort = $this->sort($request, $type);
         $time = $this->time($request);
 
-        $limit = $type === 'all' ? self::ALL_TAB_RESULTS : self::PAGE_RESULTS;
-
         $showsBoards = $query !== '' && in_array($type, ['all', 'communities'], true);
         $showsThreads = $query !== '' && in_array($type, ['all', 'posts'], true);
         $showsComments = $query !== '' && in_array($type, ['all', 'comments'], true);
+
+        /* Set by `section()` when it found a row beyond what All shows. */
+        $truncated = false;
+
+        $boards = $showsBoards
+            ? $this->section($this->boards($query, $showsMature, $sort), BoardResource::class, $type, 'slug', $truncated)
+            : BoardResource::collection(collect());
+        $threads = $showsThreads
+            ? $this->section($this->threads($query, $showsMature, $sort, $time), ThreadResource::class, $type, 'id', $truncated)
+            : ThreadResource::collection(collect());
+        $comments = $showsComments
+            ? $this->section($this->comments($query, $showsMature, $sort, $time), CommentResultResource::class, $type, 'id', $truncated)
+            : CommentResultResource::collection(collect());
 
         return Inertia::render('search', [
             'query' => $query,
@@ -112,21 +127,17 @@ class SearchController extends Controller
             'sort' => $sort,
             'time' => $time,
 
-            'boards' => BoardResource::collection(
-                $showsBoards
-                    ? $this->boards($query, $showsMature, $sort)->limit($limit)->get()
-                    : collect(),
-            ),
-            'threads' => ThreadResource::collection(
-                $showsThreads
-                    ? $this->threads($query, $showsMature, $sort, $time)->limit($limit)->get()
-                    : collect(),
-            ),
-            'comments' => CommentResultResource::collection(
-                $showsComments
-                    ? $this->comments($query, $showsMature, $sort, $time)->limit($limit)->get()
-                    : collect(),
-            ),
+            'boards' => $boards,
+            'threads' => $threads,
+            'comments' => $comments,
+
+            /**
+             * Whether the All tab left matches out of a section. Its count is
+             * the rows on screen, which is only the number of results when
+             * nothing was cut: with this set the page says "9+", the same way
+             * a tab of its own says "40+" while a next page waits.
+             */
+            'truncated' => $truncated,
 
             /**
              * The empty-query suggestions screen below `md` (task 6). Sent
@@ -151,6 +162,37 @@ class SearchController extends Controller
                 $this->busiestThreads($showsMature)->limit(self::SUGGEST_THREADS)->get(),
             ),
         ]);
+    }
+
+    /**
+     * One section of the page: a three-row slice on All, a scrolling page on
+     * a tab of its own.
+     *
+     * A tab pages by page number, not by cursor, because relevance is a
+     * `case when` expression and a cursor cannot follow one. The page number
+     * rides in `?page=`, next to the `q`, `type`, `sort` and `time` the
+     * browser's follow-up request already carries, so every page of a tab is
+     * answered with the same filters. On All, `$truncated` is raised when a
+     * section had a row it did not show. Rows are matched on `$matchOn` when they
+     * are appended: a thread bumped between two requests can shift an offset
+     * by one, and the client then drops the repeat instead of drawing it twice.
+     *
+     * @param  Builder<covariant Model>  $results
+     * @param  class-string<JsonResource>  $resource
+     * @return AnonymousResourceCollection|ScrollProp<AnonymousResourceCollection>
+     */
+    private function section(Builder $results, string $resource, string $type, string $matchOn, bool &$truncated): AnonymousResourceCollection|ScrollProp
+    {
+        if ($type === 'all') {
+            /* One more than is shown, only to learn whether there is more. */
+            $rows = $results->limit(self::ALL_TAB_RESULTS + 1)->get();
+            $truncated = $truncated || $rows->count() > self::ALL_TAB_RESULTS;
+
+            return $resource::collection($rows->take(self::ALL_TAB_RESULTS));
+        }
+
+        return Inertia::scroll($resource::collection($results->simplePaginate(self::PAGE_RESULTS)))
+            ->matchOn('data.'.$matchOn);
     }
 
     /**
@@ -249,7 +291,8 @@ class SearchController extends Controller
             return $boards
                 ->withMax('threads', 'bumped_at')
                 ->orderByDesc('threads_max_bumped_at')
-                ->orderByDesc('threads_count');
+                ->orderByDesc('threads_count')
+                ->orderBy('id');
         }
 
         /* A slug match is what an anon typing "g" almost certainly meant,
@@ -257,7 +300,8 @@ class SearchController extends Controller
            description. */
         return $boards
             ->orderByRaw('case when '.$this->likeClause('slug').' then 0 else 1 end', [$like])
-            ->orderByDesc('threads_count');
+            ->orderByDesc('threads_count')
+            ->orderBy('id');
     }
 
     /**
@@ -297,13 +341,18 @@ class SearchController extends Controller
             $threads->where('bumped_at', '>=', $since);
         }
 
-        return match ($sort) {
+        /* The id last, so a page boundary always falls in the same place:
+           without it two rows that tie on every key above can swap between
+           one request and the next, and a thread is skipped or shown twice. */
+        $ordered = match ($sort) {
             'latest' => $threads->orderByDesc('bumped_at'),
             'replies' => $threads->orderByDesc('replies_count')->orderByDesc('bumped_at'),
             default => $threads
                 ->orderByRaw('case when '.$this->likeClause('subject').' then 0 else 1 end', [$like])
                 ->orderByDesc('bumped_at'),
         };
+
+        return $ordered->orderByDesc('id');
     }
 
     /**
@@ -348,10 +397,12 @@ class SearchController extends Controller
             $comments->where('posted_at', '>=', $since);
         }
 
-        return match ($sort) {
+        $ordered = match ($sort) {
             'latest' => $comments->orderByDesc('posted_at'),
             default => $comments->orderByRaw('length(body) asc')->orderByDesc('posted_at'),
         };
+
+        return $ordered->orderByDesc('id');
     }
 
     /**

@@ -443,13 +443,13 @@ it('reports a thread as bookmarked on the feed once it is saved', function (): v
     $user = User::factory()->create();
 
     $this->actingAs($user)->get('/popular')->assertInertia(
-        fn ($page) => $page->where('threads.0.bookmarked', false),
+        fn ($page) => $page->where('threads.data.0.bookmarked', false),
     );
 
     $this->actingAs($user)->post("/threads/{$thread->id}/bookmark")->assertRedirect();
 
     $this->actingAs($user)->get('/popular')->assertInertia(
-        fn ($page) => $page->where('threads.0.bookmarked', true),
+        fn ($page) => $page->where('threads.data.0.bookmarked', true),
     );
 });
 
@@ -464,7 +464,7 @@ it('unsaves a thread that was saved', function (): void {
     $this->actingAs($user)->delete("/threads/{$thread->id}/bookmark");
 
     $this->actingAs($user)->get('/popular')->assertInertia(
-        fn ($page) => $page->where('threads.0.bookmarked', false),
+        fn ($page) => $page->where('threads.data.0.bookmarked', false),
     );
 });
 
