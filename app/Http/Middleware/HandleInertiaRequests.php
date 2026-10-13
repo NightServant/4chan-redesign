@@ -6,7 +6,9 @@ use App\Http\Resources\BoardResource;
 use App\Models\Board;
 use App\Support\RecentActivity;
 use App\Support\ThreadNotifications;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -22,6 +24,9 @@ class HandleInertiaRequests extends Middleware
 
     /** How many boards the sidebar's "Boards you use" list shows. */
     private const SIDEBAR_BOARDS = 6;
+
+    /** How long the sidebar's thread counts are reused before they are counted again. */
+    private const SIDEBAR_CACHE_SECONDS = 60;
 
     /**
      * How many notifications the header carries.
@@ -51,6 +56,8 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $sidebar = $this->sidebarBoards((bool) $request->user()?->shows_mature_boards);
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -137,29 +144,74 @@ class HandleInertiaRequests extends Middleware
              * sidebar labelled "Boards you use" while showing nothing of the
              * kind. It is labelled "Popular" now, which is what it always was.
              */
-            'sidebarBoards' => BoardResource::collection(
-                Board::query()
-                    ->visible((bool) $request->user()?->shows_mature_boards)
-                    ->withCount('threads')
-                    ->orderByDesc('threads_count')
-                    ->limit(self::SIDEBAR_BOARDS)
-                    ->get(),
-            ),
+            'sidebarBoards' => BoardResource::collection($sidebar['popular']),
 
             /**
              * Busiest by conversation rather than by thread count: a board can
              * hold a great many threads nobody is replying to, and the two
              * orderings pick out genuinely different boards.
              */
-            'sidebarTrending' => BoardResource::collection(
-                Board::query()
-                    ->visible((bool) $request->user()?->shows_mature_boards)
+            'sidebarTrending' => BoardResource::collection($sidebar['trending']),
+        ];
+    }
+
+    /**
+     * The boards behind the sidebar's two lists, counted at most a minute ago.
+     *
+     * The thread counts are the expensive part, and the sidebar is on every
+     * page, so they are reused for `SIDEBAR_CACHE_SECONDS` rather than
+     * recounted by every request. A figure here is therefore a true count of
+     * what the database held up to a minute earlier, which is what the list
+     * claims to be (a ranking and a count, not a live feed), and it is not
+     * invalidated by a sync: the next minute's request sees the sync.
+     *
+     * Keyed by visibility and by nothing else. Visibility is the only thing
+     * the two queries depend on -- adult boards in or out -- so there are two
+     * entries (signed out and opted out share one), and an anon who hides
+     * adult boards can never be handed a list that names one.
+     *
+     * What depends on the individual anon is not here. `BoardResource` is built
+     * from the cached rows on every request, because it reports whether *this*
+     * anon follows each board; caching the resource would show one anon's
+     * subscriptions to the next.
+     *
+     * Rows are cached as plain arrays, not as models. `cache.serializable_classes`
+     * is `false`, so a cached `Collection` comes back as `__PHP_Incomplete_Class`
+     * from the database store -- while the suite's array store, which never
+     * serialises, hands the object straight back and passes.
+     *
+     * @return array{popular: Collection<int, Board>, trending: Collection<int, Board>}
+     */
+    private function sidebarBoards(bool $showsMature): array
+    {
+        /** @var array{popular: list<array<string, mixed>>, trending: list<array<string, mixed>>} $rows */
+        $rows = Cache::remember(
+            'clover.sidebar.'.(int) $showsMature,
+            self::SIDEBAR_CACHE_SECONDS,
+            fn (): array => [
+                'popular' => Board::query()
+                    ->visible($showsMature)
+                    ->withCount('threads')
+                    ->orderByDesc('threads_count')
+                    ->limit(self::SIDEBAR_BOARDS)
+                    ->get()
+                    ->map(fn (Board $board): array => $board->getAttributes())
+                    ->all(),
+                'trending' => Board::query()
+                    ->visible($showsMature)
                     ->withCount('threads')
                     ->withSum('threads', 'replies_count')
                     ->orderByDesc('threads_sum_replies_count')
                     ->limit(self::SIDEBAR_BOARDS)
-                    ->get(),
-            ),
+                    ->get()
+                    ->map(fn (Board $board): array => $board->getAttributes())
+                    ->all(),
+            ],
+        );
+
+        return [
+            'popular' => Board::hydrate($rows['popular']),
+            'trending' => Board::hydrate($rows['trending']),
         ];
     }
 }
