@@ -3,9 +3,9 @@ import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 
 /**
- * jsdom implements neither of these, and the libraries we build overlays on
- * call them during mount: cmdk observes its list box for resize, and both cmdk
- * and Radix scroll the highlighted row into view. Without them the component
+ * jsdom implements neither of these, and the library we build overlays on
+ * calls them during mount: Radix observes elements for resize and scrolls the
+ * highlighted row into view. Without them the component
  * throws on render, which surfaces as every test in the file failing for a
  * reason unrelated to what it was asserting.
  *
