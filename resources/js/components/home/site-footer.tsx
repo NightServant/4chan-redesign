@@ -4,21 +4,25 @@ import { MachineValue } from '@/components/clover/machine-value';
 import { PatternField } from '@/components/clover/pattern-field';
 import { SectionLabel } from '@/components/clover/section-label';
 import { Wordmark } from '@/components/clover/wordmark';
+import { CONTACT_EMAIL } from '@/content/information';
 import { communities, faq, privacy, rules, terms } from '@/routes';
 
 /**
- * Five destinations, down from twelve.
+ * Five destinations and one address, down from twelve destinations.
  *
  * The twelve all resolved, and all but one resolved to a page saying it had
  * not been written. That was honest, and it was still the wrong answer: a
  * footer is a map of the product, and this one advertised a janitor queue, a
  * report flow, a contribution guide, a status page, a DMCA process and a
- * contact address for a read-only mirror that has none of those things. Being
+ * contact label for a read-only mirror that had none of those things. Being
  * upfront that a page is empty does not help when the page should not exist.
  *
  * What is left is what Clover can actually answer for: what the boards are,
  * how the site behaves, what it does with an account, and what it does not
- * collect. Those get written rather than stubbed.
+ * collect. Those get written rather than stubbed. The address is the one
+ * thing added back, because there is now an inbox behind it; it is shown as
+ * the address, not a label, and what happens to a message is on the Privacy
+ * page.
  */
 type LinkGroup = {
     heading: string;
@@ -39,9 +43,13 @@ const LINK_GROUPS: readonly LinkGroup[] = [
         items: [
             { label: 'Terms', href: terms().url },
             { label: 'Privacy', href: privacy().url },
+            { label: CONTACT_EMAIL, href: `mailto:${CONTACT_EMAIL}` },
         ],
     },
 ];
+
+const LINK_CLASS =
+    'text-body-sm text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:text-foreground';
 
 function FooterLinkGroup({ heading, items }: LinkGroup) {
     const headingId = useId();
@@ -52,12 +60,20 @@ function FooterLinkGroup({ heading, items }: LinkGroup) {
             <ul className="flex flex-col gap-2">
                 {items.map((item) => (
                     <li key={item.label}>
-                        <Link
-                            href={item.href}
-                            className="text-body-sm text-muted-foreground transition-colors duration-[var(--duration-hover)] ease-standard hover:text-foreground"
-                        >
-                            {item.label}
-                        </Link>
+                        {/* `mailto:` is not a page: `Link` would try to visit
+                            it over XHR, so it gets a plain anchor. */}
+                        {item.href.startsWith('mailto:') ? (
+                            <a
+                                href={item.href}
+                                className={`${LINK_CLASS} break-all`}
+                            >
+                                {item.label}
+                            </a>
+                        ) : (
+                            <Link href={item.href} className={LINK_CLASS}>
+                                {item.label}
+                            </Link>
+                        )}
                     </li>
                 ))}
             </ul>

@@ -1,9 +1,10 @@
 import { Link } from '@inertiajs/react';
 import { FileTextIcon } from 'lucide-react';
+import { Fragment } from 'react';
 import { EmptyState } from '@/components/clover/empty-state';
 import { PageMeta } from '@/components/clover/page-meta';
 import { SectionLabel } from '@/components/clover/section-label';
-import { INFORMATION } from '@/content/information';
+import { CONTACT_EMAIL, INFORMATION } from '@/content/information';
 import { faq, privacy, rules, terms } from '@/routes';
 
 /**
@@ -24,6 +25,31 @@ const STANDING_PAGES = [
     { title: 'Terms', href: terms().url },
     { title: 'Privacy', href: privacy().url },
 ] as const;
+
+/**
+ * A paragraph, with the contact address made into a mail link wherever it
+ * appears. The copy stays plain strings; only the address is picked out. A
+ * plain anchor rather than `Link`, which would try to visit `mailto:` over XHR.
+ */
+function Paragraph({ text }: { text: string }) {
+    return (
+        <p className="text-body leading-[1.6] text-pretty text-muted-foreground">
+            {text.split(CONTACT_EMAIL).map((part, index) => (
+                <Fragment key={index}>
+                    {index > 0 && (
+                        <a
+                            href={`mailto:${CONTACT_EMAIL}`}
+                            className="text-primary underline underline-offset-2 transition-colors duration-[var(--duration-hover)] ease-standard hover:text-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        >
+                            {CONTACT_EMAIL}
+                        </a>
+                    )}
+                    {part}
+                </Fragment>
+            ))}
+        </p>
+    );
+}
 
 /**
  * Clover's standing pages: Rules, FAQ, Terms and Privacy.
@@ -92,12 +118,7 @@ export default function Information({ title }: { title: string }) {
                             </h2>
 
                             {section.body.map((paragraph) => (
-                                <p
-                                    key={paragraph}
-                                    className="text-body leading-[1.6] text-pretty text-muted-foreground"
-                                >
-                                    {paragraph}
-                                </p>
+                                <Paragraph key={paragraph} text={paragraph} />
                             ))}
                         </section>
                     ))}
