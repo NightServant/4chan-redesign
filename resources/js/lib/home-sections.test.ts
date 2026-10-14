@@ -9,11 +9,17 @@ describe('homeSectionOrdinal', () => {
     it('numbers the bands from one, two digits wide', () => {
         expect(homeSectionOrdinal('top')).toBe('01');
         expect(homeSectionOrdinal('boards')).toBe('02');
-        expect(homeSectionOrdinal('how')).toBe('05');
+        expect(homeSectionOrdinal('problem')).toBe('04');
+        expect(homeSectionOrdinal('how')).toBe('06');
+        expect(homeSectionOrdinal('cta')).toBe('07');
     });
 
     it('returns nothing for a band that is not on the page', () => {
         expect(homeSectionOrdinal('nope')).toBeNull();
+    });
+
+    it('counts the seven bands of the narrative', () => {
+        expect(HOME_SECTION_TOTAL).toBe(7);
     });
 
     it('counts every band exactly once', () => {

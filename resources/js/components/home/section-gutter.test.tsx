@@ -60,7 +60,7 @@ describe('SectionGutter', () => {
 
     /**
      * A band that is not on `HOME_SECTION_IDS` gets no mark at all. A margin
-     * reading "00 / 05", or silently numbering an unlisted band, tells the
+     * reading "00 / 07", or silently numbering an unlisted band, tells the
      * reader something false about where they are.
      */
     it('marks nothing when the band has no ordinal', () => {

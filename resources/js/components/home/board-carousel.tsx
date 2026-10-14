@@ -108,8 +108,9 @@ function BoardCarousel({ boards }: BoardCarouselProps) {
         <Section
             id="boards"
             depth={50}
-            label="Popular boards"
+            label="Live from 4chan"
             title="The boards carrying the most threads"
+            description="Every board and thread on this page comes from 4chan's own API and is refreshed through the day. None of it is a mockup."
             action={
                 boards.length === 0 ? undefined : (
                     <div className="flex items-center gap-2">

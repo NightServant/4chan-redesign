@@ -34,6 +34,23 @@ describe('Section', () => {
         ).toBeInTheDocument();
     });
 
+    it('sets a description under the heading when given one', () => {
+        render(
+            <Section
+                id="boards"
+                label="Label"
+                title="Title"
+                description="One sentence of framing."
+            >
+                <p>Content</p>
+            </Section>,
+        );
+
+        expect(
+            screen.getByText('One sentence of framing.'),
+        ).toBeInTheDocument();
+    });
+
     it('carries an id so the nav can link to it', () => {
         const { container } = render(
             <Section id="how" label="How Clover works" title="Three steps">

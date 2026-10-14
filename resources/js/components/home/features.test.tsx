@@ -54,8 +54,19 @@ describe('Features — below `md`, an accordion', () => {
 
         expect(
             screen.getByRole('heading', {
-                name: 'Built for reading, not for engagement',
+                name: 'The same boards, rebuilt for reading',
             }),
+        ).toBeInTheDocument();
+    });
+
+    it('opens the solution with the label and the sentence Gabe approved', () => {
+        const { container } = render(<Features />);
+
+        expect(container.textContent).toContain('The solution');
+        expect(
+            screen.getByText(
+                'Clover takes the threads 4chan publishes and lays them out the way a reader needs them: replies nested under the post they answer, one feed across every board, and pages that work on a phone.',
+            ),
         ).toBeInTheDocument();
     });
 

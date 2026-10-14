@@ -5,6 +5,7 @@ import { CONTACT_EMAIL } from '@/content/information';
 import { makeBoard, makeThread, makeTrendingTag } from '@/fixtures/factories';
 import { HOME_SECTION_IDS } from '@/lib/home-sections';
 import Welcome from '@/pages/welcome';
+import { popular } from '@/routes';
 import type { User } from '@/types/auth';
 
 /**
@@ -208,7 +209,7 @@ describe('Welcome', () => {
     });
 
     /**
-     * The margins number each band "02 / 05" from `HOME_SECTION_IDS`, which is
+     * The margins number each band "02 / 07" from `HOME_SECTION_IDS`, which is
      * a list written by hand beside a page assembled by hand. Nothing else
      * connects the two, so a band added, removed or renamed leaves the margins
      * counting a page that no longer exists: an id off the list gets no folio
@@ -231,6 +232,132 @@ describe('Welcome', () => {
             .filter((id) => id !== '');
 
         expect(onThePage).toEqual([...HOME_SECTION_IDS]);
+    });
+
+    /**
+     * The homepage argues in order: the pitch, proof it is live, the problem
+     * with the default way to read, the rebuild, then an invitation. The
+     * ordering is the content of this test, so it is spelled out rather than
+     * read from `HOME_SECTION_IDS`, which would agree with any order at all.
+     */
+    it('stacks the pitch, proof, problem, solution and call to action in that order', () => {
+        const { container } = render(
+            <Welcome
+                boards={BOARDS}
+                threads={THREADS}
+                trending={TRENDING}
+                boardCount={53}
+            />,
+        );
+
+        expect(
+            [...container.querySelectorAll('main section[id]')].map(
+                (section) => section.id,
+            ),
+        ).toEqual([
+            'top',
+            'boards',
+            'trending',
+            'problem',
+            'features',
+            'how',
+            'cta',
+        ]);
+
+        expect(
+            screen
+                .getAllByRole('heading', { level: 2 })
+                .map((heading) => heading.textContent),
+        ).toEqual([
+            'The boards carrying the most threads',
+            'What is being bumped today',
+            'Good boards, an old way to read them',
+            'The same boards, rebuilt for reading',
+            'Three steps, no onboarding tour',
+            'Start reading',
+        ]);
+    });
+
+    it('counts all seven bands in the left margins and no stale total', () => {
+        const { container } = render(
+            <Welcome
+                boards={BOARDS}
+                threads={THREADS}
+                trending={TRENDING}
+                boardCount={53}
+            />,
+        );
+
+        const folios = [
+            ...container.querySelectorAll(
+                '[data-slot="section-gutter"][data-side="left"]',
+            ),
+        ].map((gutter) => gutter.textContent);
+
+        expect(folios).toEqual([
+            '01/ 07',
+            '02/ 07',
+            '03/ 07',
+            '04/ 07',
+            '05/ 07',
+            '06/ 07',
+            '07/ 07',
+        ]);
+    });
+
+    it('names each band in the right margin with the copy Gabe approved', () => {
+        const { container } = render(
+            <Welcome
+                boards={BOARDS}
+                threads={THREADS}
+                trending={TRENDING}
+                boardCount={53}
+            />,
+        );
+
+        const names = [
+            ...container.querySelectorAll(
+                '[data-slot="section-gutter"][data-side="right"]',
+            ),
+        ].map((gutter) => gutter.textContent);
+
+        expect(names.slice(0, 6)).toEqual([
+            'The pitch',
+            'Live from 4chan',
+            'Trending discussions',
+            'The problem',
+            'The solution',
+            'How Clover works',
+        ]);
+    });
+
+    it('closes on the one call to action, into the feed, and the hero has none', () => {
+        const { container } = render(
+            <Welcome
+                boards={BOARDS}
+                threads={THREADS}
+                trending={TRENDING}
+                boardCount={53}
+            />,
+        );
+
+        const label = 'Browse without an account';
+        const cta = container.querySelector('section#cta');
+        const ctaLinks = [...(cta?.querySelectorAll('a') ?? [])];
+
+        expect(cta?.textContent).toContain('Start reading');
+        expect(cta?.textContent).toContain(
+            'Reading needs no account. Make one when you want to reply.',
+        );
+        expect(ctaLinks.map((link) => link.textContent)).toEqual([label]);
+        expect(ctaLinks[0].getAttribute('href')).toBe(popular().url);
+
+        /* The page offers that one door once: the hero keeps its caption but
+           not the button. */
+        expect(screen.getAllByRole('link', { name: label })).toHaveLength(1);
+        expect(container.querySelector('section#top')?.textContent).toContain(
+            'Free · Reading needs no account',
+        );
     });
 
     it('draws a margin either side of every band it numbers', () => {

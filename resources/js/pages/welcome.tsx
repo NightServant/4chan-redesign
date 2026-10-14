@@ -1,8 +1,10 @@
 import { PageMeta } from '@/components/clover/page-meta';
 import { BoardCarousel } from '@/components/home/board-carousel';
+import { CtaBand } from '@/components/home/cta-band';
 import { Features } from '@/components/home/features';
 import { Hero } from '@/components/home/hero';
 import { HowItWorks } from '@/components/home/how-it-works';
+import { Problem } from '@/components/home/problem';
 import { SiteFooter } from '@/components/home/site-footer';
 import { TopNav } from '@/components/home/top-nav';
 import { Trending } from '@/components/home/trending';
@@ -84,8 +86,10 @@ export default function Welcome({
                     threads={threads.slice(0, TRENDING_COUNT)}
                     trending={trending}
                 />
+                <Problem />
                 <Features />
                 <HowItWorks boardCount={boardCount} />
+                <CtaBand />
             </main>
 
             <SiteFooter />

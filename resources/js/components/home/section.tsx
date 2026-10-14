@@ -36,6 +36,8 @@ type SectionProps = {
     /** Tracked uppercase kicker above the heading. */
     label: string;
     title: string;
+    /** Optional sentence under the heading that frames what follows. */
+    description?: string;
     /** Optional control aligned to the heading, e.g. a link onward. */
     action?: ReactNode;
     children: ReactNode;
@@ -47,6 +49,7 @@ function Section({
     depth = 60,
     label,
     title,
+    description,
     action,
     children,
     className,
@@ -80,6 +83,11 @@ function Section({
                                 >
                                     {title}
                                 </h2>
+                                {description === undefined ? null : (
+                                    <p className="max-w-[60ch] text-body leading-[1.55] text-pretty text-muted-foreground">
+                                        {description}
+                                    </p>
+                                )}
                             </div>
                             {action}
                         </div>

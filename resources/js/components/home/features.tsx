@@ -51,7 +51,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
  * an accordion whose triggers are `div`s is a list a screen reader cannot
  * navigate, because none of it appears in the document outline and there is
  * nothing to jump between. Wrapped this way the band reads as six named
- * subsections of "Built for reading, not for engagement", and each one
+ * subsections of "The same boards, rebuilt for reading", and each one
  * announces whether it is open.
  *
  * The icon is inside the trigger rather than beside it, so pressing the glyph
@@ -213,8 +213,9 @@ function Features() {
         <Section
             id="features"
             depth={40}
-            label="Features"
-            title="Built for reading, not for engagement"
+            label="The solution"
+            title="The same boards, rebuilt for reading"
+            description="Clover takes the threads 4chan publishes and lays them out the way a reader needs them: replies nested under the post they answer, one feed across every board, and pages that work on a phone."
         >
             {/* A hard grid, ruled on both axes, flush with the band's frame.
 
