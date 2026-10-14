@@ -175,14 +175,14 @@ export const INFORMATION: Record<string, InformationPage> = {
                 heading: 'Images and your browser',
                 body: [
                     'Mirrored attachments load from 4chan’s content servers rather than from Clover, so 4chan sees those requests the same way it would if you visited it directly. That is how hotlinking works everywhere, and it is worth knowing rather than burying.',
-                    'An image you attach to your own reply is served by Clover and 4chan never sees it. It is deleted with the account that posted it.',
+                    'An image you attach to your own reply is served by Clover and 4chan never sees it. It is deleted with the account that posted it. A copy your browser or a cache in front of Clover has already kept can take up to a day to expire after that.',
                 ],
             },
             {
                 heading: 'Deleting what you leave',
                 body: [
                     'Deleting your account removes it and everything private attached to it. Posts stay, because they were anonymous the whole time and carry nothing that points back to you.',
-                    'Any image you attached goes with the account, and the post it was on stays as the text you wrote. That is enforced in the code rather than promised here: an account cannot be deleted without its files going too.',
+                    'Any image you attached goes with the account, and the post it was on stays as the text you wrote. That is enforced in the code rather than promised here: an account cannot be deleted without its images going too. A copy already cached by a browser or by the cache in front of Clover can take up to a day to expire.',
                 ],
             },
             {

@@ -13,11 +13,11 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * `nosniff` is the one that earns its place rather than being received wisdom.
  * Clover holds exactly one class of file — images attached to replies written
- * here — and serves them off the `public` disk from the same origin as the
- * application. `ReplyController` checks the bytes as well as the extension, so
- * a `.png` that is really a zip is already refused; `nosniff` is what stops a
- * browser from second-guessing the `Content-Type` on whatever does get stored
- * and deciding it is a script after all.
+ * here — and serves them from the database, from the same origin as the
+ * application (`AttachmentController`). `ReplyController` checks the bytes as
+ * well as the extension, so a `.png` that is really a zip is already refused;
+ * `nosniff` is what stops a browser from second-guessing the `Content-Type`
+ * on whatever does get stored and deciding it is a script after all.
  *
  * `SAMEORIGIN` because nothing here is meant to be embedded elsewhere, and a
  * framed Clover is a clickjacked one. `strict-origin-when-cross-origin` is what

@@ -231,20 +231,38 @@ return [
 
     'attachments' => [
         /**
-         * Off on a deployment with no durable storage for what gets uploaded.
+         * Off switch for reply images.
          *
-         * An uploaded reply image is written to local disk, which on Vercel
-         * is one instance's `/tmp` -- gone the moment a different instance
-         * serves the thread, or the same one recycles. Rather than show a
-         * broken image, the demo declines the upload outright: `store()`
-         * rejects `media` and the composer hides the control that offers it.
+         * An uploaded image is a row in the `attachments` table, so it is as
+         * durable as the database and does not depend on the instance that
+         * served the request. This stays so a deployment can still decline
+         * uploads outright: `store()` rejects `media` and the composer hides
+         * the control that offers it.
          */
         'enabled' => (bool) env('CLOVER_ATTACHMENTS_ENABLED', true),
 
-        'disk' => env('CLOVER_ATTACHMENT_DISK', 'public'),
-        'directory' => 'attachments',
         /* Kilobytes, which is what Laravel's `max` rule counts in. */
         'max_kilobytes' => 4096,
+
+        /**
+         * Everything stored at once, in kilobytes.
+         *
+         * Images live in the same Neon database as the mirror, whose free
+         * tier is 0.5GB all told, so they get a fixed share (150MB) and no
+         * more. `ReplyController` refuses a new image once this would be
+         * passed, checked under a lock so concurrent uploads cannot overshoot.
+         * ponytail: the upgrade is a real bucket (S3, R2, Vercel Blob) behind
+         * the same `attachments.show` route, at which point this goes.
+         */
+        'max_total_kilobytes' => 150 * 1024,
+
+        /**
+         * One account's share of that total, in kilobytes. Without it a single
+         * account can fill the total in minutes and everyone else is told the
+         * space is full.
+         */
+        'max_account_kilobytes' => 20 * 1024,
+
         'mimes' => ['jpg', 'jpeg', 'png', 'gif', 'webp'],
     ],
 

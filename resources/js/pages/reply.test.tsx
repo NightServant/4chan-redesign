@@ -110,4 +110,24 @@ describe('Reply composer page', () => {
             '/g/58210441',
         );
     });
+
+    /** Vercel's 413 for an oversized body is not something the page can explain. */
+    it('refuses an image over the size limit with a message, and attaches nothing', async () => {
+        const user = userEvent.setup();
+
+        const { container } = render(<Reply {...props()} />);
+
+        const huge = new File([new Uint8Array(5 * 1024 * 1024)], 'huge.png', {
+            type: 'image/png',
+        });
+        await user.upload(
+            container.querySelector('input[type="file"]') as HTMLInputElement,
+            huge,
+        );
+
+        expect(screen.getByRole('alert')).toHaveTextContent(
+            'That image is 5.0 MB, and the limit is 4 MB.',
+        );
+        expect(screen.queryByRole('button', { name: 'Remove' })).toBeNull();
+    });
 });

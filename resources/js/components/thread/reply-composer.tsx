@@ -6,7 +6,7 @@ import { FormField } from '@/components/clover/form-field';
 import { MachineValue } from '@/components/clover/machine-value';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { POST_MAX_LENGTH } from '@/lib/posting';
+import { POST_MAX_LENGTH, attachmentTooLarge } from '@/lib/posting';
 import { cn } from '@/lib/utils';
 
 export interface ReplyComposerProps {
@@ -105,6 +105,9 @@ export function ReplyComposer({
         file: File;
         url: string;
     } | null>(null);
+    /* Why the last pick was refused, so an oversized file gets a message here
+       instead of a request that fails before the server can say anything. */
+    const [fileError, setFileError] = useState<string | null>(null);
     const fileInput = useRef<HTMLInputElement>(null);
     const field = useRef<HTMLTextAreaElement>(null);
     const baseId = useId();
@@ -165,6 +168,17 @@ export function ReplyComposer({
 
     function handleFile(event: ChangeEvent<HTMLInputElement>): void {
         const file = event.target.files?.[0] ?? null;
+        const tooLarge = file === null ? null : attachmentTooLarge(file);
+
+        setFileError(tooLarge);
+
+        if (tooLarge !== null) {
+            /* Refused: whatever was attached before stays, and the input is
+               emptied so choosing the same file again still fires. */
+            event.target.value = '';
+
+            return;
+        }
 
         setAttachment((previous) => {
             if (previous !== null) {
@@ -178,6 +192,7 @@ export function ReplyComposer({
     }
 
     function clearMedia(): void {
+        setFileError(null);
         setAttachment((previous) => {
             if (previous !== null) {
                 URL.revokeObjectURL(previous.url);
@@ -226,7 +241,10 @@ export function ReplyComposer({
             <AnonAvatar seed={String(threadNo)} className="mt-1" />
 
             <div className="flex flex-1 flex-col gap-2">
-                <FormField label="Reply to this thread" error={error}>
+                <FormField
+                    label="Reply to this thread"
+                    error={error ?? fileError ?? undefined}
+                >
                     <Textarea
                         ref={field}
                         value={body}

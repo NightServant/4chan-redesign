@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Models\Attachment;
 use App\Models\Board;
 use App\Models\Post;
 use App\Models\Thread;
 use App\Models\User;
 use App\Support\RoutableBoards;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * An image attached to a reply written here.
@@ -16,12 +17,12 @@ use Illuminate\Support\Facades\Storage;
  * This is the only file Clover holds. Everything ingested points at 4chan's
  * CDN and is addressed by `media_tim`, 4chan's own id for it; a reply written
  * on Clover has no `tim`, because 4chan has never seen the image and has no id
- * to give it. `media_path` is what addresses those, and the two are mutually
+ * to give it. `media_path` is what addresses those -- the uuid of an
+ * `attachments` row, which holds the bytes -- and the two are mutually
  * exclusive by construction.
  */
 beforeEach(function (): void {
     RoutableBoards::forget();
-    Storage::fake('public');
 });
 
 function replyTarget(): array
@@ -36,31 +37,98 @@ function replyTarget(): array
 
 it('stores an attached image and hangs it off the reply', function (): void {
     [$board, $thread, $user] = replyTarget();
+    $file = UploadedFile::fake()->image('x230.png', 640, 480);
 
     $this->actingAs($user)
         ->post("/{$board->slug}/{$thread->no}/replies", [
             'body' => 'Here is the board.',
-            'media' => UploadedFile::fake()->image('x230.png', 640, 480),
+            'media' => $file,
         ])
         ->assertSessionHasNoErrors();
 
     $reply = Post::query()->where('is_local', true)->latest('id')->firstOrFail();
 
-    expect($reply->media_path)->not->toBeNull();
+    $attachment = Attachment::query()->where('post_id', $reply->id)->firstOrFail();
+
+    expect($reply->media_path)->toBe($attachment->uuid);
     expect($reply->hasMedia())->toBeTrue();
     expect($reply->hasLocalMedia())->toBeTrue();
     expect($reply->media_width)->toBe(640);
     expect($reply->media_height)->toBe(480);
+    expect($reply->mediaUrl())->toBe("/attachments/{$attachment->uuid}");
 
-    Storage::disk('public')->assertExists($reply->media_path);
+    expect($attachment->mime)->toBe('image/png');
+    expect($attachment->width)->toBe(640);
+    expect($attachment->height)->toBe(480);
+    expect($attachment->size)->toBe($reply->media_size);
+    $stored = $attachment->contents();
+
+    expect($attachment->size)->toBe(strlen($stored));
+    expect(getimagesizefromstring($stored)[0])->toBe(640);
+});
+
+/**
+ * A phone photo carries where it was taken. The product's claim is that a post
+ * carries nothing pointing back at its author, so what is stored is the image
+ * with that taken out -- and the size on the row is the size of what is stored,
+ * not of what was uploaded.
+ */
+it('stores the image without the metadata or the file glued on after it', function (): void {
+    [$board, $thread, $user] = replyTarget();
+
+    $image = imagecreatetruecolor(64, 48);
+    ob_start();
+    imagejpeg($image);
+    $plain = (string) ob_get_clean();
+    $upload = tempnam(sys_get_temp_dir(), 'jpg');
+    file_put_contents($upload, "\xFF\xD8\xFF\xFE\x00\x0CSECRET-GPS".substr($plain, 2).'PK-hidden-archive');
+
+    $this->actingAs($user)
+        ->post("/{$board->slug}/{$thread->no}/replies", [
+            'body' => 'from my phone',
+            'media' => new UploadedFile($upload, 'IMG_0001.jpg', 'image/jpeg', null, true),
+        ])
+        ->assertSessionHasNoErrors();
+
+    $reply = Post::query()->where('is_local', true)->latest('id')->firstOrFail();
+    $attachment = Attachment::query()->where('post_id', $reply->id)->firstOrFail();
+    $stored = $attachment->contents();
+
+    expect($stored)->not->toContain('SECRET-GPS')
+        ->and($stored)->not->toContain('hidden-archive')
+        ->and($attachment->mime)->toBe('image/jpeg')
+        ->and($attachment->size)->toBe(strlen($stored))
+        ->and($reply->media_size)->toBe(strlen($stored))
+        ->and([$reply->media_width, $reply->media_height])->toBe([64, 48]);
+});
+
+it('refuses an image whose container cannot be read to the end', function (): void {
+    [$board, $thread, $user] = replyTarget();
+
+    $image = imagecreatetruecolor(8, 8);
+    ob_start();
+    imagepng($image);
+    $png = (string) ob_get_clean();
+    $upload = tempnam(sys_get_temp_dir(), 'png');
+    file_put_contents($upload, substr($png, 0, -12));
+
+    $this->actingAs($user)
+        ->post("/{$board->slug}/{$thread->no}/replies", [
+            'body' => 'cut short',
+            'media' => new UploadedFile($upload, 'cut.png', 'image/png', null, true),
+        ])
+        ->assertSessionHasErrors('media');
+
+    expect(Attachment::query()->count())->toBe(0);
+    expect(Post::query()->where('is_local', true)->count())->toBe(0);
 });
 
 /**
  * The name the browser sent is attacker-controlled text. It is kept because it
- * is what the interface shows and what a screen reader reads, but it never
- * decides where a file lands.
+ * is what the interface shows and what a screen reader reads, but it addresses
+ * nothing: the image is found by a generated uuid.
  */
-it('never lets the uploaded filename decide the path', function (): void {
+it('never lets the uploaded filename address anything', function (): void {
     [$board, $thread, $user] = replyTarget();
 
     $this->actingAs($user)
@@ -72,8 +140,44 @@ it('never lets the uploaded filename decide the path', function (): void {
 
     $reply = Post::query()->where('is_local', true)->latest('id')->firstOrFail();
 
-    expect($reply->media_path)->toStartWith('attachments/g/');
-    expect($reply->media_path)->not->toContain('..');
+    expect($reply->media_path)->toMatch('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/');
+    expect($reply->media_filename)->toBe('evil');
+});
+
+/**
+ * The type is what the bytes say. A GIF called `.png` is stored as a GIF, and a
+ * client that claims `text/html` for a PNG does not get that stored either.
+ */
+it('takes the mime from the bytes, not from the name or the client header', function (): void {
+    [$board, $thread, $user] = replyTarget();
+
+    $gif = tempnam(sys_get_temp_dir(), 'gif');
+    $image = imagecreatetruecolor(4, 4);
+    imagegif($image, $gif);
+
+    $this->actingAs($user)
+        ->post("/{$board->slug}/{$thread->no}/replies", [
+            'body' => 'gif in disguise',
+            'media' => new UploadedFile($gif, 'looks-like.png', 'text/html', null, true),
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect(Attachment::query()->firstOrFail()->mime)->toBe('image/gif');
+});
+
+/**
+ * The code once said the `image` rule had consumed the temp file, so it read
+ * the dimensions back from the stored copy instead. It does not: validation
+ * leaves the upload where it was, and this is the proof.
+ */
+it('can still read the upload after the image rule has passed it', function (): void {
+    $file = UploadedFile::fake()->image('x230.png', 640, 480);
+
+    $passes = Validator::make(['media' => $file], ['media' => ['file', 'image', 'mimes:png']])->passes();
+
+    expect($passes)->toBeTrue()
+        ->and(getimagesize((string) $file->getRealPath()))->toBeArray()
+        ->and(getimagesize((string) $file->getRealPath())[0])->toBe(640);
 });
 
 /**
@@ -277,3 +381,182 @@ it('counts uploads rather than threads nobody can start', function (): void {
             ->where('stats.0.value', '1'),
         );
 });
+
+/**
+ * Neon's free tier is 0.5GB and the mirror shares it, so the images get a fixed
+ * share. The cap is on everything stored so far plus this upload, and an upload
+ * that lands exactly on it is the last one let through.
+ */
+it('takes an image that brings the total exactly to the cap', function (): void {
+    [$board, $thread, $user] = replyTarget();
+    $file = UploadedFile::fake()->image('x230.png', 32, 32);
+    $limit = 4;
+    config(['clover.attachments.max_total_kilobytes' => $limit]);
+    Attachment::factory()->create(['size' => $limit * 1024 - $file->getSize()]);
+
+    $this->actingAs($user)
+        ->post("/{$board->slug}/{$thread->no}/replies", ['body' => 'last one', 'media' => $file])
+        ->assertSessionHasNoErrors();
+
+    expect(Attachment::query()->count())->toBe(2);
+});
+
+it('refuses an image that would pass the total cap, and says why', function (): void {
+    [$board, $thread, $user] = replyTarget();
+    $file = UploadedFile::fake()->image('x230.png', 32, 32);
+    $limit = 4;
+    config(['clover.attachments.max_total_kilobytes' => $limit]);
+    Attachment::factory()->create(['size' => $limit * 1024 - $file->getSize() + 1]);
+
+    $this->actingAs($user)
+        ->post("/{$board->slug}/{$thread->no}/replies", ['body' => 'one too many', 'media' => $file])
+        ->assertSessionHasErrors(['media' => 'Clover is not taking new images right now: the space set aside for them is full. Post the reply as text instead.']);
+
+    expect(Attachment::query()->count())->toBe(1);
+    expect(Post::query()->where('is_local', true)->count())->toBe(0);
+});
+
+it('still takes a reply that is only words once the images are full', function (): void {
+    [$board, $thread, $user] = replyTarget();
+    config(['clover.attachments.max_total_kilobytes' => 1]);
+    Attachment::factory()->create(['size' => 5000]);
+
+    $this->actingAs($user)
+        ->post("/{$board->slug}/{$thread->no}/replies", ['body' => 'words are free'])
+        ->assertSessionHasNoErrors();
+
+    expect(Post::query()->where('is_local', true)->count())->toBe(1);
+});
+
+/** The database does this, so no code path that deletes a post can forget it. */
+it('deletes the image with its post', function (): void {
+    [$board, $thread, $user] = replyTarget();
+
+    $this->actingAs($user)->post("/{$board->slug}/{$thread->no}/replies", [
+        'body' => 'short lived',
+        'media' => UploadedFile::fake()->image('x230.png'),
+    ])->assertSessionHasNoErrors();
+
+    expect(Attachment::query()->count())->toBe(1);
+
+    Post::query()->where('is_local', true)->delete();
+
+    expect(Attachment::query()->count())->toBe(0);
+});
+
+/**
+ * The check in validation runs before any lock, so another upload can land
+ * after it. The same check runs again with the images lock held, when the
+ * image is about to be stored, and it is the one that holds.
+ */
+it('checks the total again once the image is being stored', function (): void {
+    [$board, $thread, $user] = replyTarget();
+    config(['clover.attachments.max_total_kilobytes' => 4]);
+
+    $landed = false;
+    Post::creating(function () use (&$landed): void {
+        if (! $landed) {
+            $landed = true;
+            Attachment::factory()->create(['size' => 4096]);
+        }
+    });
+
+    $this->actingAs($user)
+        ->post("/{$board->slug}/{$thread->no}/replies", [
+            'body' => 'second in line',
+            'media' => UploadedFile::fake()->image('x230.png', 32, 32),
+        ])
+        ->assertSessionHasErrors(['media' => 'Clover is not taking new images right now: the space set aside for them is full. Post the reply as text instead.']);
+
+    /* Everything rolled back, including the upload that "landed" first: both
+       lived in the one test transaction. What matters is that this reply and
+       its image are not there. */
+    expect(Attachment::query()->count())->toBe(0);
+    expect(Post::query()->where('is_local', true)->count())->toBe(0);
+});
+
+it('refuses an image once the account has used its share, and says so', function (): void {
+    [$board, $thread, $user] = replyTarget();
+    config(['clover.attachments.max_account_kilobytes' => 1024]);
+    Attachment::factory()->for(Post::factory()->for($thread)->create(['user_id' => $user->id]))->create(['size' => 1024 * 1024]);
+
+    $this->actingAs($user)
+        ->post("/{$board->slug}/{$thread->no}/replies", [
+            'body' => 'one more',
+            'media' => UploadedFile::fake()->image('x230.png', 32, 32),
+        ])
+        ->assertSessionHasErrors(['media' => 'You have used the 1 MB of image space each account gets. Post the reply as text instead.']);
+
+    expect(Attachment::query()->count())->toBe(1);
+});
+
+it('does not charge one account for another account\'s images', function (): void {
+    [$board, $thread, $user] = replyTarget();
+    config(['clover.attachments.max_account_kilobytes' => 1024]);
+    $other = User::factory()->create();
+    Attachment::factory()->for(Post::factory()->for($thread)->create(['user_id' => $other->id]))->create(['size' => 1024 * 1024]);
+
+    $this->actingAs($user)
+        ->post("/{$board->slug}/{$thread->no}/replies", [
+            'body' => 'my own share',
+            'media' => UploadedFile::fake()->image('x230.png', 32, 32),
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect(Attachment::query()->count())->toBe(2);
+});
+
+it('checks the account share again once the image is being stored', function (): void {
+    [$board, $thread, $user] = replyTarget();
+    config(['clover.attachments.max_account_kilobytes' => 1]);
+
+    $landed = false;
+    Post::creating(function () use (&$landed, $thread, $user): void {
+        if (! $landed) {
+            $landed = true;
+            Attachment::factory()->for(Post::factory()->for($thread)->create(['user_id' => $user->id]))->create(['size' => 1024]);
+        }
+    });
+
+    $this->actingAs($user)
+        ->post("/{$board->slug}/{$thread->no}/replies", [
+            'body' => 'two tabs at once',
+            'media' => UploadedFile::fake()->image('x230.png', 8, 8),
+        ])
+        ->assertSessionHasErrors('media');
+
+    expect(Attachment::query()->count())->toBe(0);
+    expect(Post::query()->where('is_local', true)->where('body', 'two tabs at once')->exists())->toBeFalse();
+});
+
+/**
+ * A few hundred bytes can declare a canvas every viewer's browser would try to
+ * allocate, and a width past 2^31 does not fit the `integer` column the size is
+ * stored in -- which used to be a 500 after the reply was half written.
+ */
+it('refuses a picture whose declared size is absurd, with a message and not an error', function (int $width, int $height): void {
+    [$board, $thread, $user] = replyTarget();
+
+    $image = imagecreatetruecolor(8, 8);
+    ob_start();
+    imagepng($image);
+    $png = (string) ob_get_clean();
+    $upload = tempnam(sys_get_temp_dir(), 'png');
+    file_put_contents($upload, substr($png, 0, 16).pack('NN', $width, $height).substr($png, 24));
+
+    $this->actingAs($user)
+        ->post("/{$board->slug}/{$thread->no}/replies", [
+            'body' => 'enormous',
+            'media' => new UploadedFile($upload, 'big.png', 'image/png', null, true),
+        ])
+        ->assertRedirect()
+        ->assertSessionHasErrors(['media' => 'That file is not an image Clover accepts.']);
+
+    expect(Attachment::query()->count())->toBe(0);
+    expect(Post::query()->where('is_local', true)->count())->toBe(0);
+})->with([
+    '2^32 - 1 wide' => [0xFFFFFFFF, 1],
+    '30000 x 30000' => [30000, 30000],
+    'zero wide' => [0, 16],
+    'zero high' => [16, 0],
+]);

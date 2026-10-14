@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\BoardController;
 use App\Http\Controllers\BoardSubscriptionController;
 use App\Http\Controllers\BookmarkController;
@@ -16,8 +17,12 @@ use App\Http\Controllers\StatusController;
 use App\Http\Controllers\SweepController;
 use App\Http\Controllers\ThreadController;
 use App\Http\Controllers\ThreadReadController;
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Support\RoutableBoards;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
+use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 Route::get('/', HomeController::class)->name('home');
 
@@ -52,6 +57,26 @@ Route::get('status', StatusController::class)->name('status');
  */
 Route::post('internal/sweep', [SweepController::class, 'start'])->name('sweep');
 Route::post('internal/sweep/run', [SweepController::class, 'run'])->name('sweep.run');
+
+/**
+ * Images attached to replies written here, served out of the database (see
+ * `AttachmentController`). Registered before `/{board}`, which is the catch-all
+ * for single-segment paths.
+ *
+ * The public route runs without a session: a response that sets a cookie is not
+ * one a shared cache keeps, and a session write per image would race the
+ * page's own. The mature route keeps the session, because who may see an image
+ * from a hidden board depends on the account.
+ */
+Route::get('attachments/{uuid}', [AttachmentController::class, 'show'])
+    ->whereUuid('uuid')
+    ->middleware('throttle:attachments')
+    ->withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, PreventRequestForgery::class, HandleInertiaRequests::class])
+    ->name('attachments.show');
+Route::get('attachments/{uuid}/mature', [AttachmentController::class, 'mature'])
+    ->whereUuid('uuid')
+    ->middleware('throttle:attachments')
+    ->name('attachments.mature');
 
 /**
  * Search, over this application's own database rather than 4chan: there is no

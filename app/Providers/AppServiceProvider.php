@@ -54,6 +54,15 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('search', fn (Request $request): Limit => $request->hasHeader(Header::INFINITE_SCROLL_MERGE_INTENT)
             ? Limit::perMinute(120)->by('scroll|'.$request->ip())
             : Limit::perMinute(30)->by('search|'.$request->ip()));
+
+        /*
+         * Image requests that reach the application, which is cache misses:
+         * the CDN answers a repeat view of a worksafe image without calling it
+         * at all. So this bounds what a caller can force past the cache, a new
+         * query string on every request for one, and a browser revalidating.
+         * Generous, because one thread can show a page of images at once.
+         */
+        RateLimiter::for('attachments', fn (Request $request): Limit => Limit::perMinute(120)->by('attachments|'.$request->ip()));
     }
 
     /**

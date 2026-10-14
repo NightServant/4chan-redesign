@@ -6,6 +6,7 @@ import { MachineValue } from '@/components/clover/machine-value';
 import { PageMeta } from '@/components/clover/page-meta';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { attachmentTooLarge } from '@/lib/posting';
 import { store as storeReply } from '@/routes/replies';
 
 /**
@@ -52,6 +53,8 @@ export default function Reply({ thread, maxCommentChars }: ReplyPageProps) {
         file: File;
         preview: string;
     } | null>(null);
+    /* Why the last pick was refused; see `attachmentTooLarge`. */
+    const [fileError, setFileError] = useState<string | null>(null);
     const fileInput = useRef<HTMLInputElement>(null);
 
     const threadPath = `${thread.board}${thread.no}`;
@@ -68,6 +71,16 @@ export default function Reply({ thread, maxCommentChars }: ReplyPageProps) {
             return;
         }
 
+        const tooLarge = attachmentTooLarge(file);
+
+        setFileError(tooLarge);
+
+        if (tooLarge !== null) {
+            event.target.value = '';
+
+            return;
+        }
+
         if (attachment !== null) {
             URL.revokeObjectURL(attachment.preview);
         }
@@ -76,6 +89,8 @@ export default function Reply({ thread, maxCommentChars }: ReplyPageProps) {
     }
 
     function clearFile(): void {
+        setFileError(null);
+
         if (attachment !== null) {
             URL.revokeObjectURL(attachment.preview);
         }
@@ -164,6 +179,15 @@ export default function Reply({ thread, maxCommentChars }: ReplyPageProps) {
                        paper. */
                     className="min-h-0 flex-1 resize-none rounded-none border-0 px-4 py-4 text-body focus-visible:ring-0"
                 />
+
+                {fileError !== null ? (
+                    <p
+                        role="alert"
+                        className="border-t border-border px-4 py-3 text-meta text-danger"
+                    >
+                        {fileError}
+                    </p>
+                ) : null}
 
                 {attachment !== null ? (
                     <div className="flex items-center gap-3 border-t border-border px-4 py-3">

@@ -9,53 +9,54 @@ use App\Models\Thread;
 /**
  * How an attachment is addressed.
  *
- * Deliberately without `Storage::fake()`. The fake builds a disk with no
- * configured `url`, so `Storage::url()` returns a root-relative path whatever
- * the real configuration says — which means a faked disk cannot reproduce the
- * bug this file exists for, and a test written on top of one passes while the
- * site is broken.
+ * A local upload is a row in `attachments`, found by its uuid, and served by
+ * this application: so the URL names no scheme and no host. `APP_URL` can
+ * disagree with how the site is actually served (an `http://` image on an
+ * `https://` page is blocked as mixed content, silently), and a root-relative
+ * URL inherits both from the page rendering it and cannot be wrong.
+ *
+ * Which of two routes it names depends on the board. A worksafe board's images
+ * are the same for every viewer and may sit in a shared cache; a mature
+ * board's depend on who is asking and may not.
  */
-function localPost(): Post
+function localPost(bool $worksafe = true): Post
 {
-    $board = Board::factory()->slug('g')->create();
+    $board = Board::factory()->slug('g')->state(['worksafe' => $worksafe])->create();
     $thread = Thread::factory()->for($board)->create();
 
     return Post::factory()->for($thread)->create([
         'media_filename' => 'x230',
         'media_extension' => '.png',
         'media_tim' => null,
-        'media_path' => 'attachments/g/abc123.png',
+        'media_path' => 'c1f4ae38-6a43-4b0d-9e0a-5f7a2f6b9a11',
         'media_width' => 640,
         'media_height' => 480,
     ]);
 }
 
-/**
- * `Storage::url()` builds from `APP_URL`. An `APP_URL` whose scheme does not
- * match how the site is served produces an `http://` image on an `https://`
- * page, which every browser blocks as mixed content — silently. The image does
- * not appear and nothing an anon can see says why.
- *
- * The file is served by this application, so the URL has no business naming a
- * scheme or a host: root-relative inherits both from the page rendering it and
- * cannot be wrong.
- */
-it('addresses a local attachment relative to the site root', function (): void {
+it('addresses a local attachment by uuid, relative to the site root', function (): void {
     config(['app.url' => 'http://4chan-redesign.test']);
 
-    expect(localPost()->mediaUrl())->toBe('/storage/attachments/g/abc123.png');
+    expect(localPost()->mediaUrl())->toBe('/attachments/c1f4ae38-6a43-4b0d-9e0a-5f7a2f6b9a11');
 });
 
 it('stays root-relative whatever APP_URL says', function (): void {
     config(['app.url' => 'https://example.test']);
-    $post = localPost();
 
-    expect($post->mediaUrl())->toStartWith('/storage/');
-    expect($post->mediaUrl())->not->toStartWith('http');
+    $url = localPost()->mediaUrl();
+
+    expect($url)->toStartWith('/attachments/')->and($url)->not->toStartWith('http');
+});
+
+it('sends an image from a mature board to the route that checks who is asking', function (): void {
+    expect(localPost(worksafe: false)->mediaUrl())
+        ->toBe('/attachments/c1f4ae38-6a43-4b0d-9e0a-5f7a2f6b9a11/mature');
 });
 
 it('uses the same relative form for the thumbnail', function (): void {
-    expect(localPost()->mediaThumbnailUrl())->toStartWith('/storage/');
+    $post = localPost();
+
+    expect($post->mediaThumbnailUrl())->toBe($post->mediaUrl());
 });
 
 /** Ingested attachments live on 4chan's CDN and keep their absolute URL. */
