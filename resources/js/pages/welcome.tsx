@@ -89,7 +89,7 @@ export default function Welcome({
                 <Problem />
                 <Features />
                 <HowItWorks boardCount={boardCount} />
-                <CtaBand />
+                <CtaBand boardCount={boardCount} />
             </main>
 
             <SiteFooter />
