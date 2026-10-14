@@ -23,17 +23,15 @@ function CtaBand() {
             description="Reading needs no account. Make one when you want to reply."
             align="center"
         >
-            {/* One block of fixed width: the way into the feed alone on top
-                and filled, the two account actions as an equal pair beneath
-                it, both outlined so neither outranks the other. The pair
-                spans exactly the primary's width, so the three read as one
-                unit at every size. At 320 each half is about 129px, so the
-                pair trims its side padding to keep "Create account" on one
-                line. Signed in, only the way into the feed remains. */}
+            {/* Signed out: the account pair first, Log in then Create
+                account, with Create account the one filled button; then an
+                "or" and the way to read without one, full width and
+                outlined. All three are 44px and share one block width, so
+                they read as one unit. At 320 each half of the pair is about
+                129px, hence its trimmed side padding. Signed in, the pair
+                and the "or" go, and the way into the feed is the filled
+                button. */}
             <div className="mx-auto grid w-full max-w-xs grid-cols-2 gap-3 sm:max-w-sm">
-                <Button size="lg" className="col-span-2 w-full" asChild>
-                    <Link href={popular()}>Browse without an account</Link>
-                </Button>
                 {isSignedIn ? null : (
                     <>
                         <Button
@@ -42,18 +40,32 @@ function CtaBand() {
                             className="w-full px-3"
                             asChild
                         >
-                            <Link href={register()}>Create account</Link>
-                        </Button>
-                        <Button
-                            size="lg"
-                            variant="outline"
-                            className="w-full px-3"
-                            asChild
-                        >
                             <Link href={login()}>Log in</Link>
                         </Button>
+                        <Button size="lg" className="w-full px-3" asChild>
+                            <Link href={register()}>Create account</Link>
+                        </Button>
+                        <p className="col-span-2 flex items-center gap-3 text-caption text-muted-foreground">
+                            <span
+                                aria-hidden="true"
+                                className="h-px flex-1 bg-border"
+                            />
+                            or
+                            <span
+                                aria-hidden="true"
+                                className="h-px flex-1 bg-border"
+                            />
+                        </p>
                     </>
                 )}
+                <Button
+                    size="lg"
+                    variant={isSignedIn ? 'primary' : 'outline'}
+                    className="col-span-2 w-full"
+                    asChild
+                >
+                    <Link href={popular()}>Browse without an account</Link>
+                </Button>
             </div>
         </Section>
     );

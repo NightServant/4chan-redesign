@@ -350,11 +350,11 @@ describe('Welcome', () => {
             'Reading needs no account. Make one when you want to reply.',
         );
         expect(ctaLinks.map((link) => link.textContent)).toEqual([
-            label,
-            'Create account',
             'Log in',
+            'Create account',
+            label,
         ]);
-        expect(ctaLinks[0].getAttribute('href')).toBe(popular().url);
+        expect(ctaLinks[2].getAttribute('href')).toBe(popular().url);
 
         /* Signed out, the account actions live here and nowhere above it. */
         expect(screen.getAllByRole('link', { name: 'Log in' })).toHaveLength(1);

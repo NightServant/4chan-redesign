@@ -70,33 +70,40 @@ describe('CtaBand', () => {
     });
 
     /**
-     * The way into the feed is the one filled button; the two account actions
-     * are an outlined pair of equal weight. All three are the same 44px height.
+     * Signed out the account pair leads, Log in then Create account, with
+     * Create account the one filled button; reading without an account is
+     * the outlined alternative beneath. All three are the same 44px height.
      */
-    it('offers browse, then create account and log in as an outlined pair, when signed out', () => {
+    it('offers log in and create account first, then browse, when signed out', () => {
         render(<CtaBand />);
 
         const links = screen.getAllByRole('link');
 
         expect(links.map((link) => link.textContent)).toEqual([
-            'Browse without an account',
-            'Create account',
             'Log in',
+            'Create account',
+            'Browse without an account',
         ]);
         expect(links.map((link) => link.getAttribute('href'))).toEqual([
-            '/popular',
-            '/register',
             '/login',
+            '/register',
+            '/popular',
         ]);
         links.forEach((link) => expect(link).toHaveClass('h-11', 'w-full'));
-        expect(links[0]).toHaveClass('bg-primary');
-        [links[1], links[2]].forEach((link) => {
+        expect(links[1]).toHaveClass('bg-primary');
+        [links[0], links[2]].forEach((link) => {
             expect(link).toHaveClass('border', 'border-border-strong');
             expect(link).not.toHaveClass('bg-primary');
         });
     });
 
-    it('offers only the way into the feed when signed in', () => {
+    it('separates the account pair from browsing with an "or"', () => {
+        render(<CtaBand />);
+
+        expect(screen.getByText('or')).toBeInTheDocument();
+    });
+
+    it('offers only the way into the feed when signed in, filled', () => {
         mockPage.props = {
             auth: { user: { id: 1, email: 'anon@example.com' } as User },
         };
@@ -107,32 +114,34 @@ describe('CtaBand', () => {
 
         expect(links).toHaveLength(1);
         expect(links[0]).toHaveTextContent('Browse without an account');
+        expect(links[0]).toHaveClass('bg-primary');
+        expect(screen.queryByText('or')).not.toBeInTheDocument();
     });
 
     /**
-     * One block: the primary spans both columns on top, the pair shares the
-     * row beneath it at every width, so the three always read as one unit.
+     * One block of fixed width: the pair shares the top row at every size
+     * and browsing spans both columns beneath it.
      */
-    it('puts the primary alone on top and the pair side by side beneath it', () => {
+    it('rows the pair on top and spans browse across the block beneath', () => {
         render(<CtaBand />);
 
-        const primary = screen.getByRole('link', {
+        const browse = screen.getByRole('link', {
             name: 'Browse without an account',
         });
 
-        expect(primary.parentElement).toHaveClass(
+        expect(browse.parentElement).toHaveClass(
             'grid',
             'grid-cols-2',
             'max-w-xs',
             'sm:max-w-sm',
         );
-        expect(primary).toHaveClass('col-span-2');
-        expect(
-            screen.getByRole('link', { name: 'Create account' }),
-        ).not.toHaveClass('col-span-2');
+        expect(browse).toHaveClass('col-span-2');
         expect(screen.getByRole('link', { name: 'Log in' })).not.toHaveClass(
             'col-span-2',
         );
+        expect(
+            screen.getByRole('link', { name: 'Create account' }),
+        ).not.toHaveClass('col-span-2');
     });
 
     /**
