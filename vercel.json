@@ -28,7 +28,7 @@
         "CACHE_STORE": "database",
         "QUEUE_CONNECTION": "sync",
         "MAIL_MAILER": "log",
-        "CLOVER_ATTACHMENTS_ENABLED": "false",
+        "CLOVER_ATTACHMENTS_ENABLED": "true",
         "CLOVER_LIVE_FETCH": "true",
         "CLOVER_SWEEP_ORIGIN": "https://clover-lac.vercel.app",
         "VIEW_COMPILED_PATH": "/tmp/views",
