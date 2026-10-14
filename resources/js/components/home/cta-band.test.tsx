@@ -30,7 +30,7 @@ beforeEach(() => {
 
 describe('CtaBand', () => {
     it('centres its heading, sentence and button down the band', () => {
-        render(<CtaBand />);
+        render(<CtaBand boardCount={53} />);
 
         const heading = screen.getByRole('heading', { name: 'Start reading' });
         const button = screen.getByRole('link', {
@@ -51,7 +51,7 @@ describe('CtaBand', () => {
     });
 
     it('is the last band, named by its invitation', () => {
-        const { container } = render(<CtaBand />);
+        const { container } = render(<CtaBand boardCount={53} />);
 
         expect(
             screen.getByRole('region', { name: 'Start reading' }),
@@ -60,7 +60,7 @@ describe('CtaBand', () => {
     });
 
     it('says reading needs no account and replying does', () => {
-        render(<CtaBand />);
+        render(<CtaBand boardCount={53} />);
 
         expect(
             screen.getByText(
@@ -75,7 +75,7 @@ describe('CtaBand', () => {
      * the outlined alternative beneath. All three are the same 44px height.
      */
     it('offers log in and create account first, then browse, when signed out', () => {
-        render(<CtaBand />);
+        render(<CtaBand boardCount={53} />);
 
         const links = screen.getAllByRole('link');
 
@@ -98,7 +98,7 @@ describe('CtaBand', () => {
     });
 
     it('separates the account pair from browsing with an "or"', () => {
-        render(<CtaBand />);
+        render(<CtaBand boardCount={53} />);
 
         expect(screen.getByText('or')).toBeInTheDocument();
     });
@@ -108,7 +108,7 @@ describe('CtaBand', () => {
             auth: { user: { id: 1, email: 'anon@example.com' } as User },
         };
 
-        render(<CtaBand />);
+        render(<CtaBand boardCount={53} />);
 
         const links = screen.getAllByRole('link');
 
@@ -123,7 +123,7 @@ describe('CtaBand', () => {
      * and browsing spans both columns beneath it.
      */
     it('rows the pair on top and spans browse across the block beneath', () => {
-        render(<CtaBand />);
+        render(<CtaBand boardCount={53} />);
 
         const browse = screen.getByRole('link', {
             name: 'Browse without an account',
@@ -145,11 +145,59 @@ describe('CtaBand', () => {
     });
 
     /**
+     * What each path gets you, so the choice is an informed one. Every line
+     * names something Clover does, and the board count is the visitor's own,
+     * passed down from the server rather than written by hand.
+     */
+    it('says what an account adds and what reading without one gives', () => {
+        render(<CtaBand boardCount={53} />);
+
+        expect(
+            screen.getByRole('heading', { level: 3, name: 'With an account' }),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByRole('heading', { level: 3, name: 'Without one' }),
+        ).toBeInTheDocument();
+        [
+            'Reply to any thread, still signed Anonymous',
+            'Save threads to come back to',
+            'Follow the boards you read most',
+            'Pick up where you left off',
+            '53 boards, read in full',
+            'Replies nested under the post they answer',
+            'Refreshed from 4chan through the day',
+        ].forEach((line) => expect(screen.getByText(line)).toBeInTheDocument());
+    });
+
+    it('counts the boards it was given, not a fixed number', () => {
+        render(<CtaBand boardCount={1234} />);
+
+        expect(
+            screen.getByText('1,234 boards, read in full'),
+        ).toBeInTheDocument();
+    });
+
+    it('drops the comparison for a reader who already has an account', () => {
+        mockPage.props = {
+            auth: { user: { id: 1, email: 'anon@example.com' } as User },
+        };
+
+        render(<CtaBand boardCount={53} />);
+
+        expect(
+            screen.queryByRole('heading', { name: 'With an account' }),
+        ).not.toBeInTheDocument();
+        expect(
+            screen.queryByText('53 boards, read in full'),
+        ).not.toBeInTheDocument();
+    });
+
+    /**
      * Green is the accent and never a large fill. The band sits on the same
      * paper as every other, and only the button carries the colour.
      */
     it('does not fill the band with colour', () => {
-        const { container } = render(<CtaBand />);
+        const { container } = render(<CtaBand boardCount={53} />);
 
         expect(container.querySelector('section')?.className).not.toMatch(
             /\bbg-(primary|success|green)/,
