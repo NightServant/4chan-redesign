@@ -67,52 +67,32 @@ describe('TopNav', () => {
         expect(wordmarkLink).toHaveAttribute('href', '/');
     });
 
-    it('shows Log in and Create account when signed out, and no dashboard link', () => {
+    it('shows no account actions when signed out, and no dashboard link', () => {
         render(<TopNav />);
 
-        expect(screen.getByRole('link', { name: 'Log in' })).toHaveAttribute(
-            'href',
-            '/login',
-        );
         expect(
-            screen.getByRole('link', { name: 'Create account' }),
-        ).toHaveAttribute('href', '/register');
+            screen.queryByRole('link', { name: 'Log in' }),
+        ).not.toBeInTheDocument();
+        expect(
+            screen.queryByRole('link', { name: 'Create account' }),
+        ).not.toBeInTheDocument();
         expect(
             screen.queryByRole('link', { name: /dashboard/i }),
         ).not.toBeInTheDocument();
     });
 
     /**
-     * Task 13, fix 3. Gabe's decision, asked for twice, and it reverses the
-     * scoping from earlier in this branch where the homepage was deliberately
-     * left alone: the pair is hidden below `md` and unchanged from `md` up.
-     *
-     * jsdom applies no stylesheet, so `hidden md:flex` renders both links into
-     * the document either way and no query can tell whether they are on screen.
-     * What is guarded instead is that the pair sits inside one box carrying
-     * exactly that pair of classes — and that the box holds *only* the pair, so
-     * the wordmark and the theme toggle cannot be hidden with it.
+     * Log in and Create account moved to the closing call-to-action band at
+     * Gabe's request, so they are reachable at every width. The bar keeps no
+     * breakpoint-gated group behind for them.
      */
-    it('hides Log in and Create account below `md`, and only those two', () => {
+    it('keeps no hidden group for account actions at any width', () => {
         const { container } = render(<TopNav />);
 
-        const group = container.querySelector('[data-slot="top-nav-auth"]');
-
-        expect(group).toHaveClass('hidden', 'md:flex');
-        expect(group).toContainElement(
-            screen.getByRole('link', { name: 'Log in' }),
-        );
-        expect(group).toContainElement(
-            screen.getByRole('link', { name: 'Create account' }),
-        );
-        expect(group).not.toContainElement(
-            screen.getByRole('link', { name: 'Clover home' }),
-        );
-        expect(group).not.toContainElement(
-            screen.getByRole('button', {
-                name: /switch to (light|dark) theme/i,
-            }),
-        );
+        expect(
+            container.querySelector('[data-slot="top-nav-auth"]'),
+        ).not.toBeInTheDocument();
+        expect(screen.getAllByRole('link')).toHaveLength(1);
     });
 
     /**

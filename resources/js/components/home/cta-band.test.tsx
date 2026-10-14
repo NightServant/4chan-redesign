@@ -1,9 +1,15 @@
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CtaBand } from '@/components/home/cta-band';
+import type { User } from '@/types/auth';
+
+const mockPage: { props: { auth: { user: User | null } } } = {
+    props: { auth: { user: null } },
+};
 
 vi.mock('@inertiajs/react', () => ({
+    usePage: () => mockPage,
     Link: ({
         href,
         children,
@@ -18,7 +24,32 @@ vi.mock('@inertiajs/react', () => ({
     ),
 }));
 
+beforeEach(() => {
+    mockPage.props = { auth: { user: null } };
+});
+
 describe('CtaBand', () => {
+    it('centres its heading, sentence and button down the band', () => {
+        render(<CtaBand />);
+
+        const heading = screen.getByRole('heading', { name: 'Start reading' });
+        const button = screen.getByRole('link', {
+            name: 'Browse without an account',
+        });
+
+        expect(heading.parentElement).toHaveClass('items-center');
+        expect(heading.parentElement?.parentElement).toHaveClass(
+            'justify-center',
+            'text-center',
+        );
+        expect(
+            screen.getByText(
+                'Reading needs no account. Make one when you want to reply.',
+            ),
+        ).toHaveClass('mx-auto');
+        expect(button.parentElement).toHaveClass('sm:justify-center');
+    });
+
     it('is the last band, named by its invitation', () => {
         const { container } = render(<CtaBand />);
 
@@ -39,17 +70,67 @@ describe('CtaBand', () => {
     });
 
     /**
-     * One door, the same as the hero's: browsing the popular feed without an
-     * account.
+     * Three actions in one deliberate order of weight: reading first and
+     * filled, then the account actions, quieter. One primary only, so nothing
+     * competes with the way in; all three the same 44px height.
      */
-    it('offers one button, into the feed, with no account', () => {
+    it('offers browse, then create account, then log in, when signed out', () => {
+        render(<CtaBand />);
+
+        const links = screen.getAllByRole('link');
+
+        expect(links.map((link) => link.textContent)).toEqual([
+            'Browse without an account',
+            'Create account',
+            'Log in',
+        ]);
+        expect(links.map((link) => link.getAttribute('href'))).toEqual([
+            '/popular',
+            '/register',
+            '/login',
+        ]);
+        links.forEach((link) =>
+            expect(link).toHaveClass('h-11', 'w-full', 'sm:w-auto'),
+        );
+        expect(links[0]).toHaveClass('bg-primary');
+        expect(links[1]).toHaveClass('border');
+        expect(links[1]).not.toHaveClass('bg-primary');
+        expect(links[2]).toHaveClass('bg-transparent');
+        expect(links[2]).not.toHaveClass('border');
+    });
+
+    it('offers only the way into the feed when signed in', () => {
+        mockPage.props = {
+            auth: { user: { id: 1, email: 'anon@example.com' } as User },
+        };
+
         render(<CtaBand />);
 
         const links = screen.getAllByRole('link');
 
         expect(links).toHaveLength(1);
         expect(links[0]).toHaveTextContent('Browse without an account');
-        expect(links[0]).toHaveAttribute('href', '/popular');
+    });
+
+    /**
+     * A phone stacks the three at one width, in the same order, rather than
+     * wrapping a row into uneven lines; from `sm` up they share one centred
+     * row.
+     */
+    it('stacks the buttons at one width on a phone and rows them from `sm`', () => {
+        render(<CtaBand />);
+
+        const group = screen.getByRole('link', {
+            name: 'Browse without an account',
+        }).parentElement;
+
+        expect(group).toHaveClass(
+            'flex-col',
+            'w-full',
+            'max-w-xs',
+            'sm:flex-row',
+            'sm:justify-center',
+        );
     });
 
     /**

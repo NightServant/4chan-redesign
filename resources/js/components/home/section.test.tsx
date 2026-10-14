@@ -51,6 +51,45 @@ describe('Section', () => {
         ).toBeInTheDocument();
     });
 
+    it('reads left to right unless asked to centre', () => {
+        render(
+            <Section id="boards" label="Popular boards" title="Left">
+                <p>Content</p>
+            </Section>,
+        );
+
+        const heading = screen.getByRole('heading', { name: 'Left' });
+
+        expect(heading.parentElement).not.toHaveClass('items-center');
+        expect(heading.parentElement?.parentElement).not.toHaveClass(
+            'text-center',
+        );
+        expect(heading.parentElement?.parentElement).toHaveClass(
+            'justify-between',
+        );
+    });
+
+    it('centres the heading when asked to', () => {
+        render(
+            <Section
+                id="cta"
+                label="The next step"
+                title="Centred"
+                align="center"
+            >
+                <p>Content</p>
+            </Section>,
+        );
+
+        const heading = screen.getByRole('heading', { name: 'Centred' });
+
+        expect(heading.parentElement).toHaveClass('items-center');
+        expect(heading.parentElement?.parentElement).toHaveClass(
+            'justify-center',
+            'text-center',
+        );
+    });
+
     it('carries an id so the nav can link to it', () => {
         const { container } = render(
             <Section id="how" label="How Clover works" title="Three steps">

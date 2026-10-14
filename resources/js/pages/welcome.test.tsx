@@ -331,7 +331,7 @@ describe('Welcome', () => {
         ]);
     });
 
-    it('closes on the one call to action, into the feed, and the hero has none', () => {
+    it('closes on the call to action, account actions included, and the hero has none', () => {
         const { container } = render(
             <Welcome
                 boards={BOARDS}
@@ -349,8 +349,18 @@ describe('Welcome', () => {
         expect(cta?.textContent).toContain(
             'Reading needs no account. Make one when you want to reply.',
         );
-        expect(ctaLinks.map((link) => link.textContent)).toEqual([label]);
+        expect(ctaLinks.map((link) => link.textContent)).toEqual([
+            label,
+            'Create account',
+            'Log in',
+        ]);
         expect(ctaLinks[0].getAttribute('href')).toBe(popular().url);
+
+        /* Signed out, the account actions live here and nowhere above it. */
+        expect(screen.getAllByRole('link', { name: 'Log in' })).toHaveLength(1);
+        expect(
+            screen.getAllByRole('link', { name: 'Create account' }),
+        ).toHaveLength(1);
 
         /* The page offers that one door once: the hero keeps its caption but
            not the button. */
