@@ -1,14 +1,11 @@
-import { Link } from '@inertiajs/react';
 import type { ComponentProps } from 'react';
 import { BlurText } from '@/components/clover/blur-text';
 import { MachineValue } from '@/components/clover/machine-value';
 import { PatternField } from '@/components/clover/pattern-field';
 import { SectionGutter } from '@/components/home/section-gutter';
 import { ThreadMarquee } from '@/components/home/thread-marquee';
-import { Button } from '@/components/ui/button';
 import { homeSectionOrdinal } from '@/lib/home-sections';
 import { cn } from '@/lib/utils';
-import { popular } from '@/routes';
 import type { Thread } from '@/types/clover';
 
 /**
@@ -123,12 +120,6 @@ function Hero({ threads, className, ...props }: HeroProps) {
                             <p className="max-w-[46ch] text-[17px] leading-[1.55] text-pretty text-muted-foreground">
                                 {INTRO}
                             </p>
-
-                            <Button size="lg" asChild>
-                                <Link href={popular()}>
-                                    Browse without an account
-                                </Link>
-                            </Button>
 
                             <MachineValue>
                                 Free · Reading needs no account

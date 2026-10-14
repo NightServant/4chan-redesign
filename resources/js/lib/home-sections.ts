@@ -2,21 +2,24 @@
  * The homepage's bands, in the order they are stacked.
  *
  * One list rather than a number written into each band, because the folio
- * marks in the margins count "02 / 05" and a hand-written ordinal drifts the
+ * marks in the margins count "02 / 07" and a hand-written ordinal drifts the
  * moment a band is added, removed or reordered. Both the ordinal and the total
  * are read from here, so neither can disagree with the page.
  */
-type HomeSectionId = 'top' | 'boards' | 'trending' | 'features' | 'how';
+type HomeSectionId =
+    'top' | 'boards' | 'trending' | 'problem' | 'features' | 'how' | 'cta';
 
 const HOME_SECTION_IDS: readonly HomeSectionId[] = [
     'top',
     'boards',
     'trending',
+    'problem',
     'features',
     'how',
+    'cta',
 ];
 
-/** How many bands the page has, for the "/ 05" half of a folio mark. */
+/** How many bands the page has, for the "/ 07" half of a folio mark. */
 const HOME_SECTION_TOTAL = HOME_SECTION_IDS.length;
 
 /**

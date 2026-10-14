@@ -116,6 +116,21 @@ describe('BoardCarousel', () => {
         ).not.toBeInTheDocument();
     });
 
+    /**
+     * The band is the page's proof, so it says where the boards come from
+     * rather than just listing them.
+     */
+    it('frames the rail as live data from 4chan', () => {
+        const { container } = render(<BoardCarousel boards={BOARDS} />);
+
+        expect(container.textContent).toContain('Live from 4chan');
+        expect(
+            screen.getByText(
+                "Every board and thread on this page comes from 4chan's own API and is refreshed through the day. None of it is a mockup.",
+            ),
+        ).toBeInTheDocument();
+    });
+
     it('links every board cell at its own board, without the slug delimiters', () => {
         render(<BoardCarousel boards={BOARDS} />);
 

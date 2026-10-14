@@ -73,12 +73,18 @@ describe('Hero', () => {
         ).toBeInTheDocument();
     });
 
-    it('makes the CTA a primary button linking to /popular, with the given label', () => {
+    /**
+     * The call to action moved to the closing band (`CtaBand`), so the pitch
+     * makes its case and leaves the invitation to the end of the page.
+     */
+    it('carries no browse link or button; the closing band owns that call', () => {
         render(<Hero threads={THREADS} />);
 
-        expect(
-            screen.getByRole('link', { name: 'Browse without an account' }),
-        ).toHaveAttribute('href', '/popular');
+        for (const role of ['link', 'button'] as const) {
+            expect(
+                screen.queryByRole(role, { name: 'Browse without an account' }),
+            ).not.toBeInTheDocument();
+        }
     });
 
     it('renders the machine-value line verbatim', () => {
@@ -152,7 +158,7 @@ describe('Hero', () => {
     /**
      * The rails are decoration made of real content, and the content is
      * rendered twice to make the loop seamless. Exposed, that is a wall of
-     * duplicated titles between a visitor and the only button on the page.
+     * duplicated titles between a visitor and the pitch.
      */
     it('keeps both rails out of the accessibility tree and the tab order', () => {
         const { container } = render(<Hero threads={THREADS} />);
@@ -188,7 +194,7 @@ describe('Hero', () => {
             HEADLINE,
         );
         expect(
-            screen.getByRole('link', { name: 'Browse without an account' }),
+            screen.getByText('Free · Reading needs no account'),
         ).toBeInTheDocument();
         expect(
             container.querySelectorAll('[data-slot="thread-marquee"]'),
