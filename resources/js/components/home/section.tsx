@@ -40,6 +40,12 @@ type SectionProps = {
     description?: string;
     /** Optional control aligned to the heading, e.g. a link onward. */
     action?: ReactNode;
+    /**
+     * `center` stacks the heading and children down the middle of the band.
+     * Only the closing call to action uses it; every other band reads left
+     * to right like the rest of the page.
+     */
+    align?: 'start' | 'center';
     children: ReactNode;
     className?: string;
 };
@@ -50,6 +56,7 @@ function Section({
     label,
     title,
     description,
+    align = 'start',
     action,
     children,
     className,
@@ -74,8 +81,20 @@ function Section({
                     />
 
                     <div className="mx-auto flex w-full max-w-(--measure-page) flex-col gap-6 border-x border-border px-6 py-14">
-                        <div className="flex flex-wrap items-end justify-between gap-5">
-                            <div className="flex flex-col gap-2">
+                        <div
+                            className={cn(
+                                'flex flex-wrap gap-5',
+                                align === 'center'
+                                    ? 'justify-center text-center'
+                                    : 'items-end justify-between',
+                            )}
+                        >
+                            <div
+                                className={cn(
+                                    'flex flex-col gap-2',
+                                    align === 'center' && 'items-center',
+                                )}
+                            >
                                 <SectionLabel>{label}</SectionLabel>
                                 <h2
                                     id={headingId}
@@ -84,7 +103,12 @@ function Section({
                                     {title}
                                 </h2>
                                 {description === undefined ? null : (
-                                    <p className="max-w-[60ch] text-body leading-[1.55] text-pretty text-muted-foreground">
+                                    <p
+                                        className={cn(
+                                            'max-w-[60ch] text-body leading-[1.55] text-pretty text-muted-foreground',
+                                            align === 'center' && 'mx-auto',
+                                        )}
+                                    >
                                         {description}
                                     </p>
                                 )}

@@ -6,15 +6,15 @@ import { Wordmark } from '@/components/clover/wordmark';
 import { Button } from '@/components/ui/button';
 import { useAppearance } from '@/hooks/use-appearance';
 import { cn } from '@/lib/utils';
-import { dashboard, home, login, register } from '@/routes';
+import { dashboard, home } from '@/routes';
 
 /**
  * The homepage's sticky header.
  *
  * The design prototype's hamburger opens onto an empty `links` array, so
- * there is nothing behind it to build. Two auth buttons plus a wordmark
- * already fit down to 320px, so the whole nav stays visible at every width
- * instead of collapsing into a drawer with nothing in it.
+ * there is nothing behind it to build. The bar holds the wordmark, the theme
+ * toggle and, when signed in, the way back to the dashboard; Log in and
+ * Create account sit in the closing call-to-action band instead.
  */
 type TopNavProps = Omit<ComponentProps<'header'>, 'children'>;
 
@@ -74,37 +74,16 @@ function TopNav({ className, ...props }: TopNavProps) {
                             )}
                         </Button>
 
+                        {/* Signed out, the bar carries no account actions at any width:
+                            Log in and Create account live in the closing
+                            band, which every width reaches. That also ends the
+                            old gap where a phone had no route to sign in from
+                            the homepage at all. */}
                         {isSignedIn ? (
                             <Button variant="primary" asChild>
                                 <Link href={dashboard()}>Go to dashboard</Link>
                             </Button>
-                        ) : (
-                            /* Gone below `md`, unchanged from `md` up. Two
-                               buttons of this length plus the wordmark and the
-                               toggle need 380px on one line, so at 320 they
-                               wrapped the header onto a second row to say the
-                               same thing the hero already says.
-
-                               The consequence is stated rather than solved:
-                               the homepage has no drawer and no bottom bar, so
-                               below `md` it now carries no route to sign in at
-                               all — the hero's only call to action goes to
-                               `/popular`. That is Gabe's call, made twice, and
-                               a hamburger here is explicitly not the answer. */
-                            <div
-                                data-slot="top-nav-auth"
-                                className="hidden items-center gap-2 md:flex"
-                            >
-                                <Button variant="ghost" asChild>
-                                    <Link href={login()}>Log in</Link>
-                                </Button>
-                                <Button variant="primary" asChild>
-                                    <Link href={register()}>
-                                        Create account
-                                    </Link>
-                                </Button>
-                            </div>
-                        )}
+                        ) : null}
                     </div>
                 </div>
             </PatternField>
