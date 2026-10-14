@@ -23,13 +23,15 @@ function CtaBand() {
             description="Reading needs no account. Make one when you want to reply."
             align="center"
         >
-            {/* One primary, one secondary, one tertiary, all the same 44px
-                size, so the eye lands on reading first and the two account
-                actions read as the quieter options they are. Stacked at full
-                width on a phone, in the same order; one centred row from
-                `sm` up. Signed in, only the way into the feed remains. */}
-            <div className="mx-auto flex w-full max-w-xs flex-col gap-3 sm:w-auto sm:max-w-none sm:flex-row sm:justify-center">
-                <Button size="lg" className="w-full sm:w-auto" asChild>
+            {/* One block of fixed width: the way into the feed alone on top
+                and filled, the two account actions as an equal pair beneath
+                it, both outlined so neither outranks the other. The pair
+                spans exactly the primary's width, so the three read as one
+                unit at every size. At 320 each half is about 129px, so the
+                pair trims its side padding to keep "Create account" on one
+                line. Signed in, only the way into the feed remains. */}
+            <div className="mx-auto grid w-full max-w-xs grid-cols-2 gap-3 sm:max-w-sm">
+                <Button size="lg" className="col-span-2 w-full" asChild>
                     <Link href={popular()}>Browse without an account</Link>
                 </Button>
                 {isSignedIn ? null : (
@@ -37,15 +39,15 @@ function CtaBand() {
                         <Button
                             size="lg"
                             variant="outline"
-                            className="w-full sm:w-auto"
+                            className="w-full px-3"
                             asChild
                         >
                             <Link href={register()}>Create account</Link>
                         </Button>
                         <Button
                             size="lg"
-                            variant="ghost"
-                            className="w-full sm:w-auto"
+                            variant="outline"
+                            className="w-full px-3"
                             asChild
                         >
                             <Link href={login()}>Log in</Link>
