@@ -47,7 +47,7 @@ describe('CtaBand', () => {
                 'Reading needs no account. Make one when you want to reply.',
             ),
         ).toHaveClass('mx-auto');
-        expect(button.parentElement).toHaveClass('sm:justify-center');
+        expect(button.parentElement).toHaveClass('mx-auto', 'grid');
     });
 
     it('is the last band, named by its invitation', () => {
@@ -70,11 +70,10 @@ describe('CtaBand', () => {
     });
 
     /**
-     * Three actions in one deliberate order of weight: reading first and
-     * filled, then the account actions, quieter. One primary only, so nothing
-     * competes with the way in; all three the same 44px height.
+     * The way into the feed is the one filled button; the two account actions
+     * are an outlined pair of equal weight. All three are the same 44px height.
      */
-    it('offers browse, then create account, then log in, when signed out', () => {
+    it('offers browse, then create account and log in as an outlined pair, when signed out', () => {
         render(<CtaBand />);
 
         const links = screen.getAllByRole('link');
@@ -89,14 +88,12 @@ describe('CtaBand', () => {
             '/register',
             '/login',
         ]);
-        links.forEach((link) =>
-            expect(link).toHaveClass('h-11', 'w-full', 'sm:w-auto'),
-        );
+        links.forEach((link) => expect(link).toHaveClass('h-11', 'w-full'));
         expect(links[0]).toHaveClass('bg-primary');
-        expect(links[1]).toHaveClass('border');
-        expect(links[1]).not.toHaveClass('bg-primary');
-        expect(links[2]).toHaveClass('bg-transparent');
-        expect(links[2]).not.toHaveClass('border');
+        [links[1], links[2]].forEach((link) => {
+            expect(link).toHaveClass('border', 'border-border-strong');
+            expect(link).not.toHaveClass('bg-primary');
+        });
     });
 
     it('offers only the way into the feed when signed in', () => {
@@ -113,23 +110,28 @@ describe('CtaBand', () => {
     });
 
     /**
-     * A phone stacks the three at one width, in the same order, rather than
-     * wrapping a row into uneven lines; from `sm` up they share one centred
-     * row.
+     * One block: the primary spans both columns on top, the pair shares the
+     * row beneath it at every width, so the three always read as one unit.
      */
-    it('stacks the buttons at one width on a phone and rows them from `sm`', () => {
+    it('puts the primary alone on top and the pair side by side beneath it', () => {
         render(<CtaBand />);
 
-        const group = screen.getByRole('link', {
+        const primary = screen.getByRole('link', {
             name: 'Browse without an account',
-        }).parentElement;
+        });
 
-        expect(group).toHaveClass(
-            'flex-col',
-            'w-full',
+        expect(primary.parentElement).toHaveClass(
+            'grid',
+            'grid-cols-2',
             'max-w-xs',
-            'sm:flex-row',
-            'sm:justify-center',
+            'sm:max-w-sm',
+        );
+        expect(primary).toHaveClass('col-span-2');
+        expect(
+            screen.getByRole('link', { name: 'Create account' }),
+        ).not.toHaveClass('col-span-2');
+        expect(screen.getByRole('link', { name: 'Log in' })).not.toHaveClass(
+            'col-span-2',
         );
     });
 
