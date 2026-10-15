@@ -113,35 +113,47 @@ describe('CtaBand', () => {
      * one gives. Ruled on the top and between, never the bottom, and meeting
      * the band's edges; stacked and ruled off one from another below `lg`.
      */
-    it('lays the buttons and the two lists out as three ruled columns', () => {
+    it('lays the buttons and the two lists out as ruled columns', () => {
         render(<CtaBand boardCount={53} />);
 
         const browse = screen.getByRole('link', {
             name: 'Browse without an account',
         });
-        const buttonColumn = browse.parentElement;
+        const buttonBlock = browse.parentElement;
+        const buttonColumn = buttonBlock?.parentElement;
         const grid = buttonColumn?.parentElement;
 
+        /* Three in a row from `xl`; buttons over the two lists from `lg`. */
         expect(grid).toHaveClass(
             'grid',
             'border-t',
-            'divide-y',
-            'lg:divide-x',
-            'lg:divide-y-0',
+            'lg:grid-cols-2',
+            'xl:grid-cols-[486px_minmax(0,1fr)_minmax(0,1fr)]',
         );
-        expect(grid).not.toHaveClass('border-b');
+        expect(buttonColumn).toHaveClass('lg:col-span-2', 'xl:col-span-1');
 
-        /* The rules meet the band's edges: the grid pulls out through the
-           section's 24px side and 56px bottom padding, and leaves the sides
-           to the section's own lines rather than drawing a second pair. */
+        /* The rules meet the band's edges and never close the bottom. */
         expect(grid).toHaveClass('-mx-6', '-mb-14');
+        expect(grid).not.toHaveClass('border-b');
         expect(grid).not.toHaveClass('border-x');
-        expect(grid?.className).toContain(
-            'lg:grid-cols-[486px_minmax(0,1fr)_minmax(0,1fr)]',
-        );
+
+        /* The button block lines up with the description at every width. */
+        expect(buttonBlock).toHaveClass('max-w-[438px]', 'w-full');
+
         expect(grid?.children).toHaveLength(3);
-        expect(grid?.children[1]).toHaveTextContent('With an account');
-        expect(grid?.children[2]).toHaveTextContent('Without one');
+        const [, withAccount, withoutOne] = [...(grid?.children ?? [])];
+        expect(withAccount).toHaveTextContent('With an account');
+        expect(withAccount).toHaveClass(
+            'border-t',
+            'xl:border-t-0',
+            'xl:border-l',
+        );
+        expect(withoutOne).toHaveTextContent('Without one');
+        expect(withoutOne).toHaveClass(
+            'border-t',
+            'lg:border-l',
+            'xl:border-t-0',
+        );
 
         expect(
             screen.getByRole('link', { name: 'Log in' }).parentElement,
