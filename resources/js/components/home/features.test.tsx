@@ -43,7 +43,7 @@ const TITLES = [
 ];
 
 const FIRST_BODY =
-    'Read any board without an account. Replying needs one, and every reply is still signed Anonymous.';
+    'Read every worksafe board without an account. Replying needs one, and every reply is still signed Anonymous.';
 
 const SCORE_BODY =
     'No votes, no karma, no reputation. A thread rises because anons replied to it, and you can send one to somebody without an account existing anywhere.';
@@ -65,7 +65,7 @@ describe('Features — below `md`, an accordion', () => {
         expect(container.textContent).toContain('The solution');
         expect(
             screen.getByText(
-                'Clover takes the threads 4chan publishes and lays them out the way a reader needs them: replies nested under the post they answer, one feed across every board, and pages that work on a phone.',
+                'Clover takes the threads 4chan publishes and lays them out the way a reader needs them: replies nested under the post they answer, one feed across every board you can see, and pages that work on a phone.',
             ),
         ).toBeInTheDocument();
     });
@@ -135,6 +135,29 @@ describe('Features — below `md`, an accordion', () => {
         );
 
         expect(screen.getByText(SCORE_BODY)).toBeInTheDocument();
+    });
+
+    /**
+     * The feed, boards and search now load more as the reader scrolls, and a
+     * stale thread arrives in two requests, so "no infinite feed" and "one
+     * request" went. What is left is what actually makes it quick.
+     */
+    it('says only what actually makes it fast', async () => {
+        const user = userEvent.setup();
+
+        render(<Features />);
+        await user.click(
+            screen.getByRole('button', { name: 'Fast on purpose' }),
+        );
+
+        expect(
+            screen.getByText(
+                'No autoplay and no tracking cookies. Hovering a thread starts loading it before you click, and one still refreshing from 4chan shows its opening post first.',
+            ),
+        ).toBeInTheDocument();
+        expect(document.body).not.toHaveTextContent(
+            /no infinite feed|one request/i,
+        );
     });
 
     /**

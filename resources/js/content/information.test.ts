@@ -118,6 +118,28 @@ describe('information copy', () => {
     });
 
     /**
+     * A signed-out visitor never sees the adult boards: the opt-in lives in
+     * settings, behind a sign-in. "None of it is behind a sign-in" was false
+     * of a third of the boards, so the answer names the exception instead.
+     */
+    it('does not say every board can be read without an account', () => {
+        const blanket =
+            /every board[^.]*(public|without an account)|none of it is behind a sign-in|read any board without/i;
+
+        const offenders = everyParagraph().filter((paragraph) =>
+            blanket.test(paragraph.text),
+        );
+
+        expect(
+            offenders.map((one) => `${one.page} / ${one.heading}`),
+            'adult boards need a signed-in opt-in',
+        ).toEqual([]);
+        expect(sectionMatching('FAQ', /need an account/i)).toMatch(
+            /adult boards/i,
+        );
+    });
+
+    /**
      * Having removed the false reassurance, the true answer has to be present:
      * deleting the sentence and saying nothing would leave the question
      * answered less honestly than before, not more.

@@ -88,7 +88,7 @@ export const INFORMATION: Record<string, InformationPage> = {
             {
                 heading: 'Do I need an account?',
                 body: [
-                    'Not to read. Every board, thread and post is public and none of it is behind a sign-in. An account exists so that replying, saving threads, following boards and reading history have somewhere to live.',
+                    'Not to read the worksafe boards: every thread and post on them is public, with nothing behind a sign-in. The adult boards are the exception, shown only to a signed-in reader who opts in. An account also gives replying, saving threads, following boards and reading history somewhere to live.',
                 ],
             },
             {

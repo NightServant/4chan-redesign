@@ -79,12 +79,12 @@ const FEATURES: Feature[] = [
     {
         icon: Shield,
         title: 'Anonymous by default',
-        body: 'Read any board without an account. Replying needs one, and every reply is still signed Anonymous.',
+        body: 'Read every worksafe board without an account. Replying needs one, and every reply is still signed Anonymous.',
     },
     {
         icon: Zap,
         title: 'Fast on purpose',
-        body: 'No infinite feed, no autoplay, no tracking cookies. Threads render in one request.',
+        body: 'No autoplay and no tracking cookies. Hovering a thread starts loading it before you click, and one still refreshing from 4chan shows its opening post first.',
     },
     {
         icon: Share2,
@@ -215,7 +215,7 @@ function Features() {
             depth={40}
             label="The solution"
             title="The same boards, rebuilt for reading"
-            description="Clover takes the threads 4chan publishes and lays them out the way a reader needs them: replies nested under the post they answer, one feed across every board, and pages that work on a phone."
+            description="Clover takes the threads 4chan publishes and lays them out the way a reader needs them: replies nested under the post they answer, one feed across every board you can see, and pages that work on a phone."
         >
             {/* A hard grid, ruled on both axes, flush with the band's frame.
 
