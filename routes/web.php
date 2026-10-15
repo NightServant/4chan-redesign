@@ -87,9 +87,11 @@ Route::get('attachments/{uuid}/mature', [AttachmentController::class, 'mature'])
  *
  * Both are throttled, and they are the only public routes here that are.
  *
- * A search is an unindexable `LIKE '%term%'` over every synced post — a
- * hundred and fifty thousand rows and climbing — so a caller sets the cost and
- * the server pays it, without needing an account to do so. `suggest` is the
+ * A search is a `LIKE '%term%'` over every synced post — a hundred and fifty
+ * thousand rows and climbing. On Postgres a trigram index serves the post
+ * bodies (2026_10_13_022437), which narrows the scan without removing it: a
+ * caller still sets the cost and the server pays it, without needing an
+ * account to do so. `suggest` is the
  * worse of the two because nothing has to be pressed: the header field fires
  * it on a keystroke, debounced 180ms (`useSearchSuggestions`).
  *
