@@ -80,6 +80,7 @@ export default function Welcome({
                         TRENDING_COUNT,
                         TRENDING_COUNT + HERO_RAIL_COUNT,
                     )}
+                    boardCount={boardCount}
                 />
                 <BoardCarousel boards={boards} />
                 <Trending

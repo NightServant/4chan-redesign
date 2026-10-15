@@ -37,34 +37,79 @@ const THREADS = [
 
 const HEADLINE = 'The same boards. Without the 2003 interface.';
 
-/**
- * `BlurText` renders one flex item per word and joins them with U+00A0,
- * because an ordinary space between flex items collapses to nothing. What a
- * reader sees is the headline; what `textContent` returns is the headline with
- * non-breaking spaces, so it is normalised before comparison.
- */
-function visibleText(el: HTMLElement): string {
-    return (el.textContent ?? '').replace(/\u00a0/g, ' ');
-}
-
 describe('Hero', () => {
-    /**
-     * The heading is split into one span per word by `BlurText`, so its text
-     * arrives in fragments and `getByText` on the whole string will not match.
-     * `textContent` on the heading is what a reader actually ends up with, and
-     * asserting that keeps the test honest about the animation being cosmetic.
-     */
     it("renders the headline as the page's only h1, with the exact copy", () => {
-        render(<Hero threads={THREADS} />);
+        render(<Hero threads={THREADS} boardCount={53} />);
 
         const headings = screen.getAllByRole('heading', { level: 1 });
 
         expect(headings).toHaveLength(1);
-        expect(visibleText(headings[0])).toBe(HEADLINE);
+        expect(headings[0]).toHaveTextContent(HEADLINE);
+        expect(headings[0]).toHaveAccessibleName(HEADLINE);
+    });
+
+    /**
+     * One sentence to a line, so the break never lands inside "the 2003
+     * interface", and no word-by-word blur: the headline is legible from the
+     * first paint rather than a few seconds after it.
+     */
+    it('sets each sentence on its own line and paints them at once', () => {
+        render(<Hero threads={THREADS} boardCount={53} />);
+
+        const heading = screen.getByRole('heading', { level: 1 });
+        const lines = [...heading.children];
+
+        expect(lines.map((line) => line.textContent)).toEqual([
+            'The same boards.',
+            'Without the 2003 interface.',
+        ]);
+        lines.forEach((line) => expect(line).toHaveClass('block'));
+        expect(heading.querySelector('[style]')).toBeNull();
+        expect(heading.className).not.toMatch(/blur|opacity-0/);
+    });
+
+    /**
+     * Green on dark paper, as type rather than as a fill; near-black on light
+     * paper, like every other heading.
+     */
+    it('sets the headline green in the dark theme only', () => {
+        render(<Hero threads={THREADS} boardCount={53} />);
+
+        const heading = screen.getByRole('heading', { level: 1 });
+
+        expect(heading).toHaveClass('text-foreground', 'dark:text-primary');
+        expect(heading).not.toHaveClass('text-primary');
+        expect(heading.className).not.toMatch(/\bbg-/);
+    });
+
+    /**
+     * Left-aligned like every band below it, centred top to bottom in the
+     * space above the terms, which are ruled off at the foot with the rule
+     * meeting the rails.
+     */
+    it('reads left to right, centred above the terms ruled off beneath', () => {
+        render(<Hero threads={THREADS} boardCount={53} />);
+
+        const heading = screen.getByRole('heading', { level: 1 });
+        const pitch = heading.parentElement;
+        const cell = pitch?.parentElement;
+        const terms = screen.getByText(
+            '53 boards · Free · Reading needs no account',
+        );
+
+        expect(cell?.className).not.toMatch(/text-center|items-center/);
+        expect(cell).toHaveClass('flex-col', 'lg:px-10');
+        expect(pitch).toHaveClass('lg:my-auto');
+        expect(terms.parentElement).toHaveClass(
+            'border-t',
+            '-mx-6',
+            'lg:-mx-10',
+        );
+        expect(terms).toHaveClass('text-muted-foreground');
     });
 
     it('renders the intro paragraph verbatim', () => {
-        render(<Hero threads={THREADS} />);
+        render(<Hero threads={THREADS} boardCount={53} />);
 
         expect(
             screen.getByText(
@@ -78,7 +123,7 @@ describe('Hero', () => {
      * makes its case and leaves the invitation to the end of the page.
      */
     it('carries no browse link or button; the closing band owns that call', () => {
-        render(<Hero threads={THREADS} />);
+        render(<Hero threads={THREADS} boardCount={53} />);
 
         for (const role of ['link', 'button'] as const) {
             expect(
@@ -87,11 +132,12 @@ describe('Hero', () => {
         }
     });
 
-    it('renders the machine-value line verbatim', () => {
-        render(<Hero threads={THREADS} />);
+    /** The count is the visitor's own, passed down rather than written in. */
+    it('counts the boards it was given in the machine-value line', () => {
+        render(<Hero threads={THREADS} boardCount={1234} />);
 
         expect(
-            screen.getByText('Free · Reading needs no account'),
+            screen.getByText('1,234 boards · Free · Reading needs no account'),
         ).toBeInTheDocument();
     });
 
@@ -101,7 +147,9 @@ describe('Hero', () => {
      * flat, and a repeating gradient is a pattern however faintly it is drawn.
      */
     it('paints no gridlines or other pattern behind itself', () => {
-        const { container } = render(<Hero threads={THREADS} />);
+        const { container } = render(
+            <Hero threads={THREADS} boardCount={53} />,
+        );
 
         expect(
             container.querySelector('[data-slot="hero-grid"]'),
@@ -113,7 +161,9 @@ describe('Hero', () => {
     });
 
     it('is a hairline-bordered band, not centred over a filled backdrop', () => {
-        const { container } = render(<Hero threads={THREADS} />);
+        const { container } = render(
+            <Hero threads={THREADS} boardCount={53} />,
+        );
 
         const hero = container.querySelector('[data-slot="hero"]');
 
@@ -123,7 +173,9 @@ describe('Hero', () => {
 
     /** Two rails, and every thread the hero was given lands in one of them. */
     it('splits its threads across two rails travelling in opposition', () => {
-        const { container } = render(<Hero threads={THREADS} />);
+        const { container } = render(
+            <Hero threads={THREADS} boardCount={53} />,
+        );
 
         const rails = container.querySelectorAll(
             '[data-slot="thread-marquee"]',
@@ -142,7 +194,9 @@ describe('Hero', () => {
      * must not match.
      */
     it('runs the two rails at different speeds', () => {
-        const { container } = render(<Hero threads={THREADS} />);
+        const { container } = render(
+            <Hero threads={THREADS} boardCount={53} />,
+        );
 
         const durations = [
             ...container.querySelectorAll<HTMLElement>(
@@ -161,7 +215,9 @@ describe('Hero', () => {
      * duplicated titles between a visitor and the pitch.
      */
     it('keeps both rails out of the accessibility tree and the tab order', () => {
-        const { container } = render(<Hero threads={THREADS} />);
+        const { container } = render(
+            <Hero threads={THREADS} boardCount={53} />,
+        );
 
         for (const rail of container.querySelectorAll(
             '[data-slot="thread-marquee"]',
@@ -173,7 +229,9 @@ describe('Hero', () => {
 
     /** The rails have no room on a phone, and texture must not precede the pitch. */
     it('hides the rails below the large breakpoint', () => {
-        const { container } = render(<Hero threads={THREADS} />);
+        const { container } = render(
+            <Hero threads={THREADS} boardCount={53} />,
+        );
 
         for (const rail of container.querySelectorAll(
             '[data-slot="thread-marquee"]',
@@ -188,13 +246,13 @@ describe('Hero', () => {
      * its own rather than the band collapsing or rendering empty rails.
      */
     it('still renders the pitch when there are no threads to show', () => {
-        const { container } = render(<Hero threads={[]} />);
+        const { container } = render(<Hero threads={[]} boardCount={53} />);
 
-        expect(visibleText(screen.getByRole('heading', { level: 1 }))).toBe(
+        expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
             HEADLINE,
         );
         expect(
-            screen.getByText('Free · Reading needs no account'),
+            screen.getByText('53 boards · Free · Reading needs no account'),
         ).toBeInTheDocument();
         expect(
             container.querySelectorAll('[data-slot="thread-marquee"]'),
@@ -207,7 +265,9 @@ describe('Hero', () => {
      * thirty-two controls behind an `inert` wrapper.
      */
     it('renders no thread cards or controls in the rails', () => {
-        const { container } = render(<Hero threads={THREADS} />);
+        const { container } = render(
+            <Hero threads={THREADS} boardCount={53} />,
+        );
 
         expect(
             container.querySelector('[data-slot="thread-card"]'),
