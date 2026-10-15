@@ -29,25 +29,15 @@ beforeEach(() => {
 });
 
 describe('CtaBand', () => {
-    it('centres its heading, sentence and button down the band', () => {
+    it('reads left to right, heading and sentence included', () => {
         render(<CtaBand boardCount={53} />);
 
         const heading = screen.getByRole('heading', { name: 'Start reading' });
-        const button = screen.getByRole('link', {
-            name: 'Browse without an account',
-        });
 
-        expect(heading.parentElement).toHaveClass('items-center');
-        expect(heading.parentElement?.parentElement).toHaveClass(
-            'justify-center',
+        expect(heading.parentElement).not.toHaveClass('items-center');
+        expect(heading.parentElement?.parentElement).not.toHaveClass(
             'text-center',
         );
-        expect(
-            screen.getByText(
-                'Reading needs no account. Make one when you want to reply.',
-            ),
-        ).toHaveClass('mx-auto');
-        expect(button.parentElement).toHaveClass('mx-auto', 'grid');
     });
 
     it('is the last band, named by its invitation', () => {
@@ -119,29 +109,50 @@ describe('CtaBand', () => {
     });
 
     /**
-     * One block of fixed width: the pair shares the top row at every size
-     * and browsing spans both columns beneath it.
+     * Three columns: the buttons, what an account adds, what reading without
+     * one gives. Ruled on the top, left and right, never the bottom; stacked
+     * and ruled off one from another below `lg`.
      */
-    it('rows the pair on top and spans browse across the block beneath', () => {
+    it('lays the buttons and the two lists out as three ruled columns', () => {
         render(<CtaBand boardCount={53} />);
 
         const browse = screen.getByRole('link', {
             name: 'Browse without an account',
         });
+        const buttonColumn = browse.parentElement;
+        const grid = buttonColumn?.parentElement;
 
-        expect(browse.parentElement).toHaveClass(
+        expect(grid).toHaveClass(
             'grid',
-            'grid-cols-2',
-            'max-w-xs',
-            'sm:max-w-sm',
+            'border-t',
+            'border-x',
+            'divide-y',
+            'lg:divide-x',
+            'lg:divide-y-0',
         );
-        expect(browse).toHaveClass('col-span-2');
-        expect(screen.getByRole('link', { name: 'Log in' })).not.toHaveClass(
-            'col-span-2',
-        );
+        expect(grid).not.toHaveClass('border-b');
+        expect(grid?.className).toContain('lg:grid-cols-');
+        expect(grid?.children).toHaveLength(3);
+        expect(grid?.children[1]).toHaveTextContent('With an account');
+        expect(grid?.children[2]).toHaveTextContent('Without one');
+
         expect(
-            screen.getByRole('link', { name: 'Create account' }),
-        ).not.toHaveClass('col-span-2');
+            screen.getByRole('link', { name: 'Log in' }).parentElement,
+        ).toHaveClass('grid', 'grid-cols-2');
+        expect(browse).toHaveClass('w-full');
+    });
+
+    /**
+     * The "or" sits close to both the pair and Browse: 8px either side and a
+     * line with no extra leading, not the larger gap the old layout left.
+     */
+    it('keeps the "or" separator tight', () => {
+        render(<CtaBand boardCount={53} />);
+
+        const or = screen.getByText('or');
+
+        expect(or).toHaveClass('leading-none');
+        expect(or.parentElement).toHaveClass('gap-2');
     });
 
     /**
