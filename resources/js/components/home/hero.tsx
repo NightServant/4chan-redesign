@@ -1,4 +1,5 @@
 import type { ComponentProps } from 'react';
+import { BlurText } from '@/components/clover/blur-text';
 import { MachineValue } from '@/components/clover/machine-value';
 import { PatternField } from '@/components/clover/pattern-field';
 import { SectionGutter } from '@/components/home/section-gutter';
@@ -33,11 +34,11 @@ import type { Thread } from '@/types/clover';
  * The copy was cut roughly in half. A centred column reads badly past about
  * ten words a line, and the old intro paragraph was three lines of it.
  *
- * The thesis was then centred and blurred in word by word, which kept the one
- * sentence the page exists to say illegible for its first few seconds. It now
- * paints at once, green on dark paper, reads left to right like every band
- * below it, and sits centred in its cell between the rails. The rails are the motion
- * here; the headline does not need its own.
+ * The thesis then moved off the centre line. It reads left to right like
+ * every band below it, sits centred top to bottom between the rails, and is
+ * green on dark paper. It still settles in word by word, one sentence to a
+ * line, the second picking up the stagger where the first leaves off; the
+ * whole headline is legible inside 0.7s, and at once under reduced motion.
  */
 type HeroProps = Omit<ComponentProps<'section'>, 'children'> & {
     /**
@@ -59,12 +60,23 @@ type HeroProps = Omit<ComponentProps<'section'>, 'children'> & {
 };
 
 /**
- * Two sentences, one to a line. Left to a balancing algorithm the break fell
+ * Two sentences, one to a line. Left to one flowing line the break fell
  * wherever the column ran out, which split "the 2003 interface" from its verb
  * as often as not. The second sentence may still wrap on a narrow column; the
  * first never shares a line with it.
+ *
+ * "2003 interface." is joined by a non-breaking space, so it settles in as one
+ * unit. Word by word, each word is a flex item, nothing balances the wrap, and
+ * at 1440 "interface." was left alone on a third line. Bound, it measures 253px
+ * at the 36px floor, inside the 272px a 320px phone gives the column.
  */
-const HEADLINE = ['The same boards.', 'Without the 2003 interface.'] as const;
+const HEADLINE = [
+    'The same boards.',
+    'Without the 2003\u00a0interface.',
+] as const;
+
+/** `BlurText`'s own stagger, so the second line continues the first's beat. */
+const WORD_STAGGER = 38;
 
 const INTRO =
     'Anonymous discussion, organised by board. No profiles, no algorithm, no ads.';
@@ -139,10 +151,20 @@ function Hero({ threads, boardCount, className, ...props }: HeroProps) {
                                     On light paper the headline stays the
                                     near-black every other heading uses. */}
                                 <h1 className="font-display text-[clamp(36px,4.4vw,56px)] leading-[1.04] font-bold tracking-[-0.03em] text-foreground dark:text-primary">
-                                    <span className="block">{HEADLINE[0]}</span>{' '}
-                                    <span className="block text-balance">
-                                        {HEADLINE[1]}
-                                    </span>
+                                    <BlurText
+                                        as="span"
+                                        text={HEADLINE[0]}
+                                        stagger={WORD_STAGGER}
+                                    />{' '}
+                                    <BlurText
+                                        as="span"
+                                        text={HEADLINE[1]}
+                                        stagger={WORD_STAGGER}
+                                        delay={
+                                            HEADLINE[0].split(' ').length *
+                                            WORD_STAGGER
+                                        }
+                                    />
                                 </h1>
 
                                 <p className="max-w-[46ch] text-[17px] leading-[1.55] text-pretty text-muted-foreground">

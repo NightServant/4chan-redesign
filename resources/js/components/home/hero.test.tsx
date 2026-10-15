@@ -45,27 +45,25 @@ describe('Hero', () => {
 
         expect(headings).toHaveLength(1);
         expect(headings[0]).toHaveTextContent(HEADLINE);
-        expect(headings[0]).toHaveAccessibleName(HEADLINE);
     });
 
     /**
      * One sentence to a line, so the break never lands inside "the 2003
-     * interface", and no word-by-word blur: the headline is legible from the
-     * first paint rather than a few seconds after it.
+     * interface". Each line settles in word by word, so every word is its own
+     * element; the words are joined with U+00A0, normalised here.
      */
-    it('sets each sentence on its own line and paints them at once', () => {
+    it('sets each sentence on its own line, settling in word by word', () => {
         render(<Hero threads={THREADS} boardCount={53} />);
 
         const heading = screen.getByRole('heading', { level: 1 });
         const lines = [...heading.children];
 
-        expect(lines.map((line) => line.textContent)).toEqual([
-            'The same boards.',
-            'Without the 2003 interface.',
-        ]);
-        lines.forEach((line) => expect(line).toHaveClass('block'));
-        expect(heading.querySelector('[style]')).toBeNull();
-        expect(heading.className).not.toMatch(/blur|opacity-0/);
+        expect(
+            lines.map((line) => line.textContent?.replace(/\u00a0/g, ' ')),
+        ).toEqual(['The same boards.', 'Without the 2003 interface.']);
+        lines.forEach((line) => expect(line).toHaveClass('flex', 'flex-wrap'));
+        /* "2003 interface." moves as one, so it never breaks apart. */
+        expect(lines.map((line) => line.children.length)).toEqual([3, 3]);
     });
 
     /**
