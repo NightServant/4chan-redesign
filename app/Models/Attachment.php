@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use InvalidArgumentException;
 use RuntimeException;
 use Symfony\Component\Mime\MimeTypes;
 
@@ -92,6 +93,22 @@ class Attachment extends Model
             ->unique()
             ->values()
             ->all();
+    }
+
+    /**
+     * The extension an accepted type is stored under: the first configured
+     * one that names it, so `image/jpeg` is `.jpg` whatever the upload was
+     * called.
+     */
+    public static function extensionFor(string $mime): string
+    {
+        foreach ((array) config('clover.attachments.mimes') as $extension) {
+            if (in_array($mime, MimeTypes::getDefault()->getMimeTypes($extension), true)) {
+                return '.'.$extension;
+            }
+        }
+
+        throw new InvalidArgumentException("{$mime} is not an accepted image type.");
     }
 
     /** The bytes stored so far, which is what the total cap counts. */

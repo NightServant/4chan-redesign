@@ -166,6 +166,49 @@ it('takes the mime from the bytes, not from the name or the client header', func
 });
 
 /**
+ * The extension shown with an image is the one its bytes are, like its mime.
+ * Taken from the name, a GIF called `looks-like.png` was labelled `.png`.
+ */
+it('labels the image with the extension its bytes have, not the one it was given', function (): void {
+    [$board, $thread, $user] = replyTarget();
+
+    $gif = tempnam(sys_get_temp_dir(), 'gif');
+    imagegif(imagecreatetruecolor(4, 4), $gif);
+
+    $this->actingAs($user)
+        ->post("/{$board->slug}/{$thread->no}/replies", [
+            'body' => 'gif in disguise',
+            'media' => new UploadedFile($gif, 'looks-like.png', 'image/png', null, true),
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect(Post::query()->where('is_local', true)->latest('id')->firstOrFail()->media_extension)
+        ->toBe('.gif');
+});
+
+/**
+ * A file named only for its extension has no name left once the extension is
+ * taken off. It was stored, counted against both limits, and never shown: a
+ * post with a blank filename is a post with no image.
+ */
+it('names an upload called only ".png" rather than storing it unseen', function (): void {
+    [$board, $thread, $user] = replyTarget();
+
+    $this->actingAs($user)
+        ->post("/{$board->slug}/{$thread->no}/replies", [
+            'body' => 'nameless',
+            'media' => UploadedFile::fake()->image('.png', 64, 64),
+        ])
+        ->assertSessionHasNoErrors();
+
+    $reply = Post::query()->where('is_local', true)->latest('id')->firstOrFail();
+
+    expect($reply->media_filename)->toBe('image');
+    expect($reply->media_extension)->toBe('.png');
+    expect($reply->hasMedia())->toBeTrue();
+});
+
+/**
  * The code once said the `image` rule had consumed the temp file, so it read
  * the dimensions back from the stored copy instead. It does not: validation
  * leaves the upload where it was, and this is the proof.

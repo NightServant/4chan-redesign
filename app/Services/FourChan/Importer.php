@@ -8,6 +8,8 @@ use App\Models\Board;
 use App\Models\Post;
 use App\Models\Thread;
 use App\Services\LocalPostNumbers;
+use App\Support\AdvisoryLock;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -193,17 +195,34 @@ final class Importer
          * absolute figure. A separate increment after the upsert was a second
          * write to race the first: two imports overlapping counted the local
          * replies twice, and a read between the two saw them missing.
+         *
+         * The bump is the later of upstream's and the newest local reply's.
+         * Upstream's alone put a thread back where it was before a reply here
+         * bumped it, on every catalog that had not heard of that reply.
+         *
+         * Read and written under the board's lock, the one a reply holds from
+         * taking its number to adding itself to the count. Without it a reply
+         * committing between this read and the upsert was missing from the
+         * count until the next import.
          */
-        foreach ($this->localReplyCounts($board->id, array_keys($rows)) as $no => $local) {
-            $rows[$no]['replies_count'] += $local;
-        }
+        DB::transaction(function () use ($board, &$rows): void {
+            AdvisoryLock::take(AdvisoryLock::POST_NUMBERS, $board->id);
 
-        foreach (array_chunk(array_values($rows), self::CHUNK) as $chunk) {
-            Thread::query()->upsert($chunk, ['board_id', 'no'], [
-                'subject', 'sticky', 'closed', 'replies_count', 'images_count',
-                'posted_at', 'bumped_at', 'synced_at',
-            ]);
-        }
+            foreach ($this->localReplies($board->id, array_keys($rows)) as $no => $local) {
+                $rows[$no]['replies_count'] += $local['count'];
+
+                if ($local['latest']->greaterThan($rows[$no]['bumped_at'])) {
+                    $rows[$no]['bumped_at'] = $local['latest'];
+                }
+            }
+
+            foreach (array_chunk(array_values($rows), self::CHUNK) as $chunk) {
+                Thread::query()->upsert($chunk, ['board_id', 'no'], [
+                    'subject', 'sticky', 'closed', 'replies_count', 'images_count',
+                    'posted_at', 'bumped_at', 'synced_at',
+                ]);
+            }
+        });
 
         /** @var array<int, Thread> $stored */
         $stored = [];
@@ -323,6 +342,10 @@ final class Importer
          * reads both for one render and prints the number above the list.
          */
         DB::transaction(function () use ($thread, $rows, $payload): void {
+            /* The board's lock, as in `importThreads`: the count stamped below
+               includes the local replies read inside it. */
+            AdvisoryLock::take(AdvisoryLock::POST_NUMBERS, $thread->board_id);
+
             $this->upsertPosts(array_values($rows));
 
             $this->stampThread($thread, $payload);
@@ -356,7 +379,7 @@ final class Importer
                     'images_count' => $this->int($row, 'images'),
                 ];
 
-                $counts['replies_count'] += $this->localReplyCounts($thread->board_id, [$thread->no])[$thread->no] ?? 0;
+                $counts['replies_count'] += $this->localReplies($thread->board_id, [$thread->no])[$thread->no]['count'] ?? 0;
 
                 break;
             }
@@ -366,7 +389,8 @@ final class Importer
     }
 
     /**
-     * How many replies each of these threads has that were posted on Clover.
+     * How many replies each of these threads has that were posted on Clover,
+     * and when the newest of them was.
      *
      * Upstream's `replies` knows nothing of them, so an import that wrote it
      * as-is would erase the one `ReplyController` added. One grouped query per
@@ -378,9 +402,9 @@ final class Importer
      * posted.
      *
      * @param  array<int, int>  $numbers  thread numbers on the board
-     * @return array<int, int> thread number to replies, for threads that have any
+     * @return array<int, array{count: int, latest: CarbonInterface}> by thread number, for threads that have any
      */
-    private function localReplyCounts(int $boardId, array $numbers): array
+    private function localReplies(int $boardId, array $numbers): array
     {
         $counts = [];
 
@@ -392,11 +416,14 @@ final class Importer
                 ->where('posts.is_local', true)
                 ->where('posts.is_op', false)
                 ->groupBy('threads.no')
-                ->selectRaw('threads.no as thread_no, count(*) as local_replies')
+                ->selectRaw('threads.no as thread_no, count(*) as local_replies, max(posts.posted_at) as latest_local')
                 ->toBase()
                 ->get()
                 ->each(function (object $row) use (&$counts): void {
-                    $counts[(int) $row->thread_no] = (int) $row->local_replies;
+                    $counts[(int) $row->thread_no] = [
+                        'count' => (int) $row->local_replies,
+                        'latest' => Date::parse((string) $row->latest_local, 'UTC'),
+                    ];
                 });
         }
 

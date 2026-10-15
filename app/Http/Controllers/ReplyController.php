@@ -256,9 +256,10 @@ class ReplyController extends Controller
              * The count is added to in the database, not written from the
              * model loaded above: an import that landed since would be
              * overwritten with a number that predates it. Imports are
-             * absolute and already include local replies
-             * (`Importer::localReplyCounts`), so the two meet at the same
-             * total whichever runs last.
+             * absolute and already include local replies and their bump
+             * (`Importer::localReplies`), and they read those under this
+             * board's lock, which this transaction holds until the increment
+             * commits. So the two meet at the same total whichever runs last.
              */
             $target->increment('replies_count', 1, ['bumped_at' => $target->fromDateTime(Date::now())]);
         });
@@ -350,8 +351,12 @@ class ReplyController extends Controller
         return [
             'columns' => [
                 'media_path' => $uuid,
-                'media_filename' => pathinfo((string) $file->getClientOriginalName(), PATHINFO_FILENAME),
-                'media_extension' => '.'.$file->getClientOriginalExtension(),
+                /* A file called only `.png` has no name once the extension is
+                   off, and a blank name is how a post says it has no image. */
+                'media_filename' => pathinfo((string) $file->getClientOriginalName(), PATHINFO_FILENAME) ?: 'image',
+
+                /* From the bytes, like the mime: a GIF called `x.png` is a GIF. */
+                'media_extension' => Attachment::extensionFor($mime),
                 'media_width' => $clean['width'],
                 'media_height' => $clean['height'],
                 'media_size' => $size,
