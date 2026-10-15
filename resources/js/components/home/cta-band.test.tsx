@@ -136,7 +136,9 @@ describe('CtaBand', () => {
            to the section's own lines rather than drawing a second pair. */
         expect(grid).toHaveClass('-mx-6', '-mb-14');
         expect(grid).not.toHaveClass('border-x');
-        expect(grid?.className).toContain('lg:grid-cols-');
+        expect(grid?.className).toContain(
+            'lg:grid-cols-[486px_minmax(0,1fr)_minmax(0,1fr)]',
+        );
         expect(grid?.children).toHaveLength(3);
         expect(grid?.children[1]).toHaveTextContent('With an account');
         expect(grid?.children[2]).toHaveTextContent('Without one');
