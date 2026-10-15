@@ -57,77 +57,92 @@ function CtaBand({ boardCount }: CtaBandProps) {
             title="Start reading"
             description="Reading needs no account. Make one when you want to reply."
         >
-            {/* Three columns, ruled on the top and between, never the
-                bottom: the buttons, then what an account adds, then what
-                reading without one gives. The grid bleeds out through the
-                section's own padding (-mx-6, -mb-14) so its rules meet the
-                band's edges: the section's side lines are its left and right
-                borders, and the columns run down to the next band. Below
-                `lg` they stack, each ruled off from the one above. The
-                button column matches the header above it: 24px in, the
-                description's 438px line, 24px out, so the buttons start and
-                end where that sentence does. ponytail: 486px is measured
-                from that one sentence at 15px; re-measure if its copy
-                changes. Signed in, only the button column
-                remains, with Browse filled. */}
+            {/* The buttons, then what an account adds, then what reading
+                without one gives. Ruled on the top and between, never the
+                bottom; the grid bleeds through the section's padding
+                (-mx-6, -mb-14) so its rules meet the band's edges, and the
+                section's own side lines serve as its left and right.
+
+                From `xl` the three sit in one row, the button column 486px:
+                the description's 438px line with 24px either side, so the
+                buttons start and end where that sentence does. Between `lg`
+                and `xl` (small laptops) three columns left the lists 261px
+                and wrapping on nearly every line, so the buttons take the
+                first row and the two lists share the second. Below `lg`
+                everything stacks. The button block is capped at 438px at
+                every width, so it always lines up with the description.
+                Each cell draws its own rules: shared `divide-*` utilities
+                would double the section's left line on the second row.
+                ponytail: 486/438px are measured from that one sentence at
+                15px; re-measure if its copy changes. Signed in, only the
+                button column remains, with Browse filled. */}
             <div
                 className={cn(
                     '-mx-6 -mb-14 grid border-t border-border',
                     !isSignedIn &&
-                        'divide-y divide-border lg:grid-cols-[486px_minmax(0,1fr)_minmax(0,1fr)] lg:divide-x lg:divide-y-0',
+                        'lg:grid-cols-2 xl:grid-cols-[486px_minmax(0,1fr)_minmax(0,1fr)]',
                 )}
             >
-                <div className="flex flex-col gap-2 p-6">
-                    {isSignedIn ? null : (
-                        <>
-                            <div className="grid grid-cols-2 gap-3">
-                                <Button
-                                    size="lg"
-                                    variant="outline"
-                                    className="w-full px-3"
-                                    asChild
-                                >
-                                    <Link href={login()}>Log in</Link>
-                                </Button>
-                                <Button
-                                    size="lg"
-                                    className="w-full px-3"
-                                    asChild
-                                >
-                                    <Link href={register()}>
-                                        Create account
-                                    </Link>
-                                </Button>
-                            </div>
-                            <p className="flex items-center gap-3 text-caption leading-none text-muted-foreground">
-                                <span
-                                    aria-hidden="true"
-                                    className="h-px flex-1 bg-border"
-                                />
-                                or
-                                <span
-                                    aria-hidden="true"
-                                    className="h-px flex-1 bg-border"
-                                />
-                            </p>
-                        </>
-                    )}
-                    <Button
-                        size="lg"
-                        variant={isSignedIn ? 'primary' : 'outline'}
-                        className="w-full"
-                        asChild
-                    >
-                        <Link href={popular()}>Browse without an account</Link>
-                    </Button>
+                <div className="p-6 lg:col-span-2 xl:col-span-1">
+                    <div className="flex w-full max-w-[438px] flex-col gap-2">
+                        {isSignedIn ? null : (
+                            <>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Button
+                                        size="lg"
+                                        variant="outline"
+                                        className="w-full px-3"
+                                        asChild
+                                    >
+                                        <Link href={login()}>Log in</Link>
+                                    </Button>
+                                    <Button
+                                        size="lg"
+                                        className="w-full px-3"
+                                        asChild
+                                    >
+                                        <Link href={register()}>
+                                            Create account
+                                        </Link>
+                                    </Button>
+                                </div>
+                                <p className="flex items-center gap-3 text-caption leading-none text-muted-foreground">
+                                    <span
+                                        aria-hidden="true"
+                                        className="h-px flex-1 bg-border"
+                                    />
+                                    or
+                                    <span
+                                        aria-hidden="true"
+                                        className="h-px flex-1 bg-border"
+                                    />
+                                </p>
+                            </>
+                        )}
+                        <Button
+                            size="lg"
+                            variant={isSignedIn ? 'primary' : 'outline'}
+                            className="w-full"
+                            asChild
+                        >
+                            <Link href={popular()}>
+                                Browse without an account
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
 
                 {isSignedIn
                     ? null
-                    : choices(boardCount).map((choice) => (
+                    : choices(boardCount).map((choice, index) => (
                           <div
                               key={choice.heading}
-                              className="flex flex-col gap-3 p-6"
+                              className={cn(
+                                  'flex flex-col gap-3 border-t border-border p-6',
+                                  index === 0
+                                      ? 'xl:border-t-0 xl:border-l'
+                                      : 'lg:border-l xl:border-t-0',
+                              )}
                           >
                               <h3 className="text-body font-semibold text-foreground">
                                   {choice.heading}
