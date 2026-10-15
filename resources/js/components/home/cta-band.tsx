@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { Check } from 'lucide-react';
 import { Section } from '@/components/home/section';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { login, popular, register } from '@/routes';
 
 /**
@@ -55,81 +56,92 @@ function CtaBand({ boardCount }: CtaBandProps) {
             label="The next step"
             title="Start reading"
             description="Reading needs no account. Make one when you want to reply."
-            align="center"
         >
-            {/* Signed out: the account pair first, Log in then Create
-                account, with Create account the one filled button; then an
-                "or" and the way to read without one, full width and
-                outlined. All three are 44px and share one block width, so
-                they read as one unit. At 320 each half of the pair is about
-                129px, hence its trimmed side padding. Signed in, the pair
-                and the "or" go, and the way into the feed is the filled
-                button. */}
-            <div className="mx-auto grid w-full max-w-xs grid-cols-2 gap-3 sm:max-w-sm">
-                {isSignedIn ? null : (
-                    <>
-                        <Button
-                            size="lg"
-                            variant="outline"
-                            className="w-full px-3"
-                            asChild
-                        >
-                            <Link href={login()}>Log in</Link>
-                        </Button>
-                        <Button size="lg" className="w-full px-3" asChild>
-                            <Link href={register()}>Create account</Link>
-                        </Button>
-                        <p className="col-span-2 flex items-center gap-3 text-caption text-muted-foreground">
-                            <span
-                                aria-hidden="true"
-                                className="h-px flex-1 bg-border"
-                            />
-                            or
-                            <span
-                                aria-hidden="true"
-                                className="h-px flex-1 bg-border"
-                            />
-                        </p>
-                    </>
+            {/* Three columns, ruled on the top, left and right but not the
+                bottom: the buttons, then what an account adds, then what
+                reading without one gives. Below `lg` they stack, each ruled
+                off from the one above. The button column is a little wider
+                (1.3fr) so "Create account" keeps its line at 1024px. Signed
+                in, only the button column remains, with Browse filled. */}
+            <div
+                className={cn(
+                    'grid border-x border-t border-border',
+                    !isSignedIn &&
+                        'divide-y divide-border lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)] lg:divide-x lg:divide-y-0',
                 )}
-                <Button
-                    size="lg"
-                    variant={isSignedIn ? 'primary' : 'outline'}
-                    className="col-span-2 w-full"
-                    asChild
-                >
-                    <Link href={popular()}>Browse without an account</Link>
-                </Button>
-            </div>
-
-            {isSignedIn ? null : (
-                <div className="mx-auto grid w-full max-w-2xl gap-x-10 gap-y-6 border-t border-border pt-8 text-left sm:grid-cols-2">
-                    {choices(boardCount).map((choice) => (
-                        <div
-                            key={choice.heading}
-                            className="flex flex-col gap-3"
-                        >
-                            <h3 className="text-body font-semibold text-foreground">
-                                {choice.heading}
-                            </h3>
-                            <ul className="flex flex-col gap-2">
-                                {choice.items.map((item) => (
-                                    <li
-                                        key={item}
-                                        className="flex items-start gap-2.5 text-body leading-[1.5] text-muted-foreground"
-                                    >
-                                        <Check
-                                            aria-hidden="true"
-                                            className="mt-[3px] size-4 shrink-0 text-primary"
-                                        />
-                                        {item}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    ))}
+            >
+                <div className="flex flex-col gap-2 p-6">
+                    {isSignedIn ? null : (
+                        <>
+                            <div className="grid grid-cols-2 gap-3">
+                                <Button
+                                    size="lg"
+                                    variant="outline"
+                                    className="w-full px-3"
+                                    asChild
+                                >
+                                    <Link href={login()}>Log in</Link>
+                                </Button>
+                                <Button
+                                    size="lg"
+                                    className="w-full px-3"
+                                    asChild
+                                >
+                                    <Link href={register()}>
+                                        Create account
+                                    </Link>
+                                </Button>
+                            </div>
+                            <p className="flex items-center gap-3 text-caption leading-none text-muted-foreground">
+                                <span
+                                    aria-hidden="true"
+                                    className="h-px flex-1 bg-border"
+                                />
+                                or
+                                <span
+                                    aria-hidden="true"
+                                    className="h-px flex-1 bg-border"
+                                />
+                            </p>
+                        </>
+                    )}
+                    <Button
+                        size="lg"
+                        variant={isSignedIn ? 'primary' : 'outline'}
+                        className="w-full"
+                        asChild
+                    >
+                        <Link href={popular()}>Browse without an account</Link>
+                    </Button>
                 </div>
-            )}
+
+                {isSignedIn
+                    ? null
+                    : choices(boardCount).map((choice) => (
+                          <div
+                              key={choice.heading}
+                              className="flex flex-col gap-3 p-6"
+                          >
+                              <h3 className="text-body font-semibold text-foreground">
+                                  {choice.heading}
+                              </h3>
+                              <ul className="flex flex-col gap-2">
+                                  {choice.items.map((item) => (
+                                      <li
+                                          key={item}
+                                          className="flex items-start gap-2.5 text-body leading-[1.5] text-muted-foreground"
+                                      >
+                                          <Check
+                                              aria-hidden="true"
+                                              className="mt-[3px] size-4 shrink-0 text-primary"
+                                          />
+                                          {item}
+                                      </li>
+                                  ))}
+                              </ul>
+                          </div>
+                      ))}
+            </div>
         </Section>
     );
 }
