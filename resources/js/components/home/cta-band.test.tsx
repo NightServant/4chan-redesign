@@ -110,8 +110,8 @@ describe('CtaBand', () => {
 
     /**
      * Three columns: the buttons, what an account adds, what reading without
-     * one gives. Ruled on the top, left and right, never the bottom; stacked
-     * and ruled off one from another below `lg`.
+     * one gives. Ruled on the top and between, never the bottom, and meeting
+     * the band's edges; stacked and ruled off one from another below `lg`.
      */
     it('lays the buttons and the two lists out as three ruled columns', () => {
         render(<CtaBand boardCount={53} />);
@@ -125,12 +125,17 @@ describe('CtaBand', () => {
         expect(grid).toHaveClass(
             'grid',
             'border-t',
-            'border-x',
             'divide-y',
             'lg:divide-x',
             'lg:divide-y-0',
         );
         expect(grid).not.toHaveClass('border-b');
+
+        /* The rules meet the band's edges: the grid pulls out through the
+           section's 24px side and 56px bottom padding, and leaves the sides
+           to the section's own lines rather than drawing a second pair. */
+        expect(grid).toHaveClass('-mx-6', '-mb-14');
+        expect(grid).not.toHaveClass('border-x');
         expect(grid?.className).toContain('lg:grid-cols-');
         expect(grid?.children).toHaveLength(3);
         expect(grid?.children[1]).toHaveTextContent('With an account');
