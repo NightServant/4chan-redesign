@@ -64,14 +64,17 @@ function CtaBand({ boardCount }: CtaBandProps) {
                 band's edges: the section's side lines are its left and right
                 borders, and the columns run down to the next band. Below
                 `lg` they stack, each ruled off from the one above. The
-                button column is a little wider (1.3fr) so "Create account"
-                keeps its line at 1024px. Signed in, only the button column
+                button column matches the header above it: 24px in, the
+                description's 438px line, 24px out, so the buttons start and
+                end where that sentence does. ponytail: 486px is measured
+                from that one sentence at 15px; re-measure if its copy
+                changes. Signed in, only the button column
                 remains, with Browse filled. */}
             <div
                 className={cn(
                     '-mx-6 -mb-14 grid border-t border-border',
                     !isSignedIn &&
-                        'divide-y divide-border lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)] lg:divide-x lg:divide-y-0',
+                        'divide-y divide-border lg:grid-cols-[486px_minmax(0,1fr)_minmax(0,1fr)] lg:divide-x lg:divide-y-0',
                 )}
             >
                 <div className="flex flex-col gap-2 p-6">
