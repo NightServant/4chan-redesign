@@ -8,6 +8,7 @@ use App\Support\RecentActivity;
 use App\Support\ThreadNotifications;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
 
@@ -56,8 +57,21 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        $sidebar = $this->sidebarBoards((bool) $request->user()?->shows_mature_boards);
+        $showsMature = (bool) $request->user()?->shows_mature_boards;
 
+        /* Both sidebar lists come from one cached read, made at most once a
+           request and only if a page renders the sidebar. */
+        $sidebar = null;
+        $sidebarFor = function () use (&$sidebar, $showsMature): array {
+            return $sidebar ??= $this->sidebarBoards($showsMature);
+        };
+
+        /* The four props below are closures, which Inertia resolves only for
+           a response that carries them. Everything passes this middleware:
+           an image, an infinite-scroll page, a partial reload that asked for
+           `auth` alone. Computed eagerly, a signed-in scroll page cost twenty
+           queries instead of ten and a mature image nineteen instead of five,
+           all of it discarded. */
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -92,7 +106,7 @@ class HandleInertiaRequests extends Middleware
              * directory is a public page and must not have to special-case
              * "nobody is signed in" to decide what it may show.
              */
-            'showsMatureBoards' => (bool) $request->user()?->shows_mature_boards,
+            'showsMatureBoards' => $showsMature,
 
             /**
              * What this anon has been doing. Shared because two surfaces read
@@ -105,9 +119,9 @@ class HandleInertiaRequests extends Middleware
              * announced back to them. Notifications are their own thing now,
              * below.
              */
-            'recentActivity' => RecentActivity::for(
+            'recentActivity' => fn (): array => RecentActivity::for(
                 $request->user(),
-                (bool) $request->user()?->shows_mature_boards,
+                $showsMature,
             ),
 
             /**
@@ -120,9 +134,9 @@ class HandleInertiaRequests extends Middleware
              * a badge reading "9+" costs one bounded query rather than a full
              * scan on every request.
              */
-            'threadNotifications' => ThreadNotifications::for(
+            'threadNotifications' => fn (): array => ThreadNotifications::for(
                 $request->user(),
-                (bool) $request->user()?->shows_mature_boards,
+                $showsMature,
                 self::HEADER_NOTIFICATIONS,
             ),
 
@@ -144,14 +158,14 @@ class HandleInertiaRequests extends Middleware
              * sidebar labelled "Boards you use" while showing nothing of the
              * kind. It is labelled "Popular" now, which is what it always was.
              */
-            'sidebarBoards' => BoardResource::collection($sidebar['popular']),
+            'sidebarBoards' => fn (): AnonymousResourceCollection => BoardResource::collection($sidebarFor()['popular']),
 
             /**
              * Busiest by conversation rather than by thread count: a board can
              * hold a great many threads nobody is replying to, and the two
              * orderings pick out genuinely different boards.
              */
-            'sidebarTrending' => BoardResource::collection($sidebar['trending']),
+            'sidebarTrending' => fn (): AnonymousResourceCollection => BoardResource::collection($sidebarFor()['trending']),
         ];
     }
 

@@ -69,16 +69,27 @@ class Thread extends Model
         return $this->belongsTo(Board::class);
     }
 
-    /** @return HasMany<Post, $this> */
+    /**
+     * Each post is handed this thread as its own, so a post building its
+     * image URL reads the board from here instead of fetching its thread and
+     * that thread's board again: two queries an image without it.
+     *
+     * @return HasMany<Post, $this>
+     */
     public function posts(): HasMany
     {
-        return $this->hasMany(Post::class);
+        return $this->hasMany(Post::class)->chaperone('thread');
     }
 
-    /** @return HasOne<Post, $this> */
+    /**
+     * Chaperoned for the same reason: every card on a board or the feed
+     * builds its opening post's image URL.
+     *
+     * @return HasOne<Post, $this>
+     */
     public function originalPost(): HasOne
     {
-        return $this->hasOne(Post::class)->where('is_op', true);
+        return $this->hasOne(Post::class)->where('is_op', true)->chaperone('thread');
     }
 
     /** @return HasMany<Bookmark, $this> */
