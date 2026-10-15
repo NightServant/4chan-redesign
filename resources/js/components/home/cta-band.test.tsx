@@ -192,7 +192,7 @@ describe('CtaBand', () => {
             'Reply to any thread, still signed Anonymous',
             'Save threads to come back to',
             'Follow the boards you read most',
-            'Pick up where you left off',
+            "Keep a list of the threads you've read",
             '53 boards, read in full',
             'Replies nested under the post they answer',
             'Refreshed from 4chan through the day',

@@ -77,9 +77,10 @@ class SearchController extends Controller
      * How much of a search term is searched for.
      *
      * The term is read straight off the query string, wrapped in `%` on both
-     * sides and run against every board, thread subject and post body — an
-     * unindexable scan the caller sizes and the server pays for, on two public
-     * routes, one of which fires on a keystroke. Uncapped, a kilobyte of `q`
+     * sides and run against every board, thread subject and post body — a
+     * scan the caller sizes and the server pays for, on two public routes, one
+     * of which fires on a keystroke. The trigram index on post bodies (Postgres
+     * only) narrows the rows compared, not the cost of comparing each one. Uncapped, a kilobyte of `q`
      * was a kilobyte compared against a hundred and fifty thousand rows.
      *
      * A hundred characters is longer than any subject on the site and far
