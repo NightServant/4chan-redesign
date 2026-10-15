@@ -41,6 +41,16 @@ function queriesDuring(Closure $work): int
  *
  * @return array<int, array<string, mixed>>
  */
+/**
+ * Statements spent taking the board's lock: one on Postgres, where an import
+ * reads local replies and writes counts under the lock a reply holds, and
+ * none on SQLite, which has no advisory locks to take.
+ */
+function boardLockStatements(): int
+{
+    return DB::getDriverName() === 'pgsql' ? 1 : 0;
+}
+
 function catalogOf(int $threads): array
 {
     $stub = Fixture::json('g-catalog.json')[0]['threads'][0];
@@ -69,8 +79,9 @@ it('imports a catalog in a handful of statements, whatever its size', function (
     /*
      * Count the replies posted on Clover, so the upsert's figure does not erase
      * them; upsert the threads; read their ids back; upsert the opening posts.
+     * On Postgres the first two run under the board's lock.
      */
-    expect($forSmall)->toBe(4);
+    expect($forSmall)->toBe(4 + boardLockStatements());
     expect($forLarge)->toBe($forSmall);
 });
 
@@ -96,8 +107,8 @@ it('counts the replies posted here in one statement, however many threads have t
 
     $upstream = catalogOf(1)[0]['threads'][0]['replies'];
 
-    expect($without)->toBe(4)
-        ->and($with)->toBe(4)
+    expect($without)->toBe(4 + boardLockStatements())
+        ->and($with)->toBe(4 + boardLockStatements())
         ->and($board->threads()->whereIn('id', $withReplies->modelKeys())->pluck('replies_count')->unique()->all())->toBe([$upstream + 1])
         ->and($board->threads()->whereNotIn('id', $withReplies->modelKeys())->pluck('replies_count')->unique()->all())->toBe([$upstream]);
 });
@@ -127,9 +138,9 @@ it('imports a thread page in a handful of statements', function (): void {
 
     /*
      * Upsert the posts, count the replies posted on Clover, then stamp the
-     * thread as fully synced.
+     * thread as fully synced; on Postgres, under the board's lock.
      */
-    expect($queries)->toBe(3);
+    expect($queries)->toBe(3 + boardLockStatements());
     expect($thread->posts()->count())->toBe(6);
 });
 

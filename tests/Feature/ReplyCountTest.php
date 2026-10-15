@@ -85,3 +85,44 @@ it('composes with an import without counting a local reply twice', function (): 
     $import();
     expect($thread->fresh()->replies_count)->toBe($upstream + 3);
 });
+
+/**
+ * A reply posted here bumps its thread, and a catalog that has not heard of
+ * it must not put the thread back where it was. The import keeps whichever
+ * is later: upstream's bump or the newest reply posted on Clover.
+ */
+it('keeps the bump a local reply gave its thread through a catalog import', function (): void {
+    $board = Board::factory()->slug('g')->create();
+    $stub = Fixture::json('g-catalog.json')[0]['threads'][0];
+    $thread = Thread::factory()->for($board)->create(['no' => $stub['no']]);
+    Post::factory()->for($thread)->op()->create(['no' => $stub['no']]);
+    $this->freezeTime();
+
+    $this->actingAs(User::factory()->create())
+        ->post("/{$board->slug}/{$thread->no}/replies", ['body' => 'bump'])
+        ->assertRedirect();
+
+    app(Importer::class)->importThreads($board, [['page' => 1, 'threads' => [$stub]]]);
+
+    $thread->refresh();
+    expect($thread->bumped_at->toDateTimeString())->toBe(now()->toDateTimeString());
+    expect($thread->replies_count)->toBe((int) $stub['replies'] + 1);
+});
+
+it('still takes upstream\'s bump when it is the later one', function (): void {
+    $board = Board::factory()->slug('g')->create();
+    $stub = Fixture::json('g-catalog.json')[0]['threads'][0];
+    $upstream = (int) ($stub['last_modified'] ?? $stub['time']);
+    $thread = Thread::factory()->for($board)->create(['no' => $stub['no']]);
+    Post::factory()->for($thread)->op()->create(['no' => $stub['no']]);
+
+    $this->travelTo(now()->setTimestamp($upstream)->subHour());
+    $this->actingAs(User::factory()->create())
+        ->post("/{$board->slug}/{$thread->no}/replies", ['body' => 'earlier'])
+        ->assertRedirect();
+    $this->travelBack();
+
+    app(Importer::class)->importThreads($board, [['page' => 1, 'threads' => [$stub]]]);
+
+    expect($thread->fresh()->bumped_at->getTimestamp())->toBe($upstream);
+});

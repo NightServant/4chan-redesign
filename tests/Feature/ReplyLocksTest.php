@@ -7,10 +7,13 @@ use App\Models\Board;
 use App\Models\Post;
 use App\Models\Thread;
 use App\Models\User;
+use App\Services\FourChan\Importer;
 use App\Support\AdvisoryLock;
 use App\Support\RoutableBoards;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Tests\Feature\Sync\Fixture;
 
 /**
  * Two anons replying at once.
@@ -112,3 +115,39 @@ it('gives replies in different threads of one board different numbers', function
 
     expect($numbers)->toHaveCount(3)->and(array_unique($numbers))->toHaveCount(3);
 });
+
+/**
+ * An import writes absolute counts: upstream's plus the replies posted here,
+ * read just before. A reply committing between that read and the write was
+ * lost until the next import, so both now run under the board's lock, the
+ * one a reply holds from its number to its increment.
+ */
+it('imports a catalog under the lock a reply on that board holds', function (): void {
+    $board = Board::factory()->slug('g')->create();
+    $held = null;
+
+    DB::listen(function (QueryExecuted $query) use ($board, &$held): void {
+        if ($held === null && str_starts_with($query->sql, 'insert into "threads"')) {
+            $held = lockIsHeldElsewhere(AdvisoryLock::POST_NUMBERS, $board->id);
+        }
+    });
+
+    app(Importer::class)->importThreads($board, Fixture::json('g-catalog.json'));
+
+    expect($held)->toBeTrue();
+})->skip(fn (): bool => config('database.default') !== 'pgsql', 'Advisory locks are Postgres only.');
+
+it('stamps a thread\'s counts under the same lock', function (): void {
+    $board = Board::factory()->slug('g')->create();
+    $payload = Fixture::json('g-thread-109514275.json');
+    $thread = Thread::factory()->for($board)->create(['no' => $payload['posts'][0]['no']]);
+    $held = null;
+
+    Thread::updating(function () use ($board, &$held): void {
+        $held ??= lockIsHeldElsewhere(AdvisoryLock::POST_NUMBERS, $board->id);
+    });
+
+    app(Importer::class)->importPosts($thread, $payload);
+
+    expect($held)->toBeTrue();
+})->skip(fn (): bool => config('database.default') !== 'pgsql', 'Advisory locks are Postgres only.');
