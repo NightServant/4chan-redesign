@@ -57,15 +57,19 @@ function CtaBand({ boardCount }: CtaBandProps) {
             title="Start reading"
             description="Reading needs no account. Make one when you want to reply."
         >
-            {/* Three columns, ruled on the top, left and right but not the
+            {/* Three columns, ruled on the top and between, never the
                 bottom: the buttons, then what an account adds, then what
-                reading without one gives. Below `lg` they stack, each ruled
-                off from the one above. The button column is a little wider
-                (1.3fr) so "Create account" keeps its line at 1024px. Signed
-                in, only the button column remains, with Browse filled. */}
+                reading without one gives. The grid bleeds out through the
+                section's own padding (-mx-6, -mb-14) so its rules meet the
+                band's edges: the section's side lines are its left and right
+                borders, and the columns run down to the next band. Below
+                `lg` they stack, each ruled off from the one above. The
+                button column is a little wider (1.3fr) so "Create account"
+                keeps its line at 1024px. Signed in, only the button column
+                remains, with Browse filled. */}
             <div
                 className={cn(
-                    'grid border-x border-t border-border',
+                    '-mx-6 -mb-14 grid border-t border-border',
                     !isSignedIn &&
                         'divide-y divide-border lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)] lg:divide-x lg:divide-y-0',
                 )}
