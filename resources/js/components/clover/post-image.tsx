@@ -80,6 +80,32 @@ function intrinsicBox(media: Attachment): {
     };
 }
 
+/** The post variant's height cap, matching `max-h-[720px]` below. */
+const POST_MAX_HEIGHT = 720;
+
+/**
+ * The post box's width, worked out before the file arrives.
+ *
+ * Handed over as `--post-box-width`, falling back to `fit-content` when the
+ * file's size is unknown. `w-fit` alone sized the box from the loaded image, so until an original of
+ * a few megabytes landed the box was 0px wide and the thread jumped when it
+ * did. Zero-height images also all sat inside the lazy-load margin at once,
+ * so a phone started downloading every one of them together. The narrowest
+ * of the column, the file's own width (never upscaled) and the width at which
+ * it reaches the height cap.
+ */
+function postBoxWidth(media: Attachment): string | undefined {
+    if (!media.width || !media.height) {
+        return undefined;
+    }
+
+    const atHeightCap = Math.floor(
+        (POST_MAX_HEIGHT * media.width) / media.height,
+    );
+
+    return `min(100%, ${media.width}px, ${atHeightCap}px)`;
+}
+
 /**
  * The accessible name for an attachment.
  *
@@ -175,14 +201,15 @@ const VARIANT_BOX_CLASSES: Record<PostImageVariant, string> = {
        file centred inside it with empty bands either side. So the box is
        sized to what it holds -- `w-fit`, bounded by the column -- and
        centred in the flex column both its parents are. */
-    post: 'w-fit max-w-full self-center',
+    post: 'w-[var(--post-box-width,fit-content)] max-w-full self-center',
 };
 
 const VARIANT_IMAGE_CLASSES: Record<PostImageVariant, string> = {
     card: 'h-full w-full object-cover object-top',
-    /* `w-auto`, so the file keeps its own proportions inside a box already
-       sized to it. `w-full` here is what letterboxed a portrait image. */
-    post: 'h-auto max-h-[720px] w-auto max-w-full object-contain',
+    /* `w-full` of a box already sized to the file (`postBoxWidth`), so the
+       width/height attributes reserve its height before it loads. `w-auto`
+       left an unloaded image 0px wide. */
+    post: 'h-auto max-h-[720px] w-full object-contain',
 };
 
 type PostImageProps = {
@@ -349,6 +376,13 @@ function PostImage({
                     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                     className,
                 )}
+                style={
+                    variant === 'post'
+                        ? ({
+                              '--post-box-width': postBoxWidth(media),
+                          } as CSSProperties)
+                        : undefined
+                }
             >
                 <img
                     src={media.fullUrl}
