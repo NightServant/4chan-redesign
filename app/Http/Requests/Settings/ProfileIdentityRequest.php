@@ -7,8 +7,8 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * The two fields the account screen actually puts on the page: the handle at
- * the top and the line under it.
+ * The line under the handle on the account screen. The handle itself is
+ * assigned at creation and cannot be changed (`User::generateHandle()`).
  *
  * Separate from `ProfileUpdateRequest` because they are edited from a different
  * place and by a different gesture. The settings form owns the account's name
@@ -28,35 +28,17 @@ class ProfileIdentityRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'handle' => $this->handleRules($this->user()->id),
             'bio' => $this->bioRules(),
         ];
     }
 
     /**
-     * A blank handle means "use the fallback", not "an empty string".
-     *
-     * An anon clearing the field submits an empty value, which is not null and
-     * would sail past `nullable` straight into the unique index — where the
-     * second anon to clear theirs collides with the first.
-     *
-     * `bio` is normalised the other way. Its column is a non-null text with an
-     * empty default, so a cleared bio has to arrive as `''` rather than null.
-     *
-     * Only keys the request actually sent are touched: merging a key that was
-     * absent would read as null and wipe a handle on any request that happened
-     * not to include it.
+     * A cleared bio arrives as `''` rather than null: its column is a non-null
+     * text with an empty default. Only sent when the request sent it, so a
+     * request without one cannot wipe it.
      */
     protected function prepareForValidation(): void
     {
-        if ($this->has('handle')) {
-            $handle = $this->input('handle');
-
-            $this->merge([
-                'handle' => is_string($handle) && trim($handle) === '' ? null : $handle,
-            ]);
-        }
-
         if ($this->has('bio')) {
             $bio = $this->input('bio');
 

@@ -152,7 +152,7 @@ export const INFORMATION: Record<string, InformationPage> = {
             {
                 heading: 'What an account stores',
                 body: [
-                    'An email address and a password, which are how you sign in. Optionally a handle, a tripcode and a short bio, which are yours to set and yours to remove.',
+                    'An email address and a password, which are how you sign in. A username Clover assigns at random, which cannot be changed. Optionally a tripcode and a short bio, which are yours to set and yours to remove.',
                     'Alongside that: the threads you saved, the boards you follow, the threads you have read, and anything you posted. All of it is private to you.',
                     'Signing in creates a session, and a session record holds the address you connected from and the browser you used. That is how staying signed in works, and it is deleted when the session ends.',
                     'What you search for is kept by your browser, not by Clover. The recent searches under the search field live in that browser’s own storage, are never sent here, and go when you clear its data.',

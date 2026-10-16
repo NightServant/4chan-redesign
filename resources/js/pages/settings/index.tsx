@@ -131,9 +131,9 @@ export default function Settings({
                                 it was the heading on their public profile
                                 until task 17c stopped that, and nothing on
                                 the site needs it. What identifies an account
-                                is its email; what identifies an anon is the
-                                handle they choose, edited from the account
-                                screen beside the profile it appears on. */}
+                                is its email; what names an anon is the
+                                handle Clover assigns, which cannot be
+                                changed. */}
                             <FormField
                                 label="Email address"
                                 error={errors.email}

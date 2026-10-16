@@ -36,12 +36,8 @@ class ProfileController extends Controller
     }
 
     /**
-     * Update what the account screen shows: the handle and the bio.
-     *
-     * These were displayed by the profile and writable by nothing. The screen
-     * put a handle at the top of the page and a line underneath it, and "Edit
-     * profile" led to a settings form that edited neither — so the one button
-     * on the profile promising to change it changed nothing a reader could see.
+     * Update the bio, the line under the handle on the account screen. The
+     * handle is assigned at creation and is not editable here or anywhere.
      *
      * Separate from `update` because it is opened in a dialog on the profile
      * rather than on the settings page, and because it must not demand an email

@@ -205,35 +205,23 @@ describe('ProfileHeader', () => {
     });
 
     /**
-     * The two fields the profile actually displays, and only those. Seeded from
-     * what is stored: an anon with no handle must get an empty box, not the
-     * `anon_41` fallback they would then save as a real, taken handle.
+     * The bio and nothing else. The username is assigned and cannot be
+     * changed, so the form offers no box for it; email lives in settings.
      */
-    it('edits the heading and the line under it, seeded from what is stored', async () => {
+    it('edits the line under the heading and never the username', async () => {
         const user = userEvent.setup();
         render(<ProfileHeader profile={PROFILE} stats={PROFILE_STATS} />);
 
         await user.click(screen.getByRole('button', { name: 'Edit profile' }));
 
-        expect(await screen.findByLabelText('Username')).toHaveValue(
-            'anon_4412',
+        expect(await screen.findByLabelText('Bio')).toHaveValue(
+            'Reads /g/ at 3am.',
         );
-        expect(screen.getByLabelText('Bio')).toHaveValue('Reads /g/ at 3am.');
+        expect(screen.queryByLabelText('Username')).not.toBeInTheDocument();
+        expect(
+            screen.queryByRole('textbox', { name: /username|handle/i }),
+        ).not.toBeInTheDocument();
         expect(screen.queryByLabelText(/email/i)).not.toBeInTheDocument();
-    });
-
-    it('leaves the username box empty for an anon who has set none', async () => {
-        const user = userEvent.setup();
-        render(
-            <ProfileHeader
-                profile={makeProfile({ handle: 'anon_41', storedHandle: null })}
-                stats={PROFILE_STATS}
-            />,
-        );
-
-        await user.click(screen.getByRole('button', { name: 'Edit profile' }));
-
-        expect(await screen.findByLabelText('Username')).toHaveValue('');
     });
 
     /**

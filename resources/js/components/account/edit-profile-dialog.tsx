@@ -14,7 +14,6 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import {
     Sheet,
     SheetContent,
@@ -36,8 +35,10 @@ import type { Profile } from '@/types/clover';
  * and changed nothing they could see. And it navigated away from the thing
  * being edited, which is the one place a form benefits from staying.
  *
- * The two fields here are exactly the two the profile displays: the heading and
- * the line under it. Nothing else belongs in a form opened from a profile.
+ * The one field here is the line under the heading. The heading itself, the
+ * username, is assigned when the account is created and cannot be changed: a
+ * chosen one was the only thing on an account that could name the anon behind
+ * it, and people type their real name into a box labelled "Username".
  *
  * ## Two surfaces, one form
  *
@@ -53,20 +54,12 @@ import type { Profile } from '@/types/clover';
  * do. The form itself is built once and handed to whichever surface renders:
  * two copies of two fields, their seeding and their submit is exactly how the
  * two would drift apart.
- *
- * ## Why the handle may be left blank
- *
- * An account with no handle falls back to `anon_{id}`, which is the right
- * default on a board that promises anonymity. So the field seeds from what is
- * *stored* rather than from what the heading shows: seeding it with the
- * fallback would mean an anon who opened this to fix a typo in their bio saved
- * `anon_41` as a real, unique, taken handle on the way out.
  */
 const BIO_LIMIT = 280;
 
 const TITLE = 'Edit profile';
 const DESCRIPTION =
-    'The name at the top of this page and the line under it. Your account name, email and password live in settings.';
+    'The line under your username. Usernames are assigned to keep you anonymous and cannot be changed. Email and password live in settings.';
 
 type EditProfileDialogProps = {
     profile: Profile;
@@ -77,7 +70,7 @@ function EditProfileDialog({ profile }: EditProfileDialogProps) {
     const isMobile = useIsMobile();
 
     const trigger: ReactNode = (
-        /* A quiet chip, not a primary slab. Editing a handle is not this
+        /* A quiet chip, not a primary slab. Editing a bio is not this
            page's main action, and a filled primary control at the width the
            row gave it said it was. */
         <Button variant="outline" size="sm">
@@ -100,20 +93,6 @@ function EditProfileDialog({ profile }: EditProfileDialogProps) {
         >
             {({ processing, errors }) => (
                 <>
-                    <FormField
-                        label="Username"
-                        description="Letters, numbers and underscores. Leave it blank to stay anon."
-                        error={errors.handle}
-                    >
-                        <Input
-                            id="handle"
-                            name="handle"
-                            defaultValue={profile.storedHandle ?? ''}
-                            autoComplete="off"
-                            placeholder="anon"
-                        />
-                    </FormField>
-
                     <FormField
                         label="Bio"
                         description={`Up to ${BIO_LIMIT} characters.`}

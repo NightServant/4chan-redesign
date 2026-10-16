@@ -98,25 +98,21 @@ describe('EditProfileDialog', () => {
      * One form, two surfaces. The fields, their seeding and the save control
      * are the same object either way — a second copy is how the two drift.
      */
-    it('carries the same two fields whichever surface it opens on', async () => {
+    it('carries the same field whichever surface it opens on', async () => {
         setViewport(true);
         const user = userEvent.setup();
 
         render(
             <EditProfileDialog
-                profile={makeProfile({
-                    storedHandle: 'anon_4412',
-                    bio: 'Reads /g/ at 3am.',
-                })}
+                profile={makeProfile({ bio: 'Reads /g/ at 3am.' })}
             />,
         );
 
         await user.click(screen.getByRole('button', { name: 'Edit profile' }));
 
-        expect(await screen.findByLabelText('Username')).toHaveValue(
-            'anon_4412',
+        expect(await screen.findByLabelText('Bio')).toHaveValue(
+            'Reads /g/ at 3am.',
         );
-        expect(screen.getByLabelText('Bio')).toHaveValue('Reads /g/ at 3am.');
         expect(
             screen.getByRole('button', { name: 'Save' }),
         ).toBeInTheDocument();

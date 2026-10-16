@@ -3,7 +3,7 @@ export type User = {
     /**
      * `name` is gone. Registration asked for a full name on a site whose
      * premise is that it does not know who you are, and the column has been
-     * dropped. An anon is named by the handle they choose, on their profile.
+     * dropped. An anon is named by a handle Clover assigns and nobody can change.
      */
     email: string;
     avatar?: string;
