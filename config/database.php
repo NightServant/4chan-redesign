@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Str;
 use Pdo\Mysql;
+use Pdo\Pgsql;
 
 return [
 
@@ -97,6 +98,13 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            /*
+             * Unnamed statements only. A named one is freed with a SQL
+             * `DEALLOCATE`, which Neon's pooler (PgBouncer) cannot match to
+             * the statement it renamed; the error is swallowed, but inside a
+             * transaction it aborts every statement after it (SQLSTATE 25P02).
+             */
+            'options' => extension_loaded('pdo_pgsql') ? [Pgsql::ATTR_DISABLE_PREPARES => true] : [],
         ],
 
         'sqlsrv' => [
