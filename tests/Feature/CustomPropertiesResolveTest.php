@@ -25,9 +25,11 @@ use Symfony\Component\Finder\Finder;
 /**
  * Properties injected at runtime rather than authored in `app.css`. Radix
  * measures its triggers and writes these onto the element itself, so they are
- * legitimately absent from the stylesheet.
+ * legitimately absent from the stylesheet. `--post-box-width` is set inline by
+ * `PostImage` from the file's size, and read with a `fit-content` fallback.
  */
 const RUNTIME_INJECTED_PROPERTIES = [
+    '--post-box-width',
     '--radix-navigation-menu-viewport-height',
     '--radix-navigation-menu-viewport-width',
     '--radix-select-trigger-height',

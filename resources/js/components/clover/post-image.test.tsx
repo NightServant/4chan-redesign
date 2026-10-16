@@ -201,11 +201,54 @@ describe('PostImage', () => {
 
             const box = screen.getByRole('button');
 
-            expect(box).toHaveClass('w-fit');
+            expect(box).toHaveClass('w-[var(--post-box-width,fit-content)]');
             expect(box).toHaveClass('self-center');
             expect(box.className).not.toMatch(/max-w-\(--measure-media\)/);
             expect(box.className).not.toMatch(/(^|\s)w-full(\s|$)/);
-            expect(screen.getByRole('img')).toHaveClass('w-auto');
+            expect(screen.getByRole('img')).toHaveClass('w-full');
+        });
+
+        /* The box exists before the file does. Sized from the loaded image,
+           it was 0px until a multi-megabyte original arrived, and the thread
+           jumped when it did. Capped by the column, by the file's own width
+           and by the width at which it reaches the 720px height cap. */
+        it('reserves a post box from the file size before it loads', () => {
+            const { unmount } = render(
+                <PostImage
+                    media={makeAttachment({ width: 3856, height: 2256 })}
+                    variant="post"
+                />,
+            );
+
+            expect(
+                screen
+                    .getByRole('button')
+                    .style.getPropertyValue('--post-box-width'),
+            ).toBe('min(100%, 3856px, 1230px)');
+
+            unmount();
+            render(
+                <PostImage
+                    media={makeAttachment({ width: null, height: null })}
+                    variant="post"
+                />,
+            );
+
+            expect(
+                screen
+                    .getByRole('button')
+                    .style.getPropertyValue('--post-box-width'),
+            ).toBe('');
+        });
+
+        it('leaves the card box to its ratio', () => {
+            render(<PostImage media={makeAttachment()} variant="card" />);
+
+            expect(
+                screen
+                    .getByRole('button')
+                    .style.getPropertyValue('--post-box-width'),
+            ).toBe('');
         });
 
         /**
