@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -26,7 +27,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
  * @property CarbonImmutable|null $two_factor_confirmed_at
- * @property string|null $handle
+ * @property string $handle
  * @property string|null $tripcode
  * @property string $bio
  * @property bool $shows_mature_boards
@@ -35,7 +36,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property CarbonImmutable|null $updated_at
  */
 #[ObservedBy(UserObserver::class)]
-#[Fillable(['email', 'password', 'handle', 'tripcode', 'bio', 'shows_mature_boards'])]
+#[Fillable(['email', 'password', 'tripcode', 'bio', 'shows_mature_boards'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
@@ -75,23 +76,21 @@ class User extends Authenticatable implements PasskeyUser
     }
 
     /**
-     * The name the profile shows.
+     * A handle for a new account: `anon_` and eight random letters and digits.
      *
-     * `handle` is nullable — every account created before the column existed
-     * has none, and a profile with a blank heading reads as broken rather than
-     * as unset — so there is a fallback. It is derived from the id and nothing
-     * else.
-     *
-     * It used to fall through the account's `name` first, which put whatever
-     * an anon typed at registration on their profile. Registration asks for a
-     * name and people give their real one; this account's is a full legal name.
-     * On a site whose entire premise is anonymity, defaulting the public
-     * heading to that is a leak, not a nicety. An anon who wants their name
-     * shown can set it as their handle, which is now a field they can reach.
+     * Assigned, never chosen. Clover promises anonymity, and a handle an anon
+     * picked was the one thing on an account that could name them; people
+     * type their real name into a box labelled "Username". Random rather than
+     * `anon_{id}`, which would publish how many accounts exist and in what
+     * order they joined. Not fillable, so no request can write it.
      */
-    public function displayHandle(): string
+    public static function generateHandle(): string
     {
-        return $this->handle ?? "anon_{$this->id}";
+        do {
+            $handle = 'anon_'.Str::lower(Str::random(8));
+        } while (static::query()->where('handle', $handle)->exists());
+
+        return $handle;
     }
 
     /**

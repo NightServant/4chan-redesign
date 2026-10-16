@@ -48,6 +48,12 @@ class UserObserver
         'media_spoiler' => false,
     ];
 
+    /** Every account is named by `User::generateHandle()`, however it is created. */
+    public function creating(User $user): void
+    {
+        $user->handle ??= User::generateHandle();
+    }
+
     /**
      * Delete the images this account uploaded, and stop its posts pointing at
      * them.
